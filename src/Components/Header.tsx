@@ -1,9 +1,12 @@
-function Header() {
+export default function Header({
+  setActiveView,
+}: {
+  setActiveView: (view: string) => void;
+}) {
   return (
-    <header>
-      <button>Parent</button>
-      <button>Admin</button>
-    </header>
+    <>
+      <button onClick={() => setActiveView("parent")}>Parent</button>
+      <button onClick={() => setActiveView("admin")}>Admin</button>
+    </>
   );
 }
-export default Header;

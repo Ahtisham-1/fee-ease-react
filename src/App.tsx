@@ -1,16 +1,14 @@
+import { useState } from "react";
 import Header from "./Components/Header";
-import AdminDashboard from "./Components/AdminDashboard";
-import ParentDashboard from "./Components/ParentDashboard";
-import { initialStudents, initialParents } from "./data";
 
-function App() {
+export default function App() {
+  let [activeView, setActiveView] = useState("parent");
   return (
-    <main>
-      <Header />
-      <ParentDashboard students={initialStudents} parents={initialParents} />
-      <AdminDashboard />
-    </main>
+    <>
+      <div>
+        <Header setActiveView = {setActiveView} />
+        {activeView === "parent" ? "ParentDashboard" : "AdminDashboard"}
+      </div>
+    </>
   );
 }
-
-export default App;
