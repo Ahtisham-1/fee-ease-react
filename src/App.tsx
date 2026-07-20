@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Header from "./Components/Header";
-import { initialStudents, initialParents } from "./data";
+import { initialStudents, initialParents, initialFees, initialTransactions } from "./data";
 import ParentDashboard from "./Components/ParentDashboard";
 import AdminDashboard from "./Components/AdminDashboard";
 
@@ -14,9 +14,11 @@ export default function App() {
           <ParentDashboard
             students={initialStudents}
             parents={initialParents}
+            fees={initialFees}
+            transactions={initialTransactions}
           />
         ) : (
-          <AdminDashboard  />
+          <AdminDashboard />
         )}
       </div>
     </>
