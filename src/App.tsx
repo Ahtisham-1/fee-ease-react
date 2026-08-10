@@ -1,9 +1,9 @@
 import { useState } from "react";
 import Header from "./components/Header";
 import type { Role } from "./components/Header";
-import type { Parent } from "./components/ParentStudentSelector";
-import type { Student } from "./components/ParentStudentSelector";
 import ParentStudentSelector from "./components/ParentStudentSelector";
+import FeeDetail from "./components/FeeDetail";
+import type { FeeObligation } from "./components/FeeDetail";
 
 const parents = [
   {
@@ -48,7 +48,6 @@ function App() {
     <>
       <Header activeRole={role} onSelectRole={setRole} />
       <ParentStudentSelector
-      
         parents={parents}
         students={filteredStudents}
         selectedParentId={selectedParent}
@@ -56,6 +55,7 @@ function App() {
         onSelectParent={setSelectedParent}
         onSelectStudent={setSelectedStudent}
       />
+      <FeeDetail />
     </>
   );
 }
