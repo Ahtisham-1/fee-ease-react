@@ -4,6 +4,7 @@ import type { Role } from "./components/Header";
 import ParentStudentSelector from "./components/ParentStudentSelector";
 import FeeDetail from "./components/FeeDetail";
 import type { FeeObligation } from "./components/FeeDetail";
+import type { FeeDetailProps } from "./components/FeeDetail";
 
 const parents = [
   {
@@ -36,6 +37,41 @@ const students = [
     gradeName: "11th",
   },
 ];
+
+const feeObligations = [
+  {
+    id: "f1",
+    studentId: "s1",
+    feeAmount: 3000,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "paid",
+  },
+  {
+    id: "f2",
+    studentId: "s1",
+    feeAmount: 3000,
+    month: "july",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f3",
+    studentId: "s2",
+    feeAmount: 3000,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "paid",
+  },
+  {
+    id: "f4",
+    studentId: "s3",
+    feeAmount: 3000,
+    month: "June",
+    feeType: "tuition+transport",
+    feeStatus: "pending",
+  },
+];
 function App() {
   const [role, setRole] = useState<Role>("parent");
   const [selectedParent, setSelectedParent] = useState("p1");
@@ -43,6 +79,9 @@ function App() {
 
   const filteredStudents = students.filter(
     (student) => student.parentId === selectedParent,
+  );
+  const filteredFeeObligations = feeObligations.filter(
+    (feeObligationStudents) => feeObligationStudents.studentId === selectedStudent,
   );
   return (
     <>
@@ -55,7 +94,7 @@ function App() {
         onSelectParent={setSelectedParent}
         onSelectStudent={setSelectedStudent}
       />
-      <FeeDetail />
+      <FeeDetail  feeObligation={filteredFeeObligations}/>
     </>
   );
 }
