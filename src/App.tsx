@@ -42,7 +42,7 @@ const feeObligations = [
   {
     id: "f1",
     studentId: "s1",
-    feeAmount: 3000,
+    feeAmount: 33000,
     month: "June",
     feeType: "tuition",
     feeStatus: "paid",
@@ -50,7 +50,7 @@ const feeObligations = [
   {
     id: "f2",
     studentId: "s1",
-    feeAmount: 3000,
+    feeAmount: 33000,
     month: "july",
     feeType: "tuition",
     feeStatus: "pending",
@@ -66,10 +66,10 @@ const feeObligations = [
   {
     id: "f4",
     studentId: "s3",
-    feeAmount: 3000,
+    feeAmount: 4000,
     month: "June",
     feeType: "tuition+transport",
-    feeStatus: "pending",
+    feeStatus: "paid",
   },
 ];
 function App() {
@@ -80,9 +80,19 @@ function App() {
   const filteredStudents = students.filter(
     (student) => student.parentId === selectedParent,
   );
+
   const filteredFeeObligations = feeObligations.filter(
-    (feeObligationStudents) => feeObligationStudents.studentId === selectedStudent,
+    (feeObligationStudents) =>
+      feeObligationStudents.studentId === selectedStudent,
   );
+
+  function handleParentChange(parentId: string) {
+    setSelectedParent(parentId);
+    const filteredStudent = students.filter(
+      (student) => parentId === student.parentId,
+    );
+    setSelectedStudent(filteredStudent[0].id);
+  }
   return (
     <>
       <Header activeRole={role} onSelectRole={setRole} />
@@ -91,10 +101,10 @@ function App() {
         students={filteredStudents}
         selectedParentId={selectedParent}
         selectedStudentId={selectedStudent}
-        onSelectParent={setSelectedParent}
+        onSelectParent={handleParentChange}
         onSelectStudent={setSelectedStudent}
       />
-      <FeeDetail  feeObligation={filteredFeeObligations}/>
+      <FeeDetail feeObligation={filteredFeeObligations} />
     </>
   );
 }
