@@ -3,8 +3,8 @@ import Header from "./components/Header";
 import type { Role } from "./components/Header";
 import ParentStudentSelector from "./components/ParentStudentSelector";
 import FeeDetail from "./components/FeeDetail";
-import type { FeeObligation } from "./components/FeeDetail";
-import type { FeeDetailProps } from "./components/FeeDetail";
+// import type { FeeObligation } from "./components/FeeDetail";
+// import type { FeeDetailProps } from "./components/FeeDetail";
 
 const parents = [
   {
@@ -76,6 +76,7 @@ function App() {
   const [role, setRole] = useState<Role>("parent");
   const [selectedParent, setSelectedParent] = useState("p1");
   const [selectedStudent, setSelectedStudent] = useState("s1");
+
 
   const filteredStudents = students.filter(
     (student) => student.parentId === selectedParent,
