@@ -125,6 +125,16 @@ function App() {
     );
     setSelectedStudent(filteredStudent[0].id);
   }
+  const totalFees = filteredFeeObligations.reduce(
+    (acc, curr) => acc + curr.feeAmount,
+    0,
+  );
+  const totalPaid = filteredPayments.reduce(
+    (acc, curr) => acc + curr.amount,
+    0,
+  );
+  const currentNetBalance = totalFees - totalPaid;
+
   return (
     <>
       <Header activeRole={role} onSelectRole={setRole} />
@@ -141,7 +151,10 @@ function App() {
         payments={filteredPayments}
       />
 
-      <PayFeesForm onSubmitPayment={handlePaymentSubmit} />
+      <PayFeesForm
+        onSubmitPayment={handlePaymentSubmit}
+        netbalance={currentNetBalance}
+      />
       <PaymentHistory payments={filteredPayments} />
     </>
   );

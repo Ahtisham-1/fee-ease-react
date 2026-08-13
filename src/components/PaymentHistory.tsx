@@ -12,7 +12,7 @@ function PaymentHistory({ payments }: PaymentHistoryProps) {
         <ul>
           {payments.map((items) => (
             <li key={items.id}>
-              Payment History: {items.amount} {items.dateTime}
+              Payment History: Rs:{items.amount} | {items.dateTime}
             </li>
           ))}
         </ul>
