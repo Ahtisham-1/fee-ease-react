@@ -3,8 +3,9 @@ import Header from "./components/Header";
 import type { Role } from "./components/Header";
 import ParentStudentSelector from "./components/ParentStudentSelector";
 import FeeDetail from "./components/FeeDetail";
-// import type { FeeObligation } from "./components/FeeDetail";
-// import type { FeeDetailProps } from "./components/FeeDetail";
+import type { Payment } from "./components/PayFeesForm";
+import PayFeesForm from "./components/PayFeesForm";
+import PaymentHistory from "./components/PaymentHistory";
 
 const parents = [
   {
@@ -77,6 +78,36 @@ function App() {
   const [selectedParent, setSelectedParent] = useState("p1");
   const [selectedStudent, setSelectedStudent] = useState("s1");
 
+  const [payments, setPayments] = useState<Payment[]>([]);
+
+  function handlePaymentSubmit(amount: number) {
+    const date = new Date();
+    const formatter = new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    // Format and fix the AM/PM spacing
+    const result = formatter
+      .format(date)
+      .replace(" am", "AM")
+      .replace(" pm", "PM");
+
+    const paymentObject = {
+      id: `pay-${Date.now()}`,
+      belongsTo: selectedStudent,
+      amount: amount,
+      dateTime: result.toString(),
+    };
+    setPayments([...payments, paymentObject]);
+  }
+
+  const filteredPayments = payments.filter(
+    (filteredList) => filteredList.belongsTo === selectedStudent,
+  );
 
   const filteredStudents = students.filter(
     (student) => student.parentId === selectedParent,
@@ -105,7 +136,13 @@ function App() {
         onSelectParent={handleParentChange}
         onSelectStudent={setSelectedStudent}
       />
-      <FeeDetail feeObligation={filteredFeeObligations} />
+      <FeeDetail
+        feeObligation={filteredFeeObligations}
+        payments={filteredPayments}
+      />
+
+      <PayFeesForm onSubmitPayment={handlePaymentSubmit} />
+      <PaymentHistory payments={filteredPayments} />
     </>
   );
 }

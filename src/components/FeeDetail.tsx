@@ -1,5 +1,7 @@
 export type FeeStatus = "paid" | "pending";
 export type FeeType = "tuition" | "tuition+transport";
+import type { Payment } from "../components/PayFeesForm";
+
 export interface FeeObligation {
   id: string;
   studentId: string;
@@ -12,18 +14,20 @@ export interface FeeObligation {
 
 export interface FeeDetailProps {
   feeObligation: FeeObligation[];
+  payments: Payment[];
 }
 
-function FeeDetail({ feeObligation }: FeeDetailProps) {
+function FeeDetail({ feeObligation, payments }: FeeDetailProps) {
   const totalFees = feeObligation.reduce(
     (accumulator, currentValue) => accumulator + currentValue.feeAmount,
     0,
   );
-  const totalPaid = feeObligation
-    .filter((studentPaid) => studentPaid.feeStatus === "paid")
-    .reduce((acc, curr) => acc + curr.feeAmount, 0);
+  const totalPaid = payments
+    .filter((pay) => pay.amount)
+    .reduce((acc, curr) => acc + curr.amount, 0);
 
   const netBalance = totalFees - totalPaid;
+  let remainingMoney = totalPaid;
 
   return (
     <div>
@@ -41,11 +45,18 @@ function FeeDetail({ feeObligation }: FeeDetailProps) {
         </p>
       </div>
       <ul>
-        {feeObligation.map((list) => (
-          <li key={list.id}>
-            {list.month} | {list.feeAmount} | {list.feeStatus}
-          </li>
-        ))}
+        {feeObligation.map((list) => {
+          const isPaid = remainingMoney >= list.feeAmount;
+          if (isPaid) {
+            remainingMoney = remainingMoney - list.feeAmount;
+          }
+          const currentStatus = isPaid ? "paid" : "pending";
+          return (
+            <li key={list.id}>
+              {list.month} | ₹{list.feeAmount} | {currentStatus}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

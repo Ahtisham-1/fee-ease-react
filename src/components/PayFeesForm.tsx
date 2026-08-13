@@ -13,9 +13,13 @@ function PayFeesForm({ onSubmitPayment }: PayFeesFormProps) {
   const [inputAmount, setInputAmount] = useState("");
 
   function handlePayment(e: React.FormEvent) {
-    e.preventDefault()
-    onSubmitPayment(Number(inputAmount));
-    setInputAmount("");
+    e.preventDefault();
+    if (Number(inputAmount) <= 0) {
+      alert("Please enter a valid amount");
+    } else {
+      onSubmitPayment(Number(inputAmount));
+      setInputAmount("");
+    }
   }
   return (
     <>
@@ -26,6 +30,7 @@ function PayFeesForm({ onSubmitPayment }: PayFeesFormProps) {
           value={inputAmount}
           onChange={(e) => setInputAmount(e.target.value)}
         />
+
         <button>Submit</button>
       </form>
     </>
