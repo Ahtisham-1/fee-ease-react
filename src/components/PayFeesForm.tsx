@@ -1,10 +1,12 @@
 import { useState } from "react";
+
 export interface Payment {
   amount: number;
   dateTime: string;
   belongsTo: string;
   id: string;
 }
+
 export interface PayFeesFormProps {
   onSubmitPayment: (amount: number) => void;
   netbalance: number;
@@ -26,19 +28,24 @@ function PayFeesForm({ onSubmitPayment, netbalance }: PayFeesFormProps) {
       setInputAmount("");
     }
   }
+
   return (
-    <>
-      <form onSubmit={handlePayment}>
+    <div className="card">
+      <div className="card-title">PAY FEES</div>
+      <form onSubmit={handlePayment} className="pay-form">
         <input
           type="number"
-          placeholder="Enter your amount"
+          className="pay-input"
+          placeholder="Enter payment amount (₹)"
           value={inputAmount}
           onChange={(e) => setInputAmount(e.target.value)}
         />
-
-        <button>Submit</button>
+        <button type="submit" className="pay-btn">
+          Submit Amount
+        </button>
       </form>
-    </>
+    </div>
   );
 }
+
 export default PayFeesForm;

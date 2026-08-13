@@ -52,7 +52,7 @@ const feeObligations = [
     id: "f2",
     studentId: "s1",
     feeAmount: 33000,
-    month: "july",
+    month: "July",
     feeType: "tuition",
     feeStatus: "pending",
   },
@@ -73,6 +73,7 @@ const feeObligations = [
     feeStatus: "paid",
   },
 ];
+
 function App() {
   const [role, setRole] = useState<Role>("parent");
   const [selectedParent, setSelectedParent] = useState("p1");
@@ -90,11 +91,11 @@ function App() {
       minute: "2-digit",
       hour12: true,
     });
-    // Format and fix the AM/PM spacing
+
     const result = formatter
       .format(date)
-      .replace(" am", "AM")
-      .replace(" pm", "PM");
+      .replace(" am", " AM")
+      .replace(" pm", " PM");
 
     const paymentObject = {
       id: `pay-${Date.now()}`,
@@ -125,6 +126,7 @@ function App() {
     );
     setSelectedStudent(filteredStudent[0].id);
   }
+
   const totalFees = filteredFeeObligations.reduce(
     (acc, curr) => acc + curr.feeAmount,
     0,
@@ -136,27 +138,45 @@ function App() {
   const currentNetBalance = totalFees - totalPaid;
 
   return (
-    <>
+    <div className="app-container">
       <Header activeRole={role} onSelectRole={setRole} />
-      <ParentStudentSelector
-        parents={parents}
-        students={filteredStudents}
-        selectedParentId={selectedParent}
-        selectedStudentId={selectedStudent}
-        onSelectParent={handleParentChange}
-        onSelectStudent={setSelectedStudent}
-      />
-      <FeeDetail
-        feeObligation={filteredFeeObligations}
-        payments={filteredPayments}
-      />
-
-      <PayFeesForm
-        onSubmitPayment={handlePaymentSubmit}
-        netbalance={currentNetBalance}
-      />
-      <PaymentHistory payments={filteredPayments} />
-    </>
+      
+      <main className="main-content">
+        {role === "parent" ? (
+          <div className="parent-grid">
+            <div className="column-left">
+              <ParentStudentSelector
+                parents={parents}
+                students={filteredStudents}
+                selectedParentId={selectedParent}
+                selectedStudentId={selectedStudent}
+                onSelectParent={handleParentChange}
+                onSelectStudent={setSelectedStudent}
+              />
+              <FeeDetail
+                feeObligation={filteredFeeObligations}
+                payments={filteredPayments}
+              />
+              <PayFeesForm
+                onSubmitPayment={handlePaymentSubmit}
+                netbalance={currentNetBalance}
+              />
+            </div>
+            
+            <div className="column-right">
+              <PaymentHistory payments={filteredPayments} />
+            </div>
+          </div>
+        ) : (
+          <div className="card">
+            <div className="card-title">ADMIN DASHBOARD</div>
+            <p style={{ color: "var(--text-secondary)" }}>
+              Admin Dashboard components coming next...
+            </p>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
 

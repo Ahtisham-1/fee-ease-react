@@ -1,4 +1,3 @@
-import PayFeesForm from "./PayFeesForm";
 import type { Payment } from "../components/PayFeesForm";
 
 interface PaymentHistoryProps {
@@ -7,17 +6,22 @@ interface PaymentHistoryProps {
 
 function PaymentHistory({ payments }: PaymentHistoryProps) {
   return (
-    <>
-      <div>
-        <ul>
-          {payments.map((items) => (
-            <li key={items.id}>
-              Payment History: Rs:{items.amount} | {items.dateTime}
+    <div className="card">
+      <div className="card-title">PAYMENT HISTORY</div>
+      {payments.length === 0 ? (
+        <p className="empty-history">No payment records found for this student.</p>
+      ) : (
+        <ul className="history-list">
+          {payments.map((item) => (
+            <li key={item.id} className="history-item">
+              <span className="history-amount">₹{item.amount}</span>
+              <span className="history-date">{item.dateTime}</span>
             </li>
           ))}
         </ul>
-      </div>
-    </>
+      )}
+    </div>
   );
 }
+
 export default PaymentHistory;

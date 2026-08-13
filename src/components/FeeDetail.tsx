@@ -30,30 +30,40 @@ function FeeDetail({ feeObligation, payments }: FeeDetailProps) {
   let remainingMoney = totalPaid;
 
   return (
-    <div>
-      <div>
-        <p>
-          <strong>Total Fees:</strong> ₹{totalFees}
-        </p>
-
-        <p>
-          <strong>Total Paid:</strong> ₹{totalPaid}
-        </p>
-
-        <p>
-          <strong>Net Balance:</strong> ₹{netBalance}
-        </p>
+    <div className="card">
+      <div className="card-title">FEE OBLIGATIONS & SUMMARY</div>
+      
+      <div className="summary-stats">
+        <div className="stat-box">
+          <span className="stat-label">TOTAL FEES</span>
+          <span className="stat-value">₹{totalFees}</span>
+        </div>
+        <div className="stat-box">
+          <span className="stat-label">TOTAL PAID</span>
+          <span className="stat-value">₹{totalPaid}</span>
+        </div>
+        <div className="stat-box">
+          <span className="stat-label">NET BALANCE</span>
+          <span className="stat-value balance">₹{netBalance}</span>
+        </div>
       </div>
-      <ul>
+
+      <ul className="month-list">
         {feeObligation.map((list) => {
           const isPaid = remainingMoney >= list.feeAmount;
           if (isPaid) {
             remainingMoney = remainingMoney - list.feeAmount;
           }
           const currentStatus = isPaid ? "paid" : "pending";
+
           return (
-            <li key={list.id}>
-              {list.month} | ₹{list.feeAmount} | {currentStatus}
+            <li key={list.id} className="month-item">
+              <span className="month-info">
+                {list.month} Fee ({list.feeType}): ₹{list.feeAmount}
+              </span>
+              <span className={`status-badge ${currentStatus}`}>
+                {currentStatus}
+              </span>
             </li>
           );
         })}
