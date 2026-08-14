@@ -6,6 +6,7 @@ import FeeDetail from "./components/ParentComponents/FeeDetail";
 import type { Payment } from "./components/ParentComponents/PayFeesForm";
 import PayFeesForm from "./components/ParentComponents/PayFeesForm";
 import PaymentHistory from "./components/ParentComponents/PaymentHistory";
+import AdminCollectionSummary from "./components/AdminComponents/AdminCollectionsSummary";
 
 const parents = [
   {
@@ -17,7 +18,6 @@ const parents = [
     name: "Mukhtar",
   },
 ];
-
 const students = [
   {
     id: "s1",
@@ -38,7 +38,6 @@ const students = [
     gradeName: "11th",
   },
 ];
-
 const feeObligations = [
   {
     id: "f1",
@@ -75,10 +74,10 @@ const feeObligations = [
 ];
 
 function App() {
+
   const [role, setRole] = useState<Role>("parent");
   const [selectedParent, setSelectedParent] = useState("p1");
   const [selectedStudent, setSelectedStudent] = useState("s1");
-
   const [payments, setPayments] = useState<Payment[]>([]);
 
   function handlePaymentSubmit(amount: number) {
@@ -140,7 +139,7 @@ function App() {
   return (
     <div className="app-container">
       <Header activeRole={role} onSelectRole={setRole} />
-      
+
       <main className="main-content">
         {role === "parent" ? (
           <div className="parent-grid">
@@ -162,7 +161,7 @@ function App() {
                 netbalance={currentNetBalance}
               />
             </div>
-            
+
             <div className="column-right">
               <PaymentHistory payments={filteredPayments} />
             </div>
