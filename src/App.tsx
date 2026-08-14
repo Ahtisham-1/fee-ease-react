@@ -1,11 +1,11 @@
 import { useState } from "react";
 import Header from "./components/Header";
 import type { Role } from "./components/Header";
-import ParentStudentSelector from "./components/ParentStudentSelector";
-import FeeDetail from "./components/FeeDetail";
-import type { Payment } from "./components/PayFeesForm";
-import PayFeesForm from "./components/PayFeesForm";
-import PaymentHistory from "./components/PaymentHistory";
+import ParentStudentSelector from "./components/ParentComponents/ParentStudentSelector";
+import FeeDetail from "./components/ParentComponents/FeeDetail";
+import type { Payment } from "./components/ParentComponents/PayFeesForm";
+import PayFeesForm from "./components/ParentComponents/PayFeesForm";
+import PaymentHistory from "./components/ParentComponents/PaymentHistory";
 
 const parents = [
   {

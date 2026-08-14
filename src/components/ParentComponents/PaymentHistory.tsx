@@ -1,4 +1,4 @@
-import type { Payment } from "../components/PayFeesForm";
+import type { Payment } from "./ParentComponents/PayFeesForm";
 
 interface PaymentHistoryProps {
   payments: Payment[];

@@ -1,6 +1,6 @@
 export type FeeStatus = "paid" | "pending";
 export type FeeType = "tuition" | "tuition+transport";
-import type { Payment } from "../components/PayFeesForm";
+import type { Payment } from "./PayFeesForm";
 
 export interface FeeObligation {
   id: string;
@@ -32,7 +32,7 @@ function FeeDetail({ feeObligation, payments }: FeeDetailProps) {
   return (
     <div className="card">
       <div className="card-title">FEE OBLIGATIONS & SUMMARY</div>
-      
+
       <div className="summary-stats">
         <div className="stat-box">
           <span className="stat-label">TOTAL FEES</span>
