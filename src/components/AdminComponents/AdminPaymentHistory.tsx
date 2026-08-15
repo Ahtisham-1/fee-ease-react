@@ -35,3 +35,4 @@ function AdminPaymentHistory({
     </div>
   );
 }
+export default AdminPaymentHistory;

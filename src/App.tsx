@@ -7,6 +7,7 @@ import type { Payment } from "./components/ParentComponents/PayFeesForm";
 import PayFeesForm from "./components/ParentComponents/PayFeesForm";
 import PaymentHistory from "./components/ParentComponents/PaymentHistory";
 import AdminCollectionSummary from "./components/AdminComponents/AdminCollectionsSummary";
+import AdminPaymentHistory from "./components/AdminComponents/AdminPaymentHistory";
 
 const parents = [
   {
@@ -74,11 +75,12 @@ const feeObligations = [
 ];
 
 function App() {
-
   const [role, setRole] = useState<Role>("parent");
   const [selectedParent, setSelectedParent] = useState("p1");
   const [selectedStudent, setSelectedStudent] = useState("s1");
   const [payments, setPayments] = useState<Payment[]>([]);
+
+  const [subTab, setSubTab] = useState("dashboard");
 
   function handlePaymentSubmit(amount: number) {
     const date = new Date();
@@ -168,10 +170,31 @@ function App() {
           </div>
         ) : (
           <div className="card">
-            <div className="card-title">ADMIN DASHBOARD</div>
-            <p style={{ color: "var(--text-secondary)" }}>
-              Admin Dashboard components coming next...
-            </p>
+            <nav className="navigation-bar">
+              <button
+                className="dashboard"
+                onClick={() => setSubTab("dashboard")}
+              >
+                Dashboard
+              </button>
+              <button className="classes" onClick={() => setSubTab("classes")}>
+                Classes
+              </button>
+            </nav>
+
+            {subTab === "dashboard" ? (
+              <div>
+                <div className="card-title">ADMIN DASHBOARD</div>
+                <AdminCollectionSummary payments={payments} />
+                <AdminPaymentHistory
+                  payments={payments}
+                  students={students}
+                  feeObligations={feeObligations}
+                />
+              </div>
+            ) : (
+              <div>classes comming soon</div>
+            )}
           </div>
         )}
       </main>
