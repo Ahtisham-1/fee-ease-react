@@ -27,7 +27,7 @@ function AdminPaymentHistory({
               {matchingStudent?.name} ({matchingStudent?.gradeName})
             </span>
             <span>
-              Paid: ₹{payId.amount} | {payId.dateTime}
+              Paid: ₹{payId.amount} | {payId.dateTime} 
             </span>
           </div>
         );

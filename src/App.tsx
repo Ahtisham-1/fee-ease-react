@@ -8,15 +8,19 @@ import PayFeesForm from "./components/ParentComponents/PayFeesForm";
 import PaymentHistory from "./components/ParentComponents/PaymentHistory";
 import AdminCollectionSummary from "./components/AdminComponents/AdminCollectionsSummary";
 import AdminPaymentHistory from "./components/AdminComponents/AdminPaymentHistory";
+import type { Grades } from "./components/AdminComponents/SelectClassComponent";
+import SelectClassComponent from "./components/AdminComponents/SelectClassComponent";
 
 const parents = [
   {
     id: "p1",
     name: "Quyoom",
+    phone: "7889123123",
   },
   {
     id: "p2",
     name: "Mukhtar",
+    phone: "9797123123",
   },
 ];
 const students = [
@@ -81,6 +85,22 @@ function App() {
   const [payments, setPayments] = useState<Payment[]>([]);
 
   const [subTab, setSubTab] = useState("dashboard");
+  const [pickGrade, setPickGrade] = useState("ist");
+
+  const gradeArray = [
+    "1st",
+    "2nd",
+    "3rd",
+    "4th",
+    "5th",
+    "6th",
+    "7th",
+    "8th",
+    "9th",
+    "10th",
+    "11th",
+    "12th",
+  ];
 
   function handlePaymentSubmit(amount: number) {
     const date = new Date();
@@ -193,7 +213,15 @@ function App() {
                 />
               </div>
             ) : (
-              <div>classes comming soon</div>
+              <div>
+                <div>
+                  <SelectClassComponent
+                    classGrade={gradeArray}
+                    selectedGrade={pickGrade}
+                    onSelectGrade={setPickGrade}
+                  />
+                </div>
+              </div>
             )}
           </div>
         )}
