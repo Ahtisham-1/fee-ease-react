@@ -11,7 +11,7 @@ function AdminCollectionSummary({ payments }: AdminCollectionSummaryProps) {
 
   return (
     <div className="card">
-      <div className="card-title">COLLECTIONS SUMMARY</div>
+      <div className="card-title">COLLECTIONS-SUMMARY</div>
       <div className="summary-stats">
         <div className="stat-box">
           <span className="stat-label">TODAY'S TOTAL</span>

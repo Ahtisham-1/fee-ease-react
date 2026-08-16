@@ -14,7 +14,7 @@ export interface PayFeesFormProps {
 
 function PayFeesForm({ onSubmitPayment, netbalance }: PayFeesFormProps) {
   const [inputAmount, setInputAmount] = useState("");
-
+ 
   function handlePayment(e: React.FormEvent) {
     e.preventDefault();
     if (Number(inputAmount) <= 0) {

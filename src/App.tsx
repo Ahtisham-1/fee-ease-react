@@ -10,6 +10,7 @@ import AdminCollectionSummary from "./components/AdminComponents/AdminCollection
 import AdminPaymentHistory from "./components/AdminComponents/AdminPaymentHistory";
 import type { Grades } from "./components/AdminComponents/SelectClassComponent";
 import SelectClassComponent from "./components/AdminComponents/SelectClassComponent";
+import AdminClassRoster from "./components/AdminComponents/AdminClassRoster";
 
 const parents = [
   {
@@ -215,10 +216,18 @@ function App() {
             ) : (
               <div>
                 <div>
+                  
                   <SelectClassComponent
                     classGrade={gradeArray}
                     selectedGrade={pickGrade}
                     onSelectGrade={setPickGrade}
+                  />
+                  <AdminClassRoster
+                    students={students}
+                    parents={parents}
+                    feeObligations={feeObligations}
+                    payments={payments}
+                    selectedGrade={pickGrade}
                   />
                 </div>
               </div>

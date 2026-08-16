@@ -13,21 +13,23 @@ function AdminPaymentHistory({
   students,
   feeObligations,
 }: AdminPaymentHistoryProps) {
+
   return (
     <div className="card">
       <div className="card-title">SCHOOL-WIDE PAYMENT HISTORY</div>
 
       {payments.map((payId) => {
         const matchingStudent = students.find(
-          (student) => student.id === payId.belongsTo,
+          (student) => student.id === payId.belongsTo
         );
         return (
           <div key={payId.id} className="history-item">
             <span>
-              {matchingStudent?.name} ({matchingStudent?.gradeName})
+              {matchingStudent?.name} ({matchingStudent?.gradeName} {matchingStudent?.id})
             </span>
             <span>
-              Paid: ₹{payId.amount} | {payId.dateTime} 
+
+              Paid: ₹{payId.amount} | {payId.dateTime}
             </span>
           </div>
         );
