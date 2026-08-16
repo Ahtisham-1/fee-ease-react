@@ -13,72 +13,95 @@ import SelectClassComponent from "./components/AdminComponents/SelectClassCompon
 import AdminClassRoster from "./components/AdminComponents/AdminClassRoster";
 
 const parents = [
-  {
-    id: "p1",
-    name: "Quyoom",
-    phone: "7889123123",
-  },
-  {
-    id: "p2",
-    name: "Mukhtar",
-    phone: "9797123123",
-  },
+  { id: "p1", name: "Quyoom", phone: "7889123123" },
+  { id: "p2", name: "Mukhtar", phone: "9797123123" },
+  { id: "p3", name: "Farooq Ahmad", phone: "9419123456" },
+  { id: "p4", name: "Altaf Hussain", phone: "9906112233" },
+  { id: "p5", name: "Bashir Ahmad", phone: "9796001122" },
+  { id: "p6", name: "Ghulam Hassan", phone: "9419003344" },
+  { id: "p7", name: "Tariq Ahmad", phone: "9622887766" },
+  { id: "p8", name: "Manzoor Ahmad", phone: "9596443322" },
+  { id: "p9", name: "Mushtaq Ahmad", phone: "9858119988" },
+  { id: "p10", name: "Shabir Ahmad", phone: "7006554433" },
+  { id: "p11", name: "Mohammad Ashraf", phone: "9149778899" },
+  { id: "p12", name: "Reyaz Ahmad", phone: "9797556677" },
 ];
 const students = [
-  {
-    id: "s1",
-    name: "Ahtisham",
-    parentId: "p1",
-    gradeName: "10th",
-  },
-  {
-    id: "s2",
-    name: "Arooj",
-    parentId: "p1",
-    gradeName: "12th",
-  },
-  {
-    id: "s3",
-    name: "Mehnan",
-    parentId: "p2",
-    gradeName: "11th",
-  },
-];
-const feeObligations = [
-  {
-    id: "f1",
-    studentId: "s1",
-    feeAmount: 33000,
-    month: "June",
-    feeType: "tuition",
-    feeStatus: "paid",
-  },
-  {
-    id: "f2",
-    studentId: "s1",
-    feeAmount: 33000,
-    month: "July",
-    feeType: "tuition",
-    feeStatus: "pending",
-  },
-  {
-    id: "f3",
-    studentId: "s2",
-    feeAmount: 3000,
-    month: "June",
-    feeType: "tuition",
-    feeStatus: "paid",
-  },
-  {
-    id: "f4",
-    studentId: "s3",
-    feeAmount: 4000,
-    month: "June",
-    feeType: "tuition+transport",
-    feeStatus: "paid",
-  },
+  // Class 1st
+  { id: "s101", name: "Zaid Farooq", parentId: "p3", gradeName: "1st" },
+  { id: "s102", name: "Ayat Altaf", parentId: "p4", gradeName: "1st" },
+  // Class 2nd
+  { id: "s201", name: "Burhan Bashir", parentId: "p5", gradeName: "2nd" },
+  { id: "s202", name: "Hadiya Hassan", parentId: "p6", gradeName: "2nd" },
+  // Class 3rd
+  { id: "s301", name: "Daniyal Tariq", parentId: "p7", gradeName: "3rd" },
+  { id: "s302", name: "Bareen Manzoor", parentId: "p8", gradeName: "3rd" },
+  // Class 4th
+  { id: "s401", name: "Mohammad Hammad", parentId: "p9", gradeName: "4th" },
+  { id: "s402", name: "Zoya Shabir", parentId: "p10", gradeName: "4th" },
+  // Class 5th
+  { id: "s501", name: "Ayaan Ashraf", parentId: "p11", gradeName: "5th" },
+  { id: "s502", name: "Insha Reyaz", parentId: "p12", gradeName: "5th" },
+  // Class 6th
+  { id: "s601", name: "Mohsin Farooq", parentId: "p3", gradeName: "6th" },
+  { id: "s602", name: "Misbah Altaf", parentId: "p4", gradeName: "6th" },
+  // Class 7th
+  { id: "s701", name: "Basit Bashir", parentId: "p5", gradeName: "7th" },
+  { id: "s702", name: "Tabeen Hassan", parentId: "p6", gradeName: "7th" },
+  // Class 8th
+  { id: "s801", name: "Faizan Mushtaq", parentId: "p9", gradeName: "8th" },
+  { id: "s802", name: "Soliha Shabir", parentId: "p10", gradeName: "8th" },
+  // Class 9th
+  { id: "s901", name: "Huzaif Ashraf", parentId: "p11", gradeName: "9th" },
+  { id: "s902", name: "Mehak Reyaz", parentId: "p12", gradeName: "9th" },
+  // Class 10th
+  { id: "s1", name: "Ahtisham", parentId: "p1", gradeName: "10th" },
+  { id: "s1002", name: "Sahil Farooq", parentId: "p3", gradeName: "10th" },
+  { id: "s1003", name: "Uzair Altaf", parentId: "p4", gradeName: "10th" },
+  // Class 11th
+  { id: "s3", name: "Mehnan", parentId: "p2", gradeName: "11th" },
+  { id: "s1102", name: "Shahid Bashir", parentId: "p5", gradeName: "11th" },
+  { id: "s1103", name: "Anees Hassan", parentId: "p6", gradeName: "11th" },
+  // Class 12th
+  { id: "s2", name: "Arooj", parentId: "p1", gradeName: "12th" },
+  { id: "s1202", name: "Momin Tariq", parentId: "p7", gradeName: "12th" },
+  { id: "s1203", name: "Seerat Manzoor", parentId: "p8", gradeName: "12th" },
 ];
 
+const feeObligations = [
+  // Class 10th
+  { id: "f1", studentId: "s1", feeAmount: 33000, month: "June", feeType: "tuition", feeStatus: "paid" },
+  { id: "f2", studentId: "s1", feeAmount: 33000, month: "July", feeType: "tuition", feeStatus: "pending" },
+  { id: "f1002", studentId: "s1002", feeAmount: 2500, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f1003", studentId: "s1003", feeAmount: 3500, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
+  // Class 11th
+  { id: "f4", studentId: "s3", feeAmount: 4000, month: "June", feeType: "tuition+transport", feeStatus: "paid" },
+  { id: "f1102", studentId: "s1102", feeAmount: 3000, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f1103", studentId: "s1103", feeAmount: 3000, month: "June", feeType: "tuition", feeStatus: "pending" },
+  // Class 12th
+  { id: "f3", studentId: "s2", feeAmount: 3000, month: "June", feeType: "tuition", feeStatus: "paid" },
+  { id: "f1202", studentId: "s1202", feeAmount: 4500, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
+  { id: "f1203", studentId: "s1203", feeAmount: 3000, month: "June", feeType: "tuition", feeStatus: "pending" },
+  // Primary & Middle Classes (1st to 9th)
+  { id: "f101", studentId: "s101", feeAmount: 1500, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f102", studentId: "s102", feeAmount: 2200, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
+  { id: "f201", studentId: "s201", feeAmount: 1600, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f202", studentId: "s202", feeAmount: 1600, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f301", studentId: "s301", feeAmount: 1800, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f302", studentId: "s302", feeAmount: 2500, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
+  { id: "f401", studentId: "s401", feeAmount: 1900, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f402", studentId: "s402", feeAmount: 1900, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f501", studentId: "s501", feeAmount: 2000, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f502", studentId: "s502", feeAmount: 2800, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
+  { id: "f601", studentId: "s601", feeAmount: 2200, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f602", studentId: "s602", feeAmount: 2200, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f701", studentId: "s701", feeAmount: 2400, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f702", studentId: "s702", feeAmount: 3200, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
+  { id: "f801", studentId: "s801", feeAmount: 2600, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f802", studentId: "s802", feeAmount: 2600, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f901", studentId: "s901", feeAmount: 2800, month: "June", feeType: "tuition", feeStatus: "pending" },
+  { id: "f902", studentId: "s902", feeAmount: 3600, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
+];
 function App() {
   const [role, setRole] = useState<Role>("parent");
   const [selectedParent, setSelectedParent] = useState("p1");
