@@ -8,7 +8,6 @@ import PayFeesForm from "./components/ParentComponents/PayFeesForm";
 import PaymentHistory from "./components/ParentComponents/PaymentHistory";
 import AdminCollectionSummary from "./components/AdminComponents/AdminCollectionsSummary";
 import AdminPaymentHistory from "./components/AdminComponents/AdminPaymentHistory";
-import type { Grades } from "./components/AdminComponents/SelectClassComponent";
 import SelectClassComponent from "./components/AdminComponents/SelectClassComponent";
 import AdminClassRoster from "./components/AdminComponents/AdminClassRoster";
 
@@ -67,40 +66,235 @@ const students = [
   { id: "s1202", name: "Momin Tariq", parentId: "p7", gradeName: "12th" },
   { id: "s1203", name: "Seerat Manzoor", parentId: "p8", gradeName: "12th" },
 ];
-
 const feeObligations = [
   // Class 10th
-  { id: "f1", studentId: "s1", feeAmount: 33000, month: "June", feeType: "tuition", feeStatus: "paid" },
-  { id: "f2", studentId: "s1", feeAmount: 33000, month: "July", feeType: "tuition", feeStatus: "pending" },
-  { id: "f1002", studentId: "s1002", feeAmount: 2500, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f1003", studentId: "s1003", feeAmount: 3500, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
+  {
+    id: "f1",
+    studentId: "s1",
+    feeAmount: 33000,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "paid",
+  },
+  {
+    id: "f2",
+    studentId: "s1",
+    feeAmount: 33000,
+    month: "July",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f1002",
+    studentId: "s1002",
+    feeAmount: 2500,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f1003",
+    studentId: "s1003",
+    feeAmount: 3500,
+    month: "June",
+    feeType: "tuition+transport",
+    feeStatus: "pending",
+  },
   // Class 11th
-  { id: "f4", studentId: "s3", feeAmount: 4000, month: "June", feeType: "tuition+transport", feeStatus: "paid" },
-  { id: "f1102", studentId: "s1102", feeAmount: 3000, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f1103", studentId: "s1103", feeAmount: 3000, month: "June", feeType: "tuition", feeStatus: "pending" },
+  {
+    id: "f4",
+    studentId: "s3",
+    feeAmount: 4000,
+    month: "June",
+    feeType: "tuition+transport",
+    feeStatus: "paid",
+  },
+  {
+    id: "f1102",
+    studentId: "s1102",
+    feeAmount: 3000,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f1103",
+    studentId: "s1103",
+    feeAmount: 3000,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
   // Class 12th
-  { id: "f3", studentId: "s2", feeAmount: 3000, month: "June", feeType: "tuition", feeStatus: "paid" },
-  { id: "f1202", studentId: "s1202", feeAmount: 4500, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
-  { id: "f1203", studentId: "s1203", feeAmount: 3000, month: "June", feeType: "tuition", feeStatus: "pending" },
+  {
+    id: "f3",
+    studentId: "s2",
+    feeAmount: 3000,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "paid",
+  },
+  {
+    id: "f1202",
+    studentId: "s1202",
+    feeAmount: 4500,
+    month: "June",
+    feeType: "tuition+transport",
+    feeStatus: "pending",
+  },
+  {
+    id: "f1203",
+    studentId: "s1203",
+    feeAmount: 3000,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
   // Primary & Middle Classes (1st to 9th)
-  { id: "f101", studentId: "s101", feeAmount: 1500, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f102", studentId: "s102", feeAmount: 2200, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
-  { id: "f201", studentId: "s201", feeAmount: 1600, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f202", studentId: "s202", feeAmount: 1600, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f301", studentId: "s301", feeAmount: 1800, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f302", studentId: "s302", feeAmount: 2500, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
-  { id: "f401", studentId: "s401", feeAmount: 1900, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f402", studentId: "s402", feeAmount: 1900, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f501", studentId: "s501", feeAmount: 2000, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f502", studentId: "s502", feeAmount: 2800, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
-  { id: "f601", studentId: "s601", feeAmount: 2200, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f602", studentId: "s602", feeAmount: 2200, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f701", studentId: "s701", feeAmount: 2400, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f702", studentId: "s702", feeAmount: 3200, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
-  { id: "f801", studentId: "s801", feeAmount: 2600, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f802", studentId: "s802", feeAmount: 2600, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f901", studentId: "s901", feeAmount: 2800, month: "June", feeType: "tuition", feeStatus: "pending" },
-  { id: "f902", studentId: "s902", feeAmount: 3600, month: "June", feeType: "tuition+transport", feeStatus: "pending" },
+  {
+    id: "f101",
+    studentId: "s101",
+    feeAmount: 1500,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f102",
+    studentId: "s102",
+    feeAmount: 2200,
+    month: "June",
+    feeType: "tuition+transport",
+    feeStatus: "pending",
+  },
+  {
+    id: "f201",
+    studentId: "s201",
+    feeAmount: 1600,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f202",
+    studentId: "s202",
+    feeAmount: 1600,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f301",
+    studentId: "s301",
+    feeAmount: 1800,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f302",
+    studentId: "s302",
+    feeAmount: 2500,
+    month: "June",
+    feeType: "tuition+transport",
+    feeStatus: "pending",
+  },
+  {
+    id: "f401",
+    studentId: "s401",
+    feeAmount: 1900,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f402",
+    studentId: "s402",
+    feeAmount: 1900,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f501",
+    studentId: "s501",
+    feeAmount: 2000,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f502",
+    studentId: "s502",
+    feeAmount: 2800,
+    month: "June",
+    feeType: "tuition+transport",
+    feeStatus: "pending",
+  },
+  {
+    id: "f601",
+    studentId: "s601",
+    feeAmount: 2200,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f602",
+    studentId: "s602",
+    feeAmount: 2200,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f701",
+    studentId: "s701",
+    feeAmount: 2400,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f702",
+    studentId: "s702",
+    feeAmount: 3200,
+    month: "June",
+    feeType: "tuition+transport",
+    feeStatus: "pending",
+  },
+  {
+    id: "f801",
+    studentId: "s801",
+    feeAmount: 2600,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f802",
+    studentId: "s802",
+    feeAmount: 2600,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f901",
+    studentId: "s901",
+    feeAmount: 2800,
+    month: "June",
+    feeType: "tuition",
+    feeStatus: "pending",
+  },
+  {
+    id: "f902",
+    studentId: "s902",
+    feeAmount: 3600,
+    month: "June",
+    feeType: "tuition+transport",
+    feeStatus: "pending",
+  },
 ];
 function App() {
   const [role, setRole] = useState<Role>("parent");
@@ -176,10 +370,12 @@ function App() {
     (acc, curr) => acc + curr.feeAmount,
     0,
   );
+
   const totalPaid = filteredPayments.reduce(
     (acc, curr) => acc + curr.amount,
     0,
   );
+
   const currentNetBalance = totalFees - totalPaid;
 
   return (
@@ -239,7 +435,6 @@ function App() {
             ) : (
               <div>
                 <div>
-                  
                   <SelectClassComponent
                     classGrade={gradeArray}
                     selectedGrade={pickGrade}
