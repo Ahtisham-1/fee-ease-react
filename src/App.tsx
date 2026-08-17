@@ -10,20 +10,22 @@ import AdminCollectionSummary from "./components/AdminComponents/AdminCollection
 import AdminPaymentHistory from "./components/AdminComponents/AdminPaymentHistory";
 import SelectClassComponent from "./components/AdminComponents/SelectClassComponent";
 import AdminClassRoster from "./components/AdminComponents/AdminClassRoster";
+import type { NewStudentData } from "./components/AdminComponents/AdminAddStudentForm";
+import AdminAddStudentForm from "./components/AdminComponents/AdminAddStudentForm";
 
 const parents = [
-  { id: "p1", name: "Quyoom", phone: "7889123123" },
-  { id: "p2", name: "Mukhtar", phone: "9797123123" },
-  { id: "p3", name: "Farooq Ahmad", phone: "9419123456" },
-  { id: "p4", name: "Altaf Hussain", phone: "9906112233" },
-  { id: "p5", name: "Bashir Ahmad", phone: "9796001122" },
-  { id: "p6", name: "Ghulam Hassan", phone: "9419003344" },
-  { id: "p7", name: "Tariq Ahmad", phone: "9622887766" },
-  { id: "p8", name: "Manzoor Ahmad", phone: "9596443322" },
-  { id: "p9", name: "Mushtaq Ahmad", phone: "9858119988" },
-  { id: "p10", name: "Shabir Ahmad", phone: "7006554433" },
-  { id: "p11", name: "Mohammad Ashraf", phone: "9149778899" },
-  { id: "p12", name: "Reyaz Ahmad", phone: "9797556677" },
+  { id: "p1", name: "Quyoom", phone: "123456" },
+  { id: "p2", name: "Mukhtar", phone: "123456" },
+  { id: "p3", name: "Farooq Ahmad", phone: "123456" },
+  { id: "p4", name: "Altaf Hussain", phone: "123456" },
+  { id: "p5", name: "Bashir Ahmad", phone: "123456" },
+  { id: "p6", name: "Ghulam Hassan", phone: "123456" },
+  { id: "p7", name: "Tariq Ahmad", phone: "123456" },
+  { id: "p8", name: "Manzoor Ahmad", phone: "123456" },
+  { id: "p9", name: "Mushtaq Ahmad", phone: "123456" },
+  { id: "p10", name: "Shabir Ahmad", phone: "123456" },
+  { id: "p11", name: "Mohammad Ashraf", phone: "123456" },
+  { id: "p12", name: "Reyaz Ahmad", phone: "123456" },
 ];
 const students = [
   // Class 1st
@@ -305,6 +307,45 @@ function App() {
   const [subTab, setSubTab] = useState("dashboard");
   const [pickGrade, setPickGrade] = useState("ist");
 
+  const [studentList, setStudentList] = useState(students);
+  const [parentList, setParentList] = useState(parents);
+  const [feeObligationList, setfeeObligationList] = useState(feeObligations);
+
+  function handleAddStudent({
+    studentName,
+    parentName,
+    phone,
+    grade,
+    tuitionFee,
+    hasTransport,
+  }: NewStudentData) {
+    const newParentObject = {
+      id: `p1-${Date.now()}`,
+      name: parentName,
+      phone: phone,
+    };
+
+    const newStudentObject = {
+      id: `s1-${Date.now()}`,
+      name: studentName,
+      gradeName: grade,
+      parentId: newParentObject.id,
+    };
+
+    const newObligationObject = {
+      id: `f1-${Date.now()}`,
+      feeAmount: tuitionFee + (hasTransport ? 1000 : 0),
+      month: "June",
+      feeType: hasTransport ? "tuition+transport" : "tuition",
+      feeStatus: "Pending",
+      studentId: newStudentObject.id,
+    };
+
+    setParentList([...parentList, newParentObject]);
+    setStudentList([...studentList, newStudentObject]);
+    setfeeObligationList([...feeObligationList, newObligationObject]);
+  }
+
   const gradeArray = [
     "1st",
     "2nd",
@@ -349,18 +390,18 @@ function App() {
     (filteredList) => filteredList.belongsTo === selectedStudent,
   );
 
-  const filteredStudents = students.filter(
+  const filteredStudents = studentList.filter(
     (student) => student.parentId === selectedParent,
   );
 
-  const filteredFeeObligations = feeObligations.filter(
+  const filteredFeeObligations = feeObligationList.filter(
     (feeObligationStudents) =>
       feeObligationStudents.studentId === selectedStudent,
   );
 
   function handleParentChange(parentId: string) {
     setSelectedParent(parentId);
-    const filteredStudent = students.filter(
+    const filteredStudent = studentList.filter(
       (student) => parentId === student.parentId,
     );
     setSelectedStudent(filteredStudent[0].id);
@@ -387,7 +428,7 @@ function App() {
           <div className="parent-grid">
             <div className="column-left">
               <ParentStudentSelector
-                parents={parents}
+                parents={parentList}
                 students={filteredStudents}
                 selectedParentId={selectedParent}
                 selectedStudentId={selectedStudent}
@@ -441,11 +482,15 @@ function App() {
                     onSelectGrade={setPickGrade}
                   />
                   <AdminClassRoster
-                    students={students}
-                    parents={parents}
-                    feeObligations={feeObligations}
+                    students={studentList}
+                    parents={parentList}
+                    feeObligations={feeObligationList}
                     payments={payments}
                     selectedGrade={pickGrade}
+                  />
+                  <AdminAddStudentForm
+                    classGrade={gradeArray}
+                    onAddStudent={handleAddStudent}
                   />
                 </div>
               </div>

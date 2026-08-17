@@ -42,6 +42,12 @@ function AdminAddStudentForm({
       tuitionFee,
       hasTransport,
     });
+    setStudentName("");
+    setParentName("");
+    setPhone("");
+    setGrade("");
+    setTuitionFee(1500);
+    setHasTransport(false);
   }
   return (
     <form onSubmit={handleSubmit} className="card">
@@ -58,7 +64,7 @@ function AdminAddStudentForm({
         onChange={(e) => setParentName(e.target.value)}
       />
       <input
-        type="text"
+        type="number"
         placeholder="Add phone number"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
