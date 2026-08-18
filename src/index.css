@@ -437,6 +437,53 @@ select:focus, .custom-select:focus {
   border-color: var(--accent-color);
 }
 
+/* Compact Class Dropdown */
+.class-selector-wrapper {
+  margin-bottom: 1.25rem;
+}
+
+.class-selector {
+  max-width: 220px;
+  margin-bottom: 0;
+  font-weight: 600;
+  border-color: #3f3f46;
+}
+
+/* 2-Column Form Grid Layout */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 700px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  background-color: #18181b;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  height: 48px;
+  transition: all 0.2s ease;
+}
+
+.checkbox-label:hover {
+  color: var(--text-primary);
+  border-color: #3f3f46;
+}
+
 /* Global Form Inputs & Buttons */
 form input[type="text"],
 form input[type="number"],

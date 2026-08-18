@@ -51,42 +51,47 @@ function AdminAddStudentForm({
   }
   return (
     <form onSubmit={handleSubmit} className="card">
-      <input
-        type="text"
-        placeholder="Add student name"
-        value={studentName}
-        onChange={(e) => setStudentName(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Add parent name"
-        value={parentName}
-        onChange={(e) => setParentName(e.target.value)}
-      />
-      <input
-        type="number"
-        placeholder="Add phone number"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Add grade"
-        value={grade}
-        onChange={(e) => setGrade(e.target.value)}
-      />
-      <input
-        type="number"
-        placeholder="Add tuition fee"
-        value={tuitionFee}
-        onChange={(e) => setTuitionFee(Number(e.target.value))}
-      />
-      <input
-        type="checkbox"
-        checked={hasTransport}
-        onChange={(e) => setHasTransport(e.target.checked)}
-      />
-      <br />
+      <div className="card-title">ENROLL NEW STUDENT & PARENT</div>
+      <div className="form-grid">
+        <input
+          type="text"
+          placeholder="Student name"
+          value={studentName}
+          onChange={(e) => setStudentName(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Parent / Father name"
+          value={parentName}
+          onChange={(e) => setParentName(e.target.value)}
+        />
+        <input
+          type="number"
+          placeholder="Parent phone number"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Class / Grade (e.g. 1st, 10th)"
+          value={grade}
+          onChange={(e) => setGrade(e.target.value)}
+        />
+        <input
+          type="number"
+          placeholder="Monthly Tuition Fee (₹)"
+          value={tuitionFee}
+          onChange={(e) => setTuitionFee(Number(e.target.value))}
+        />
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={hasTransport}
+            onChange={(e) => setHasTransport(e.target.checked)}
+          />
+          Include Transport Service (+₹1,000)
+        </label>
+      </div>
       <button type="submit">Add Student Details</button>
     </form>
   );

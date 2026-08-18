@@ -15,8 +15,9 @@ function SelectClassComponent({
 }: SelectClassComponentProps) {
   return (
     <>
-      <div>
+      <div className="class-selector-wrapper">
         <select
+          className="class-selector"
           value={selectedGrade}
           onChange={(e) => onSelectGrade(e.target.value)}
         >
