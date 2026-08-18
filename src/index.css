@@ -252,42 +252,20 @@ body {
 .pay-form {
   display: flex;
   gap: 0.75rem;
+  align-items: center;
 }
 
-.pay-input {
+.pay-form .pay-input {
   flex: 1;
-  background-color: #18181b;
-  border: 1px solid var(--card-border);
-  color: var(--text-primary);
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  outline: none;
-  transition: border-color 0.2s ease;
+  width: auto;
+  margin-bottom: 0;
 }
 
-.pay-input:focus {
-  border-color: var(--accent-color);
-}
-
-.pay-btn {
-  background-color: var(--accent-color);
-  color: #ffffff;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.pay-btn:hover {
-  background-color: var(--accent-hover);
-}
-
-.pay-btn:active {
-  transform: scale(0.98);
+.pay-form .pay-btn {
+  width: auto;
+  white-space: nowrap;
+  margin-top: 0;
+  flex-shrink: 0;
 }
 
 /* Payment History Component */
