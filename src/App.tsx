@@ -319,19 +319,22 @@ function App() {
     tuitionFee,
     hasTransport,
   }: NewStudentData) {
-    const newParentObject = {
-      id: `p1-${Date.now()}`,
-      name: parentName,
-      phone: phone,
-    };
-
+    const existingParnet = parentList.find((p) => p.phone === phone);
+    const parentID = existingParnet ? existingParnet.id : `p-${Date.now()}`;
+    if (!existingParnet) {
+      const newParentObject = {
+        id: parentID,
+        name: parentName,
+        phone: phone,
+      };
+      setParentList([...parentList, newParentObject]);
+    }
     const newStudentObject = {
       id: `s1-${Date.now()}`,
       name: studentName,
       gradeName: grade,
-      parentId: newParentObject.id,
+      parentId: parentID,
     };
-
     const newObligationObject = {
       id: `f1-${Date.now()}`,
       feeAmount: tuitionFee + (hasTransport ? 1000 : 0),
@@ -340,8 +343,6 @@ function App() {
       feeStatus: "Pending",
       studentId: newStudentObject.id,
     };
-
-    setParentList([...parentList, newParentObject]);
     setStudentList([...studentList, newStudentObject]);
     setfeeObligationList([...feeObligationList, newObligationObject]);
   }
