@@ -324,3 +324,196 @@ body {
   font-size: 0.9rem;
   font-style: italic;
 }
+
+/* Admin Sub-Navigation */
+.navigation-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background: #18181b;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  width: fit-content;
+}
+
+.navigation-bar button {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.navigation-bar button:hover {
+  color: var(--text-primary);
+}
+
+.navigation-bar button.active {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Admin Class Roster & Student Rows */
+.roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.roster-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #18181b;
+  border: 1px solid #29292e;
+  padding: 0.9rem 1.2rem;
+  border-radius: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.roster-row:hover {
+  border-color: #3f3f46;
+}
+
+.student-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.parent-info {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.due-amount {
+  font-weight: 700;
+  color: var(--warning-color);
+  font-size: 0.95rem;
+}
+
+.edit-btn {
+  background: #27272a;
+  color: var(--text-primary);
+  border: 1px solid #3f3f46;
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-btn:hover {
+  background: #3f3f46;
+  border-color: var(--accent-color);
+}
+
+/* Admin Add Student Form */
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-input {
+  background-color: #18181b;
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+  width: 100%;
+}
+
+.form-input:focus {
+  border-color: var(--accent-color);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  accent-color: var(--accent-color);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Modal Overlay & Dialog */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-card {
+  max-width: 480px;
+  width: 100%;
+  background-color: #1c1c1f;
+  border: 1px solid #38383e;
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  animation: slideUp 0.2s ease-out;
+}
+
+.modal-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
