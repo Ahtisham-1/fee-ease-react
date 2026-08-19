@@ -1,25 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
   /* Apple Signature Light Palette */
   --bg-color: #f5f5f7;
   --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.07);
-  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
-  --card-shadow-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
+  --card-border: rgba(0, 0, 0, 0.08);
+  
+  /* Richer Apple Ambient Shadows */
+  --card-shadow: 0 8px 28px -4px rgba(0, 0, 0, 0.08), 0 2px 8px -1px rgba(0, 0, 0, 0.04);
+  --card-shadow-hover: 0 20px 48px -6px rgba(0, 0, 0, 0.13), 0 4px 14px -2px rgba(0, 0, 0, 0.06);
   
   --accent-color: #0071e3;
   --accent-hover: #0077ed;
   --accent-active: #0062c4;
   
-  --text-primary: #1d1d1f;
-  --text-secondary: #86868b;
-  --text-muted: #a1a1a6;
+  --text-primary: #111113;
+  --text-secondary: #6e6e73;
+  --text-muted: #86868b;
   
-  --success-bg: rgba(52, 199, 89, 0.12);
-  --success-text: #248a3d;
-  --warning-bg: rgba(255, 149, 0, 0.12);
-  --warning-text: #c96f00;
+  --success-bg: rgba(52, 199, 89, 0.15);
+  --success-text: #1d7e35;
+  --warning-bg: rgba(255, 149, 0, 0.15);
+  --warning-text: #b86200;
   
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -44,7 +46,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   line-height: 1.5;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 /* Layout */
@@ -96,21 +98,21 @@ body {
 }
 
 .card-title {
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
+  letter-spacing: 0.07em;
+  color: var(--text-primary);
   margin-bottom: 1.25rem;
 }
 
 /* Header Component */
 .header-bar {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 1rem 1.5rem;
+  padding: 1.1rem 1.5rem;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -125,27 +127,27 @@ body {
 }
 
 .header-title {
-  font-size: 1.35rem;
-  font-weight: 700;
+  font-size: 1.45rem;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
 }
 
 .role-switcher {
   display: flex;
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 3px;
+  background-color: #ebebed;
+  padding: 4px;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .role-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  padding: 0.45rem 1.25rem;
+  padding: 0.45rem 1.35rem;
   border-radius: var(--radius-pill);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.82rem;
   cursor: pointer;
   transition: var(--transition);
@@ -158,7 +160,8 @@ body {
 .role-btn.active {
   background: #ffffff;
   color: var(--text-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.04);
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* Selectors */
@@ -414,12 +417,12 @@ select:focus, .custom-select:focus {
 /* Admin Sub-Navigation */
 .navigation-bar {
   display: flex;
-  gap: 0.35rem;
-  margin-bottom: 1.75rem;
-  background: #f5f5f7;
+  gap: 0.4rem;
+  margin-bottom: 2rem;
+  background: #ebebed;
   padding: 4px;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   width: fit-content;
 }
 
@@ -427,12 +430,13 @@ select:focus, .custom-select:focus {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  padding: 0.5rem 1.35rem;
+  padding: 0.55rem 1.45rem;
   border-radius: var(--radius-pill);
-  font-weight: 600;
-  font-size: 0.84rem;
+  font-weight: 700;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: var(--transition);
+  font-family: inherit;
 }
 
 .navigation-bar button:hover {
@@ -442,7 +446,8 @@ select:focus, .custom-select:focus {
 .navigation-bar button.active {
   background-color: #ffffff;
   color: var(--text-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-weight: 800;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* Admin Class Roster & Student Rows */

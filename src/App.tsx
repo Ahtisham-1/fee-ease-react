@@ -490,12 +490,15 @@ function App() {
           <div className="card">
             <nav className="navigation-bar">
               <button
-                className="dashboard"
+                className={subTab === "dashboard" ? "active" : ""}
                 onClick={() => setSubTab("dashboard")}
               >
                 Dashboard
               </button>
-              <button className="classes" onClick={() => setSubTab("classes")}>
+              <button
+                className={subTab === "classes" ? "active" : ""}
+                onClick={() => setSubTab("classes")}
+              >
                 Classes
               </button>
             </nav>
