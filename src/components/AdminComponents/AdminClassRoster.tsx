@@ -9,14 +9,16 @@ export interface AdminClassRosterProps {
   feeObligations: FeeObligation[];
   payments: Payment[];
   selectedGrade: string;
+  onEditStudent: (student: Student) => void;
 }
-  
+
 function AdminClassRoster({
   students,
   parents,
   feeObligations,
   payments,
   selectedGrade,
+  onEditStudent,
 }: AdminClassRosterProps) {
   // 1. Filter students to only those in the selected grade
   const matchingStudentGrade = students.filter(
@@ -57,7 +59,12 @@ function AdminClassRoster({
                 <span>
                   Pending: <strong>₹{total}</strong>
                 </span>
-                <button className="role-btn">Edit</button>
+                <button
+                  className="role-btn"
+                  onClick={() => onEditStudent(studentN)}
+                >
+                  Edit
+                </button>
               </div>
             );
           })}

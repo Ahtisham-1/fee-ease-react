@@ -1,7 +1,9 @@
 import { useState } from "react";
 import Header from "./components/Header";
 import type { Role } from "./components/Header";
-import ParentStudentSelector from "./components/ParentComponents/ParentStudentSelector";
+import ParentStudentSelector, {
+  type Student,
+} from "./components/ParentComponents/ParentStudentSelector";
 import FeeDetail from "./components/ParentComponents/FeeDetail";
 import type { Payment } from "./components/ParentComponents/PayFeesForm";
 import PayFeesForm from "./components/ParentComponents/PayFeesForm";
@@ -12,6 +14,8 @@ import SelectClassComponent from "./components/AdminComponents/SelectClassCompon
 import AdminClassRoster from "./components/AdminComponents/AdminClassRoster";
 import type { NewStudentData } from "./components/AdminComponents/AdminAddStudentForm";
 import AdminAddStudentForm from "./components/AdminComponents/AdminAddStudentForm";
+import AdminEditStudentModal from "./components/AdminComponents/AdminEditStudentModal";
+import type { AdminClassRosterProps } from "./components/AdminComponents/AdminClassRoster";
 
 const parents = [
   { id: "p1", name: "Quyoom", phone: "123456" },
@@ -311,6 +315,39 @@ function App() {
   const [parentList, setParentList] = useState(parents);
   const [feeObligationList, setfeeObligationList] = useState(feeObligations);
 
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  function openHandler(student: Student) {
+    setEditingStudent(student);
+    setIsEditModalOpen(true);
+  }
+  function handleSaveStudent(
+    studentId: string,
+    newStudentName: string,
+    newParentName: string,
+    newPhone: string,
+  ) {
+    const updatedStudentArray = studentList.map((editStudent) =>
+      editStudent.id === studentId
+        ? { ...editStudent, name: newStudentName }
+        : editStudent,
+    );
+    setStudentList(updatedStudentArray);
+
+    const updatedParentArray = parentList.map((editParent) =>
+      editParent.id === editingStudent?.parentId
+        ? {
+            ...editParent,
+            name: newParentName,
+            phone: newPhone,
+          }
+        : editParent,
+    );
+    setParentList(updatedParentArray);
+
+  }
+
   function handleAddStudent({
     studentName,
     parentName,
@@ -488,10 +525,20 @@ function App() {
                     feeObligations={feeObligationList}
                     payments={payments}
                     selectedGrade={pickGrade}
+                    onEditStudent={openHandler}
                   />
                   <AdminAddStudentForm
                     classGrade={gradeArray}
                     onAddStudent={handleAddStudent}
+                  />
+                  <AdminEditStudentModal
+                    student={editingStudent}
+                    parent={parentList.find(
+                      (p) => p.id === editingStudent?.parentId,
+                    )}
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    onSave={handleSaveStudent}
                   />
                 </div>
               </div>
