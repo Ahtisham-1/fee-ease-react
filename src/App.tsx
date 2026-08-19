@@ -345,7 +345,6 @@ function App() {
         : editParent,
     );
     setParentList(updatedParentArray);
-
   }
 
   function handleAddStudent({
@@ -539,6 +538,7 @@ function App() {
                     isOpen={isEditModalOpen}
                     onClose={() => setIsEditModalOpen(false)}
                     onSave={handleSaveStudent}
+                    key={editingStudent?.id}
                   />
                 </div>
               </div>

@@ -35,6 +35,12 @@ function AdminEditStudentModal({
     if (!student) return;
     e.preventDefault();
     onSave(student.id, studentName, parentName, phone);
+    (setStudentName(""), setParentName(""), setPhone(""));
+    onClose();
+  }
+
+  function handleCloseModal() {
+    (setStudentName(""), setParentName(""), setPhone(""));
     onClose();
   }
   return (
@@ -65,7 +71,7 @@ function AdminEditStudentModal({
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
-          <button type="button" onClick={onClose} className="role-btn">
+          <button type="button" onClick={handleCloseModal} className="role-btn">
             Cancel
           </button>
           <button type="submit" className="pay-btn">
