@@ -11,7 +11,11 @@ interface AdminAssignFeesFormProps {
   pickMonth: string[];
   pickClass: string[];
   onInputChange: (value: number) => void;
-  onSubmitFeesForm: () => void;
+  onSubmitFeesForm: (
+    targetClass: string,
+    targetMonth: string,
+    amount: number,
+  ) => void;
 }
 
 function AdminAssignFeesForm({
@@ -21,8 +25,16 @@ function AdminAssignFeesForm({
   onSubmitFeesForm,
   onInputChange,
 }: AdminAssignFeesFormProps) {
+  const [selectedMonth, setSelectedMonth] = useState(pickMonth[0]);
+  const [selectedClass, setSelectedClass] = useState(pickClass[0]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    onSubmitFeesForm(selectedClass, selectedMonth, assignFees);
+  }
+
   return (
-    <form typeof="submit">
+    <form onSubmit={handleSubmit}>
       <div>
         <input
           type="number"
@@ -33,22 +45,27 @@ function AdminAssignFeesForm({
       </div>
       <div>
         <span>
-          <select name="" id="">
-            Pick a Month
+          value={selectedMonth}
+          <select>
+            Pick Month
             {pickMonth.map((month) => (
-              <option>{month}</option>
+              <option onChange={(e) => setSelectedMonth(e.target.value)}>
+                {month}
+              </option>
             ))}
           </select>
         </span>
         <span>
-          <select name="" id="">
-            Pick class to Assign Fees
+          <select value={selectedClass}>
+            Pick Grade
             {pickClass.map((classGrade) => (
-              <option>{classGrade}</option>
+              <option onChange={(e) => setSelectedClass(e.target.value)}>
+                {classGrade}
+              </option>
             ))}
           </select>
         </span>
-        <button onClick={onSubmitFeesForm}>submit fees</button>
+        <button onClick={handleSubmit}>submit fees</button>
       </div>
     </form>
   );

@@ -322,13 +322,6 @@ function App() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [inputAssignFees, setInputAssignFees] = useState(1500);
 
-  function handleFeesForm() {
-
-    
-
-
-  }
-
   const months = [
     "Jan",
     "feb",
@@ -584,7 +577,7 @@ function App() {
                 onInputChange={setInputAssignFees}
                 pickMonth={months}
                 pickClass={gradeArray}
-                // onSubmitFeesForm={}
+                onSubmitFeesForm={}
               />
             )}
           </div>
