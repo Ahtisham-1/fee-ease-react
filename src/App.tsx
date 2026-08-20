@@ -17,6 +17,9 @@ import AdminAddStudentForm from "./components/AdminComponents/AdminAddStudentFor
 import AdminEditStudentModal from "./components/AdminComponents/AdminEditStudentModal";
 import type { AdminClassRosterProps } from "./components/AdminComponents/AdminClassRoster";
 
+import type { AssignFeesForm } from "./components/AdminComponents/AdminAssignFeesForm";
+import AdminAssignFeesForm from "./components/AdminComponents/AdminAssignFeesForm";
+
 const parents = [
   { id: "p1", name: "Quyoom", phone: "123456" },
   { id: "p2", name: "Mukhtar", phone: "123456" },
@@ -317,6 +320,29 @@ function App() {
 
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [inputAssignFees, setInputAssignFees] = useState(1500);
+
+  function handleFeesForm() {
+
+    
+
+
+  }
+
+  const months = [
+    "Jan",
+    "feb",
+    "march",
+    "april",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
+  ];
 
   function openHandler(student: Student) {
     setEditingStudent(student);
@@ -501,6 +527,13 @@ function App() {
               >
                 Classes
               </button>
+
+              <button
+                className={subTab === "assignFees" ? "active" : ""}
+                onClick={() => setSubTab("assignFees")}
+              >
+                Assign Fees
+              </button>
             </nav>
 
             {subTab === "dashboard" ? (
@@ -513,7 +546,7 @@ function App() {
                   feeObligations={feeObligations}
                 />
               </div>
-            ) : (
+            ) : subTab === "classes" ? (
               <div>
                 <div>
                   <SelectClassComponent
@@ -545,6 +578,14 @@ function App() {
                   />
                 </div>
               </div>
+            ) : (
+              <AdminAssignFeesForm
+                assignFees={inputAssignFees}
+                onInputChange={setInputAssignFees}
+                pickMonth={months}
+                pickClass={gradeArray}
+                // onSubmitFeesForm={}
+              />
             )}
           </div>
         )}
