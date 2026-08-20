@@ -322,6 +322,25 @@ function App() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [inputAssignFees, setInputAssignFees] = useState(1500);
 
+  function handleFeesForm(
+    targetClass: string,
+    targetMonth: string,
+    assignFees: number,
+  ) {
+    const filterTargetClassStudents = studentList.filter(
+      (student) => student.gradeName === targetClass,
+    );
+    const mappedStudents = filterTargetClassStudents.map((s) => ({
+      id: `f${s.id}-${Date.now()}`,
+      studentId: s.id,
+      feeAmount: assignFees,
+      month: targetMonth,
+      feeType: "tuition",
+      feeStatus: "pending",
+    }));
+    setfeeObligationList([...feeObligationList, ...mappedStudents]);
+  }
+
   const months = [
     "Jan",
     "feb",
@@ -577,7 +596,7 @@ function App() {
                 onInputChange={setInputAssignFees}
                 pickMonth={months}
                 pickClass={gradeArray}
-                onSubmitFeesForm={}
+                onSubmitFeesForm={handleFeesForm}
               />
             )}
           </div>

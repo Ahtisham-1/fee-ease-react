@@ -31,6 +31,8 @@ function AdminAssignFeesForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSubmitFeesForm(selectedClass, selectedMonth, assignFees);
+    setSelectedClass(pickMonth[0]);
+    setSelectedMonth(pickClass[0]);
   }
 
   return (
@@ -45,23 +47,24 @@ function AdminAssignFeesForm({
       </div>
       <div>
         <span>
-          value={selectedMonth}
-          <select>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+          >
             Pick Month
             {pickMonth.map((month) => (
-              <option onChange={(e) => setSelectedMonth(e.target.value)}>
-                {month}
-              </option>
+              <option>{month}</option>
             ))}
           </select>
         </span>
         <span>
-          <select value={selectedClass}>
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+          >
             Pick Grade
             {pickClass.map((classGrade) => (
-              <option onChange={(e) => setSelectedClass(e.target.value)}>
-                {classGrade}
-              </option>
+              <option>{classGrade}</option>
             ))}
           </select>
         </span>
