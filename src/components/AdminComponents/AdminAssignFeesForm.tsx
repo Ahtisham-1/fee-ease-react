@@ -31,45 +31,61 @@ function AdminAssignFeesForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSubmitFeesForm(selectedClass, selectedMonth, assignFees);
-    setSelectedClass(pickMonth[0]);
-    setSelectedMonth(pickClass[0]);
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div>
-        <input
-          type="number"
-          placeholder="Assign Fees"
-          value={assignFees}
-          onChange={(e) => onInputChange(Number(e.target.value))}
-        />
-      </div>
-      <div>
-        <span>
+    <form onSubmit={handleSubmit} className="admin-form-container">
+      <div className="card-title">MASS MONTHLY FEE ASSIGNMENT</div>
+      <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1.5rem" }}>
+        Assign and generate monthly fee obligations for all students in a selected class simultaneously.
+      </p>
+
+      <div className="form-grid">
+        <div className="selector-field">
+          <label className="selector-label">TARGET CLASS</label>
           <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-          >
-            Pick Month
-            {pickMonth.map((month) => (
-              <option>{month}</option>
-            ))}
-          </select>
-        </span>
-        <span>
-          <select
+            className="custom-select"
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
           >
-            Pick Grade
             {pickClass.map((classGrade) => (
-              <option>{classGrade}</option>
+              <option key={classGrade} value={classGrade}>
+                Class {classGrade}
+              </option>
             ))}
           </select>
-        </span>
-        <button onClick={handleSubmit}>submit fees</button>
+        </div>
+
+        <div className="selector-field">
+          <label className="selector-label">BILLING MONTH</label>
+          <select
+            className="custom-select"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+          >
+            {pickMonth.map((month) => (
+              <option key={month} value={month}>
+                {month}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      <div className="selector-field" style={{ marginTop: "0.5rem", marginBottom: "1.5rem" }}>
+        <label className="selector-label">MONTHLY TUITION AMOUNT (₹)</label>
+        <input
+          type="number"
+          placeholder="e.g. 2500"
+          value={assignFees}
+          onChange={(e) => onInputChange(Number(e.target.value))}
+          style={{ width: "100%" }}
+        />
+      </div>
+
+      <button type="submit">
+        Generate Monthly Fees for Class {selectedClass}
+      </button>
     </form>
   );
 }

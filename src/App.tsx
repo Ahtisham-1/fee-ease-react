@@ -323,8 +323,6 @@ function App() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [inputAssignFees, setInputAssignFees] = useState(1500);
-
-  // const [showStudents, setShowStudents] = useState("");
   const [gradeClasses, setGradeClasses] = useState("1st");
 
   const filteredStudent = studentList.filter(
