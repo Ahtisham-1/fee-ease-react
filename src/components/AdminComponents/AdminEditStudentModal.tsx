@@ -2,8 +2,8 @@ import { useState } from "react";
 import type { Student } from "../ParentComponents/ParentStudentSelector";
 import type { Parent } from "../ParentComponents/ParentStudentSelector";
 export interface AdminEditStudentModalProps {
-  student: Student | undefined;
-  parent: Parent | undefined;
+  student: Student | null | undefined;
+  parent: Parent | null | undefined;
   isOpen: boolean;
   onClose: () => void;
   onSave: (

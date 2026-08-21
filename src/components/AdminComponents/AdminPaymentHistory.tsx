@@ -1,17 +1,14 @@
 import type { Payment } from "../ParentComponents/PayFeesForm";
 import type { Student } from "../ParentComponents/ParentStudentSelector";
-import type { FeeObligation } from "../ParentComponents/FeeDetail";
 
 export interface AdminPaymentHistoryProps {
   payments: Payment[];
   students: Student[];
-  feeObligations: FeeObligation[];
 }
 
 function AdminPaymentHistory({
   payments,
   students,
-  feeObligations,
 }: AdminPaymentHistoryProps) {
 
   return (

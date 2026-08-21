@@ -4,7 +4,9 @@ import type { Role } from "./components/Header";
 import ParentStudentSelector, {
   type Student,
 } from "./components/ParentComponents/ParentStudentSelector";
-import FeeDetail from "./components/ParentComponents/FeeDetail";
+import FeeDetail, {
+  type FeeObligation,
+} from "./components/ParentComponents/FeeDetail";
 import type { Payment } from "./components/ParentComponents/PayFeesForm";
 import PayFeesForm from "./components/ParentComponents/PayFeesForm";
 import PaymentHistory from "./components/ParentComponents/PaymentHistory";
@@ -15,11 +17,7 @@ import AdminClassRoster from "./components/AdminComponents/AdminClassRoster";
 import type { NewStudentData } from "./components/AdminComponents/AdminAddStudentForm";
 import AdminAddStudentForm from "./components/AdminComponents/AdminAddStudentForm";
 import AdminEditStudentModal from "./components/AdminComponents/AdminEditStudentModal";
-import type { AdminClassRosterProps } from "./components/AdminComponents/AdminClassRoster";
-
-import type { AssignFeesForm } from "./components/AdminComponents/AdminAssignFeesForm";
 import AdminAssignFeesForm from "./components/AdminComponents/AdminAssignFeesForm";
-
 import AdminPromoteClass from "./components/AdminComponents/AdminPromoteClass";
 
 const parents = [
@@ -77,7 +75,7 @@ const students = [
   { id: "s1202", name: "Momin Tariq", parentId: "p7", gradeName: "12th" },
   { id: "s1203", name: "Seerat Manzoor", parentId: "p8", gradeName: "12th" },
 ];
-const feeObligations = [
+const feeObligations: FeeObligation[] = [
   // Class 10th
   {
     id: "f1",
@@ -353,7 +351,7 @@ function App() {
     const filterTargetClassStudents = studentList.filter(
       (student) => student.gradeName === targetClass,
     );
-    const mappedStudents = filterTargetClassStudents.map((s) => ({
+    const mappedStudents: FeeObligation[] = filterTargetClassStudents.map((s) => ({
       id: `f${s.id}-${Date.now()}`,
       studentId: s.id,
       feeAmount: assignFees,
@@ -432,12 +430,12 @@ function App() {
       gradeName: grade,
       parentId: parentID,
     };
-    const newObligationObject = {
+    const newObligationObject: FeeObligation = {
       id: `f1-${Date.now()}`,
       feeAmount: tuitionFee + (hasTransport ? 1000 : 0),
       month: "June",
       feeType: hasTransport ? "tuition+transport" : "tuition",
-      feeStatus: "Pending",
+      feeStatus: "pending",
       studentId: newStudentObject.id,
     };
     setStudentList([...studentList, newStudentObject]);
@@ -585,7 +583,6 @@ function App() {
                 <AdminPaymentHistory
                   payments={payments}
                   students={students}
-                  feeObligations={feeObligations}
                 />
               </div>
             ) : subTab === "classes" ? (
