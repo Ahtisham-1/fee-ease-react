@@ -314,7 +314,7 @@ function App() {
   const [payments, setPayments] = useState<Payment[]>([]);
 
   const [subTab, setSubTab] = useState("dashboard");
-  const [pickGrade, setPickGrade] = useState("ist");
+  const [pickGrade, setPickGrade] = useState("1st");
 
   const [studentList, setStudentList] = useState(students);
   const [parentList, setParentList] = useState(parents);
@@ -324,14 +324,23 @@ function App() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [inputAssignFees, setInputAssignFees] = useState(1500);
 
-  // const [showStudents, setShowStudents] = useState("");
-  const [gradeClasses, setGradeClasses] = useState("ist");
+  const [showStudents, setShowStudents] = useState("");
+  const [gradeClasses, setGradeClasses] = useState("1st");
 
   const filteredStudent = studentList.filter(
     (student) => student.gradeName === gradeClasses,
   );
+  function promoteStudents() {
+    const currentIndex = gradeArray.indexOf(gradeClasses);
+    const nextGrade = gradeArray[currentIndex + 1];
 
-  // setShowStudents(filteredStudent);
+    const filteredStudent = studentList.map((student) =>
+      student.gradeName === gradeClasses
+        ? { ...student, gradeName: nextGrade }
+        : student,
+    );
+    setStudentList(filteredStudent);
+  }
 
   function handleFeesForm(
     targetClass: string,
@@ -622,6 +631,7 @@ function App() {
                 gradeStudents={filteredStudent}
                 onDropdownChange={setGradeClasses}
                 selectedGrade={gradeClasses}
+                onPromoteSubmit={promoteStudents}
               />
             )}
           </div>

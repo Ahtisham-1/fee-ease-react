@@ -8,19 +8,22 @@ interface AdminPromoteClassProps {
   gradeClass: string[];
   gradeStudents: Student[];
   selectedGrade: string;
-  onSubmit: () => void;
   onDropdownChange: (value: string) => void;
+  onPromoteSubmit: (gradeName: string) => void;
 }
 
 function AdminPromoteClass({
   gradeClass,
   gradeStudents,
-  onSubmit,
+  onPromoteSubmit,
   onDropdownChange,
   selectedGrade,
 }: AdminPromoteClassProps) {
+  function handlePromote(e: React.FormEvent) {
+    e.preventDefault();
+  }
   return (
-    <div>
+    <form onSubmit={onPromoteSubmit}>
       <span>
         <select
           value={selectedGrade}
@@ -36,7 +39,10 @@ function AdminPromoteClass({
           <li>{student.name}</li>
         ))}
       </ul>
-    </div>
+      <button type="button" onClick={onPromoteSubmit}>
+        Promote
+      </button>
+    </form>
   );
 }
 
