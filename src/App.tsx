@@ -324,22 +324,27 @@ function App() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [inputAssignFees, setInputAssignFees] = useState(1500);
 
-  const [showStudents, setShowStudents] = useState("");
+  // const [showStudents, setShowStudents] = useState("");
   const [gradeClasses, setGradeClasses] = useState("1st");
 
   const filteredStudent = studentList.filter(
     (student) => student.gradeName === gradeClasses,
   );
-  function promoteStudents() {
+  function promoteStudents(selectedStudentIds: string[]) {
     const currentIndex = gradeArray.indexOf(gradeClasses);
-    const nextGrade = gradeArray[currentIndex + 1];
+    const nextGrade =
+      currentIndex < gradeArray.length - 1
+        ? gradeArray[currentIndex + 1]
+        : "Graduated";
 
-    const filteredStudent = studentList.map((student) =>
-      student.gradeName === gradeClasses
-        ? { ...student, gradeName: nextGrade }
-        : student,
-    );
-    setStudentList(filteredStudent);
+    const updatedStudents = studentList.map((student) => {
+      if (selectedStudentIds.includes(student.id)) {
+        return { ...student, gradeName: nextGrade };
+      }
+      return student;
+    });
+
+    setStudentList(updatedStudents);
   }
 
   function handleFeesForm(
