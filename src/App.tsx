@@ -20,6 +20,8 @@ import type { AdminClassRosterProps } from "./components/AdminComponents/AdminCl
 import type { AssignFeesForm } from "./components/AdminComponents/AdminAssignFeesForm";
 import AdminAssignFeesForm from "./components/AdminComponents/AdminAssignFeesForm";
 
+import AdminPromoteClass from "./components/AdminComponents/AdminPromoteClass";
+
 const parents = [
   { id: "p1", name: "Quyoom", phone: "123456" },
   { id: "p2", name: "Mukhtar", phone: "123456" },
@@ -322,6 +324,15 @@ function App() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [inputAssignFees, setInputAssignFees] = useState(1500);
 
+  // const [showStudents, setShowStudents] = useState("");
+  const [gradeClasses, setGradeClasses] = useState("ist");
+
+  const filteredStudent = studentList.filter(
+    (student) => student.gradeName === gradeClasses,
+  );
+
+  // setShowStudents(filteredStudent);
+
   function handleFeesForm(
     targetClass: string,
     targetMonth: string,
@@ -546,6 +557,13 @@ function App() {
               >
                 Assign Fees
               </button>
+
+              <button
+                className={subTab === "promoteClass" ? "active" : ""}
+                onClick={() => setSubTab("promoteClass")}
+              >
+                Promote Classes
+              </button>
             </nav>
 
             {subTab === "dashboard" ? (
@@ -590,13 +608,20 @@ function App() {
                   />
                 </div>
               </div>
-            ) : (
+            ) : subTab === "assignFees" ? (
               <AdminAssignFeesForm
                 assignFees={inputAssignFees}
                 onInputChange={setInputAssignFees}
                 pickMonth={months}
                 pickClass={gradeArray}
                 onSubmitFeesForm={handleFeesForm}
+              />
+            ) : (
+              <AdminPromoteClass
+                gradeClass={gradeArray}
+                gradeStudents={filteredStudent}
+                onDropdownChange={setGradeClasses}
+                selectedGrade={gradeClasses}
               />
             )}
           </div>
