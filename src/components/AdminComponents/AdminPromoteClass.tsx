@@ -18,7 +18,6 @@ function AdminPromoteClass({
 }: AdminPromoteClassProps) {
   const [selectedIDs, setSelectedIDs] = useState<string[]>([]);
 
-  // Automatically check all students when the selected class changes
   useEffect(() => {
     setSelectedIDs(gradeStudents.map((student) => student.id));
   }, [gradeStudents]);
@@ -57,8 +56,6 @@ function AdminPromoteClass({
       <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1.5rem" }}>
         Advance students to the next academic level. Uncheck any students who are repeating the grade.
       </p>
-
-      {/* Promotion Direction Header */}
       <div
         style={{
           display: "flex",
