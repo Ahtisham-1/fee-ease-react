@@ -11,7 +11,6 @@ function Header({ activeRole, onSelectRole }: HeaderProps) {
       <h1>Fee Ease Kashmir</h1>
       <span>
         <button onClick={() => onSelectRole("parent")}>Parent</button>
-
         <button onClick={() => onSelectRole("admin")}>Admin</button>
       </span>
     </div>
