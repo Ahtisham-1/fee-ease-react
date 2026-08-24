@@ -1,75 +1,66 @@
+import type { Payment } from "../ParentComponents/PayFeesForm";
+import type { FeeObligation } from "../ParentComponents/FeeDetail";
 import type { Student } from "../ParentComponents/ParentStudentSelector";
 import type { Parent } from "../ParentComponents/ParentStudentSelector";
-import type { FeeObligation } from "../ParentComponents/FeeDetail";
-import type { Payment } from "../ParentComponents/PayFeesForm";
 
-export interface AdminClassRosterProps {
+interface AdminClassRosterProps {
+  payments: Payment[];
+  feeObligations: FeeObligation[];
   students: Student[];
   parents: Parent[];
-  feeObligations: FeeObligation[];
-  payments: Payment[];
-  selectedGrade: string;
   onEditStudent: (student: Student) => void;
+  selectedGrade: string;
 }
-
 function AdminClassRoster({
+  payments,
+  feeObligations,
   students,
   parents,
-  feeObligations,
-  payments,
-  selectedGrade,
   onEditStudent,
+  selectedGrade,
 }: AdminClassRosterProps) {
-  // 1. Filter students to only those in the selected grade
   const matchingStudentGrade = students.filter(
     (student) => student.gradeName === selectedGrade,
   );
 
   return (
-    <div className="card">
-      <div className="card-title">CLASS ROSTER — {selectedGrade}</div>
+    <div>
+      <div>Class roaster</div>
 
-      {matchingStudentGrade.length === 0 ? (
-        <p className="empty-history">
-          No students enrolled in {selectedGrade} class yet.
-        </p>
-      ) : (
-        <div className="history-list">
-          {matchingStudentGrade.map((studentN) => {
-            const parent = parents.find((p) => p.id === studentN.parentId);
+      <div>
+        {matchingStudentGrade.length === 0 ? (
+          <p>No student found for this class</p>
+        ) : (
+          <div>
+            {matchingStudentGrade.map((studentN) => {
+              const newParnet = parents.find((p) => p.id === studentN.parentId);
 
-            const totalFeesObligations = feeObligations
-              .filter((obligations) => obligations.studentId === studentN.id)
-              .reduce((acc, curr) => acc + curr.feeAmount, 0);
+              const totalFeeAmount = feeObligations
+                .filter((fee) => fee.studentId === studentN.id)
+                .reduce((acc, curr) => acc + curr.feeAmount, 0);
 
-            const totalPaidObligations = payments
-              .filter((totalPaid) => totalPaid.belongsTo === studentN.id)
-              .reduce((acc, curr) => acc + curr.amount, 0);
-
-            const total = totalFeesObligations - totalPaidObligations;
-
-            return (
-              <div key={studentN.id} className="history-item">
-                <span>
-                  <strong>{studentN.name}</strong> (ID: {studentN.id})
-                </span>
-                <span>
-                  Parent: {parent?.name} ({parent?.phone})
-                </span>
-                <span>
-                  Pending: <strong>₹{total}</strong>
-                </span>
-                <button
-                  className="role-btn"
-                  onClick={() => onEditStudent(studentN)}
-                >
-                  Edit
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              const totalpayment = payments
+                .filter((pay) => pay.belongsTo === studentN.id)
+                .reduce((acc, curr) => acc + curr.amount, 0);
+              const total = totalFeeAmount - totalpayment;
+              return (
+                <div key={studentN.id}>
+                  <span>
+                    <strong>{studentN.name}</strong>
+                    <strong>{studentN.id}</strong>
+                    <strong>{newParnet?.name}</strong>
+                    <strong>{newParnet?.phone}</strong>
+                    <strong>{total}</strong>
+                    <button onClick={() => onEditStudent(studentN)}>
+                      Click
+                    </button>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
