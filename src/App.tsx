@@ -580,10 +580,7 @@ function App() {
               <div>
                 <div className="card-title">ADMIN DASHBOARD</div>
                 <AdminCollectionSummary payments={payments} />
-                <AdminPaymentHistory
-                  payments={payments}
-                  students={students}
-                />
+                <AdminPaymentHistory payments={payments} students={students} />
               </div>
             ) : subTab === "classes" ? (
               <div>

@@ -3,8 +3,8 @@ import { useState } from "react";
 export interface NewStudentData {
   studentName: string;
   parentName: string;
-  phone: string;
   grade: string;
+  phone: string;
   tuitionFee: number;
   hasTransport: boolean;
 }
@@ -19,29 +19,30 @@ function AdminAddStudentForm({
 }: AdminAddStudentFormProps) {
   const [studentName, setStudentName] = useState("");
   const [parentName, setParentName] = useState("");
-  const [phone, setPhone] = useState("");
   const [grade, setGrade] = useState("");
+  const [phone, setPhone] = useState("");
   const [tuitionFee, setTuitionFee] = useState(1500);
   const [hasTransport, setHasTransport] = useState(false);
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (
       studentName === "" ||
       parentName === "" ||
-      phone === "" ||
-      grade === ""
+      grade === "" ||
+      phone === ""
     ) {
-      return alert("Input fields are empty");
+      return alert("Input fields are empty please fill each input filed");
+    } else {
+      onAddStudent({
+        studentName,
+        parentName,
+        grade,
+        phone,
+        tuitionFee,
+        hasTransport,
+      });
     }
-    onAddStudent({
-      studentName,
-      parentName,
-      phone,
-      grade: grade || classGrade[0],
-      tuitionFee,
-      hasTransport,
-    });
+
     setStudentName("");
     setParentName("");
     setPhone("");
