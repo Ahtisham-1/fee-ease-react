@@ -8,7 +8,7 @@ export interface Student {
 export interface Parent {
   id: string;
   name: string;
-  phone: String;
+  phone: string;
 }
 
 interface ParentStudentSelectorProps {
