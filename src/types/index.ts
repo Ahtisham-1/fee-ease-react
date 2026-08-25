@@ -3,6 +3,7 @@
 // ==========================================
 
 export type Role = "admin" | "parent";
+export type AdminTab = "overview" | "students" | "fees" | "promotion";
 
 export type FeeType = "tuition" | "tuition+transport";
 export type FeeStatus = "paid" | "pending";

@@ -4,134 +4,215 @@ import type { NewStudentData } from "../../types";
 export interface AdminAddStudentFormProps {
   classGrade: string[];
   onAddStudent: (data: NewStudentData) => void;
+  onClassChange?: (grade: string) => void;
 }
 
+/**
+ * AdminAddStudentForm Component
+ * 
+ * Purpose:
+ * Renders the new student and guardian enrollment form.
+ * 
+ * Architectural Features:
+ * 1. String-based numeric input: Allows complete field clearance without forcing 0.
+ * 2. One-Way Master Class Sync: Changing class here updates the Roster view, but Roster changes do not alter this form.
+ */
 export function AdminAddStudentForm({
   classGrade,
   onAddStudent,
+  onClassChange,
 }: AdminAddStudentFormProps) {
-  const [studentName, setStudentName] = useState("");
-  const [parentName, setParentName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [grade, setGrade] = useState(classGrade[0] || "1st");
-  const [tuitionFee, setTuitionFee] = useState(1500);
-  const [hasTransport, setHasTransport] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Local Form State
+  const [selectedGrade, setSelectedGrade] = useState(classGrade[0] || "1st");
+  const [studentFullName, setStudentFullName] = useState("");
+  const [parentFullName, setParentFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [baseMonthlyTuition, setBaseMonthlyTuition] = useState("1500");
+  const [hasBusTransport, setHasBusTransport] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setErrorMessage(null);
+  function handleClassroomSelectChange(event: React.ChangeEvent<HTMLSelectElement>) {
+    const newGrade = event.target.value;
+    setSelectedGrade(newGrade);
 
-    if (!studentName.trim() || !parentName.trim() || !phone.trim() || !grade.trim()) {
-      setErrorMessage("Please complete all required fields.");
+    // One-Way Master Push: Sync the active Roster view to this classroom
+    if (onClassChange) {
+      onClassChange(newGrade);
+    }
+  }
+
+  function handleEnrollmentSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setValidationError(null);
+
+    const parsedTuition = Number(baseMonthlyTuition);
+
+    // Defensive Validations
+    if (!studentFullName.trim()) {
+      setValidationError("Please enter the student's full name.");
+      return;
+    }
+    if (!parentFullName.trim()) {
+      setValidationError("Please enter the parent/guardian's name.");
+      return;
+    }
+    if (!phoneNumber.trim()) {
+      setValidationError("Please enter the parent's contact phone number.");
+      return;
+    }
+    if (isNaN(parsedTuition) || parsedTuition <= 0) {
+      setValidationError("Please enter a valid positive base tuition fee amount.");
       return;
     }
 
+    // Dispatch Enrollment Payload
     onAddStudent({
-      studentName: studentName.trim(),
-      parentName: parentName.trim(),
-      phone: phone.trim(),
-      grade,
-      tuitionFee,
-      hasTransport,
+      studentName: studentFullName.trim(),
+      parentName: parentFullName.trim(),
+      phone: phoneNumber.trim(),
+      grade: selectedGrade,
+      tuitionFee: parsedTuition,
+      hasTransport: hasBusTransport,
     });
 
-    // Reset inputs
-    setStudentName("");
-    setParentName("");
-    setPhone("");
-    setGrade(classGrade[0] || "1st");
-    setTuitionFee(1500);
-    setHasTransport(false);
+    // Reset Form Fields
+    setStudentFullName("");
+    setParentFullName("");
+    setPhoneNumber("");
+    setBaseMonthlyTuition("1500");
+    setHasBusTransport(false);
   }
 
   return (
-    <div className="card add-student-card">
-      <div className="card-title">ENROLL NEW STUDENT & FAMILY</div>
+    <div className="card add-student-card" role="region" aria-label="Student Enrollment Form">
+      <div className="card-title text-center">ENROLL NEW STUDENT & GUARDIAN</div>
 
-      <form onSubmit={handleSubmit} className="enroll-form">
-        <div className="form-grid">
+      <form onSubmit={handleEnrollmentSubmit} className="enrollment-form-grid">
+        {/* Top Field: Select Class (One-Way Master Switcher) */}
+        <div className="input-group full-width mb-3">
+          <label htmlFor="enroll-class-select" className="box-label">
+            SELECT CLASSROOM
+          </label>
+          <select
+            id="enroll-class-select"
+            className="class-selector custom-select"
+            value={selectedGrade}
+            onChange={handleClassroomSelectChange}
+            aria-label="Select Enrollment Classroom"
+          >
+            {classGrade.map((grade) => (
+              <option key={grade} value={grade}>
+                Class {grade}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Row 1: Student Name & Parent Name */}
+        <div className="form-two-col">
           <div className="input-group">
-            <label className="input-label">Student Full Name *</label>
+            <label htmlFor="student-name-input" className="box-label">
+              STUDENT NAME *
+            </label>
             <input
+              id="student-name-input"
               type="text"
               className="text-input"
               placeholder="e.g. Zaid Farooq"
-              value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
+              value={studentFullName}
+              onChange={(e) => {
+                setStudentFullName(e.target.value);
+                if (validationError) setValidationError(null);
+              }}
             />
           </div>
 
           <div className="input-group">
-            <label className="input-label">Parent / Guardian Name *</label>
+            <label htmlFor="parent-name-input" className="box-label">
+              PARENT NAME *
+            </label>
             <input
+              id="parent-name-input"
               type="text"
               className="text-input"
               placeholder="e.g. Farooq Ahmad"
-              value={parentName}
-              onChange={(e) => setParentName(e.target.value)}
+              value={parentFullName}
+              onChange={(e) => {
+                setParentFullName(e.target.value);
+                if (validationError) setValidationError(null);
+              }}
             />
           </div>
+        </div>
 
+        {/* Row 2: Phone Number & Transport Option */}
+        <div className="form-two-col align-center mt-3">
           <div className="input-group">
-            <label className="input-label">Parent Phone Number *</label>
+            <label htmlFor="phone-input" className="box-label">
+              PHONE NUMBER *
+            </label>
             <input
+              id="phone-input"
               type="tel"
               className="text-input"
               placeholder="e.g. 9876543210"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              value={phoneNumber}
+              onChange={(e) => {
+                setPhoneNumber(e.target.value);
+                if (validationError) setValidationError(null);
+              }}
             />
           </div>
 
-          <div className="input-group">
-            <label className="input-label">Enrolling Classroom *</label>
-            <select
-              className="class-selector"
-              value={grade}
-              onChange={(e) => setGrade(e.target.value)}
-            >
-              {classGrade.map((c) => (
-                <option key={c} value={c}>
-                  Class {c}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="input-group">
-            <label className="input-label">Base Monthly Tuition Fee (₹)</label>
-            <div className="currency-input-wrapper">
-              <span className="currency-symbol">₹</span>
-              <input
-                type="number"
-                className="number-input"
-                value={tuitionFee}
-                onChange={(e) => setTuitionFee(Number(e.target.value))}
-                min="0"
-              />
-            </div>
-          </div>
-
-          <div className="input-group checkbox-group">
-            <label className="checkbox-container mt-6">
+          <div className="input-group checkbox-cell">
+            <label className="checkbox-container">
               <input
                 type="checkbox"
-                checked={hasTransport}
-                onChange={(e) => setHasTransport(e.target.checked)}
+                checked={hasBusTransport}
+                onChange={(e) => setHasBusTransport(e.target.checked)}
               />
               <span className="student-name-label">
-                Include Bus Service (+₹1,000/mo)
+                🚌 Add Bus Service (+₹1,000/mo)
               </span>
             </label>
           </div>
         </div>
 
-        {errorMessage && <div className="error-banner">⚠️ {errorMessage}</div>}
+        {/* Row 3: Base Monthly Fee (Clearable) & Submit Button */}
+        <div className="form-two-col align-center mt-3">
+          <div className="input-group">
+            <label htmlFor="tuition-fee-input" className="box-label">
+              BASE MONTHLY FEE (₹)
+            </label>
+            <div className="currency-input-wrapper">
+              <span className="currency-symbol">₹</span>
+              <input
+                id="tuition-fee-input"
+                type="number"
+                className="number-input"
+                placeholder="Enter fee amount"
+                value={baseMonthlyTuition}
+                onChange={(e) => {
+                  setBaseMonthlyTuition(e.target.value);
+                  if (validationError) setValidationError(null);
+                }}
+                min="1"
+              />
+            </div>
+          </div>
 
-        <button type="submit" className="pay-btn mt-4">
-          ➕ Complete Enrollment & Generate Account
-        </button>
+          <div className="input-group submit-cell">
+            <button type="submit" className="pay-btn full-width-btn">
+              ➕ Complete Enrollment
+            </button>
+          </div>
+        </div>
+
+        {validationError && (
+          <div className="error-banner mt-3" role="alert">
+            ⚠️ {validationError}
+          </div>
+        )}
       </form>
     </div>
   );
