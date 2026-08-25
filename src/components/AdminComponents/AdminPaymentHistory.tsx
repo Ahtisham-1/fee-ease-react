@@ -1,36 +1,29 @@
-import type { Payment } from "../ParentComponents/PayFeesForm";
 import type { Student } from "../ParentComponents/ParentStudentSelector";
+import type { Payment } from "../ParentComponents/PayFeesForm";
 
-export interface AdminPaymentHistoryProps {
-  payments: Payment[];
+interface AdminPaymentHistoryProps {
   students: Student[];
+  payments: Payment[];
 }
 
-function AdminPaymentHistory({
-  payments,
-  students,
-}: AdminPaymentHistoryProps) {
-
+function AdminPaymentHistory({ students, payments }: AdminPaymentHistoryProps) {
   return (
-    <div className="card">
-      <div className="card-title">SCHOOL-WIDE PAYMENT HISTORY</div>
+    <div>
+      <div>Payment history of students</div>
 
-      {payments.map((payId) => {
-        const matchingStudent = students.find(
-          (student) => student.id === payId.belongsTo
-        );
-        return (
-          <div key={payId.id} className="history-item">
-            <span>
-              {matchingStudent?.name} ({matchingStudent?.gradeName} {matchingStudent?.id})
-            </span>
-            <span>
-
-              Paid: ₹{payId.amount} | {payId.dateTime}
-            </span>
-          </div>
-        );
-      })}
+      <div>
+        {payments.map((payId) => {
+          const matchingStudents = students.find(
+            (student) => student.id === payId.belongsTo,
+          );
+          return (
+            <div>
+              {matchingStudents?.name} | {matchingStudents?.gradeName} |{" "}
+              {payId.amount} | {payId.dateTime}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
