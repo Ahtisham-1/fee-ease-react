@@ -192,8 +192,8 @@ export function App() {
     updatedStudentName: string,
     updatedParentName: string,
     updatedPhoneNumber: string,
-    hasTransport: boolean,
-    transportFee: number
+    hasTransport: boolean = false,
+    transportFee: number = 1000
   ) {
     setStudentsDatabase((previousStudents) =>
       previousStudents.map((student) =>

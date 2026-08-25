@@ -12,8 +12,8 @@ export interface AdminEditStudentModalProps {
     newStudentName: string,
     newParentName: string,
     newPhone: string,
-    hasTransport: boolean,
-    transportFee: number
+    hasTransport?: boolean,
+    transportFee?: number
   ) => void;
 }
 
@@ -26,8 +26,8 @@ interface InnerFormProps {
     newStudentName: string,
     newParentName: string,
     newPhone: string,
-    hasTransport: boolean,
-    transportFee: number
+    hasTransport?: boolean,
+    transportFee?: number
   ) => void;
 }
 
