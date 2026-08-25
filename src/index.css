@@ -759,3 +759,295 @@ form input[type="checkbox"], input[type="checkbox"] {
 }
 
 
+
+/* ========================================== */
+/* Blueprint Enhancements (Scrollable Feeds & Centering) */
+/* ========================================== */
+
+.text-center {
+  text-align: center !important;
+  justify-content: center !important;
+}
+
+.scrollable-feed {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+/* Custom Sleek Scrollbar */
+.scrollable-feed::-webkit-scrollbar {
+  width: 5px;
+}
+
+.scrollable-feed::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-pill);
+}
+
+.scrollable-feed::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.35);
+  border-radius: var(--radius-pill);
+}
+
+.scrollable-feed::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
+
+.vertical-pay-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.full-width-input {
+  width: 100% !important;
+}
+
+.full-width-btn {
+  width: 100% !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.selector-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.selector-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.box-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+}
+
+/* ========================================== */
+/* Pixel-Perfect Symmetric 50/50 Grid & Alignment */
+/* ========================================== */
+
+.main-content {
+  max-width: 1240px !important;
+}
+
+.parent-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 1.5rem !important;
+  align-items: stretch !important;
+}
+
+.column-left, .column-right {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.5rem !important;
+}
+
+/* Matching Heights for Symmetry */
+.selector-card, .pay-fees-card {
+  min-height: 255px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.fee-detail-card, .payment-history-card {
+  min-height: 400px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Currency Input Fix - No Overlap */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.input-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+}
+
+.currency-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.currency-symbol {
+  position: absolute;
+  left: 1.1rem;
+  color: var(--accent-color);
+  font-weight: 800;
+  font-size: 1.1rem;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.currency-input-wrapper .number-input {
+  width: 100% !important;
+  padding-left: 2.35rem !important;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  min-height: 48px;
+}
+
+/* Receipt & Fee Metadata Alignment */
+.history-item {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  padding: 0.85rem 1.15rem !important;
+}
+
+.history-meta {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.2rem !important;
+  align-items: flex-start !important;
+  overflow: hidden;
+}
+
+.receipt-id, .month-name {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.timestamp, .fee-type-tag {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.history-finance {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+  flex-shrink: 0 !important;
+}
+
+.amount-text {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.scrollable-feed {
+  max-height: 220px !important;
+  overflow-y: auto !important;
+}
+
+/* Failed Payment Badges & Alerts */
+.danger-badge {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+.text-danger {
+  color: #f87171 !important;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.strikethrough {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+.failed-receipt-item {
+  border-left: 3px solid #f87171 !important;
+  background-color: rgba(239, 68, 68, 0.04) !important;
+}
+
+.failure-note {
+  font-size: 0.72rem;
+  color: #f87171;
+  font-weight: 700;
+}
+
+/* Payment Confirmation Modal Styling */
+.confirmation-card {
+  max-width: 440px !important;
+  text-align: center;
+}
+
+.confirmation-body {
+  margin: 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.confirmation-subtext {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.confirmation-amount-box {
+  background: var(--input-bg);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.confirmation-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+}
+
+.confirmation-amount {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #fb923c;
+  letter-spacing: -0.03em;
+}
+
+.security-notice {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.confirm-proceed-btn {
+  flex: 1;
+}
+
+.cancel-btn {
+  background: #202028 !important;
+  color: #ffffff !important;
+}
+
+.cancel-btn:hover {
+  background: #282834 !important;
+}

@@ -6,6 +6,7 @@ export type Role = "admin" | "parent";
 
 export type FeeType = "tuition" | "tuition+transport";
 export type FeeStatus = "paid" | "pending";
+export type PaymentStatus = "SUCCESS" | "FAILED";
 
 export interface Parent {
   id: string;
@@ -34,6 +35,7 @@ export interface Payment {
   amount: number;
   dateTime: string;
   belongsTo: string;
+  status: PaymentStatus;
 }
 
 export interface NewStudentData {

@@ -7,14 +7,18 @@ import {
   gradeArray,
   months,
 } from "./data/mockData";
+import { getStudentFinancialSummary } from "./utils/feeCalculator";
 
-// Components
+// Universal Components
 import Header from "./components/common/Header";
+
+// Parent Portal Suite
 import ParentStudentSelector from "./components/parent/ParentStudentSelector";
 import FeeDetail from "./components/parent/FeeDetail";
 import PayFeesForm from "./components/parent/PayFeesForm";
 import PaymentHistory from "./components/parent/PaymentHistory";
 
+// Admin Portal Suite
 import AdminCollectionsSummary from "./components/admin/AdminCollectionsSummary";
 import SelectClassComponent from "./components/admin/SelectClassComponent";
 import AdminClassRoster from "./components/admin/AdminClassRoster";
@@ -24,277 +28,386 @@ import AdminPaymentHistory from "./components/admin/AdminPaymentHistory";
 import AdminAddStudentForm from "./components/admin/AdminAddStudentForm";
 import AdminEditStudentModal from "./components/admin/AdminEditStudentModal";
 
+/**
+ * ============================================================================
+ * FeeEase Central Application Orchestrator (App.tsx)
+ * ============================================================================
+ * 
+ * Architectural Purpose:
+ * Serves as the central state store, in-memory domain database, and top-level
+ * orchestrator connecting all 13 Parent and Admin components.
+ */
 export function App() {
-  // 1. Role State
-  const [role, setRole] = useState<Role>("parent");
+  // --------------------------------------------------------------------------
+  // GLOBAL APPLICATION NAVIGATION STATE
+  // Connected to: Header.tsx
+  // --------------------------------------------------------------------------
+  const [activeUserRole, setActiveUserRole] = useState<Role>("parent");
 
-  // 2. Central Domain State (Clean Slate - Zero Mock Data)
-  const [parentList, setParentList] = useState<Parent[]>(initialParents);
-  const [studentList, setStudentList] = useState<Student[]>(initialStudents);
-  const [feeObligationList, setFeeObligationList] = useState<FeeObligation[]>(initialFeeObligations);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  // --------------------------------------------------------------------------
+  // CENTRAL IN-MEMORY DOMAIN DATABASES (Clean Slate / Zero Mock Data)
+  // Shared across ALL components in the school system
+  // --------------------------------------------------------------------------
+  const [parentsDatabase, setParentsDatabase] = useState<Parent[]>(initialParents);
+  const [studentsDatabase, setStudentsDatabase] = useState<Student[]>(initialStudents);
+  const [feeObligationsDatabase, setFeeObligationsDatabase] = useState<FeeObligation[]>(initialFeeObligations);
+  const [paymentsDatabase, setPaymentsDatabase] = useState<Payment[]>([]);
 
-  // 3. Parent Portal Active Selection State
-  const [selectedParentId, setSelectedParentId] = useState<string>(
+  // --------------------------------------------------------------------------
+  // PARENT PORTAL ACTIVE CONTEXT SELECTION STATE
+  // Connected to: ParentStudentSelector.tsx, FeeDetail.tsx, PayFeesForm.tsx, PaymentHistory.tsx
+  // --------------------------------------------------------------------------
+  const [selectedParentAccountId, setSelectedParentAccountId] = useState<string>(
     initialParents[0]?.id || ""
   );
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(
+  const [selectedStudentProfileId, setSelectedStudentProfileId] = useState<string>(
     initialStudents[0]?.id || ""
   );
 
-  // 4. Admin Portal State
-  const [adminSelectedGrade, setAdminSelectedGrade] = useState<string>(gradeArray[0]);
-  const [inputAssignFees, setInputAssignFees] = useState<number>(1500);
+  // --------------------------------------------------------------------------
+  // ADMIN PORTAL FILTER & ASSIGNMENT STATE
+  // Connected to: SelectClassComponent.tsx, AdminClassRoster.tsx, AdminAssignFeesForm.tsx, AdminPromoteClass.tsx
+  // --------------------------------------------------------------------------
+  const [selectedGradeForFilter, setSelectedGradeForFilter] = useState<string>(gradeArray[0]);
+  const [standardTuitionFeeInput, setStandardTuitionFeeInput] = useState<number>(1500);
 
-  // 5. Modal Edit State
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  // --------------------------------------------------------------------------
+  // ADMIN EDIT STUDENT MODAL STATE
+  // Connected to: AdminClassRoster.tsx (Triggers open) & AdminEditStudentModal.tsx (Renders form)
+  // --------------------------------------------------------------------------
+  const [studentTargetForEdit, setStudentTargetForEdit] = useState<Student | null>(null);
+  const [isEditStudentRecordModalOpen, setIsEditStudentRecordModalOpen] = useState<boolean>(false);
 
-  // ==========================================
-  // Central Handlers
-  // ==========================================
+  // ==========================================================================
+  // COMPONENT-SPECIFIC BUSINESS MUTATION HANDLERS
+  // ==========================================================================
 
-  // Submit Payment (Parent)
-  function handlePayment(amount: number) {
-    if (!selectedStudentId || amount <= 0) return;
+  /**
+   * LOGIC FOR: PayFeesForm.tsx (Component #3)
+   * 
+   * Purpose:
+   * Processes an authorized online payment, generates a verified Payment receipt
+   * object with status 'SUCCESS', and prepends it to the transaction history.
+   */
+  function handleProcessPayment(paymentAmount: number) {
+    if (!selectedStudentProfileId || paymentAmount <= 0) return;
 
-    const newPayment: Payment = {
+    const newPaymentReceipt: Payment = {
       id: `rcpt-${Date.now()}`,
-      amount,
+      amount: paymentAmount,
       dateTime: new Date().toLocaleString(),
-      belongsTo: selectedStudentId,
+      belongsTo: selectedStudentProfileId,
+      status: "SUCCESS",
     };
 
-    setPayments((prev) => [newPayment, ...prev]);
+    setPaymentsDatabase((previousPayments) => [newPaymentReceipt, ...previousPayments]);
   }
 
-  // Enroll Student & Family (Admin)
-  function handleAddStudent(data: NewStudentData) {
-    const existingParent = parentList.find((p) => p.phone === data.phone);
-    const parentId = existingParent ? existingParent.id : `p-${Date.now()}`;
+  /**
+   * LOGIC FOR: AdminAddStudentForm.tsx (Component #8)
+   * 
+   * Purpose:
+   * Enrolls a new student. Checks if the guardian already exists via phone number;
+   * if not, creates a new guardian account. Generates the baseline fee obligation.
+   */
+  function handleEnrollStudentAccount(enrollmentData: NewStudentData) {
+    // 1. Relational Check: Does this guardian already have a profile in the school?
+    const existingGuardian = parentsDatabase.find(
+      (guardian) => guardian.phone === enrollmentData.phone
+    );
+    const guardianId = existingGuardian ? existingGuardian.id : `p-${Date.now()}`;
 
-    if (!existingParent) {
-      const newParent: Parent = {
-        id: parentId,
-        name: data.parentName,
-        phone: data.phone,
+    // 2. If new guardian, register family account
+    if (!existingGuardian) {
+      const newGuardianRecord: Parent = {
+        id: guardianId,
+        name: enrollmentData.parentName,
+        phone: enrollmentData.phone,
       };
-      setParentList((prev) => [...prev, newParent]);
+      setParentsDatabase((previousGuardians) => [...previousGuardians, newGuardianRecord]);
     }
 
+    // 3. Register student profile linked to the guardian
     const newStudentId = `s-${Date.now()}`;
-    const newStudent: Student = {
+    const newStudentRecord: Student = {
       id: newStudentId,
-      name: data.studentName,
-      gradeName: data.grade,
-      parentId,
+      name: enrollmentData.studentName,
+      gradeName: enrollmentData.grade,
+      parentId: guardianId,
     };
 
-    const monthlyAmount = data.tuitionFee + (data.hasTransport ? 1000 : 0);
+    // 4. Generate initial fee obligation (Tuition + Optional Transport Service)
+    const baseMonthlyFee = enrollmentData.tuitionFee + (enrollmentData.hasTransport ? 1000 : 0);
     const initialObligation: FeeObligation = {
       id: `fee-${Date.now()}`,
       studentId: newStudentId,
-      feeAmount: monthlyAmount,
+      feeAmount: baseMonthlyFee,
       month: months[new Date().getMonth()] || "Current",
-      feeType: data.hasTransport ? "tuition+transport" : "tuition",
+      feeType: enrollmentData.hasTransport ? "tuition+transport" : "tuition",
       feeStatus: "pending",
     };
 
-    setStudentList((prev) => [...prev, newStudent]);
-    setFeeObligationList((prev) => [...prev, initialObligation]);
+    setStudentsDatabase((previousStudents) => [...previousStudents, newStudentRecord]);
+    setFeeObligationsDatabase((previousObligations) => [...previousObligations, initialObligation]);
 
-    // If first parent/student ever, auto-select them for parent portal
-    if (!selectedParentId) setSelectedParentId(parentId);
-    if (!selectedStudentId) setSelectedStudentId(newStudentId);
+    // If first student in empty database, auto-select for immediate parent view
+    if (!selectedParentAccountId) setSelectedParentAccountId(guardianId);
+    if (!selectedStudentProfileId) setSelectedStudentProfileId(newStudentId);
   }
 
-  // Edit Student & Parent Record (Admin)
-  function handleOpenEditModal(student: Student) {
-    setEditingStudent(student);
-    setIsEditModalOpen(true);
+  /**
+   * LOGIC FOR: AdminClassRoster.tsx (Component #7)
+   * 
+   * Purpose:
+   * Triggered when the admin clicks "✏️ Edit" on any student row in the roster.
+   * Sets the active editing student and displays the modal.
+   */
+  function handleInitiateStudentEdit(targetStudent: Student) {
+    setStudentTargetForEdit(targetStudent);
+    setIsEditStudentRecordModalOpen(true);
   }
 
-  function handleSaveStudent(
+  /**
+   * LOGIC FOR: AdminEditStudentModal.tsx (Component #12)
+   * 
+   * Purpose:
+   * Saves updated student name and guardian contact details back into the database.
+   */
+  function handleSaveStudentProfileChanges(
     studentId: string,
-    newStudentName: string,
-    newParentName: string,
-    newPhone: string
+    updatedStudentName: string,
+    updatedParentName: string,
+    updatedPhoneNumber: string
   ) {
-    setStudentList((prev) =>
-      prev.map((s) => (s.id === studentId ? { ...s, name: newStudentName } : s))
+    // Update student name in studentsDatabase
+    setStudentsDatabase((previousStudents) =>
+      previousStudents.map((student) =>
+        student.id === studentId ? { ...student, name: updatedStudentName } : student
+      )
     );
 
-    if (editingStudent?.parentId) {
-      setParentList((prev) =>
-        prev.map((p) =>
-          p.id === editingStudent.parentId
-            ? { ...p, name: newParentName, phone: newPhone }
-            : p
+    // Update parent name and phone in parentsDatabase
+    if (studentTargetForEdit?.parentId) {
+      setParentsDatabase((previousGuardians) =>
+        previousGuardians.map((guardian) =>
+          guardian.id === studentTargetForEdit.parentId
+            ? { ...guardian, name: updatedParentName, phone: updatedPhoneNumber }
+            : guardian
         )
       );
     }
   }
 
-  // Batch Assign Fees to Classroom (Admin)
-  function handleAssignFees(
-    targetClass: string,
-    targetMonth: string,
-    amount: number
+  /**
+   * LOGIC FOR: AdminAssignFeesForm.tsx (Component #9)
+   * 
+   * Purpose:
+   * Batch creates fee obligations for all students currently enrolled in a target class.
+   */
+  function handleBatchGenerateClassFees(
+    targetGradeClass: string,
+    targetAcademicMonth: string,
+    feeAmount: number
   ) {
-    const classStudents = studentList.filter((s) => s.gradeName === targetClass);
-    if (classStudents.length === 0) {
-      alert(`No students found in Class ${targetClass} to assign fees.`);
+    const classEnrolledStudents = studentsDatabase.filter(
+      (student) => student.gradeName === targetGradeClass
+    );
+
+    if (classEnrolledStudents.length === 0) {
+      alert(`No students currently enrolled in Class ${targetGradeClass} to assign fees.`);
       return;
     }
 
-    const newBills: FeeObligation[] = classStudents.map((s) => ({
-      id: `fee-${s.id}-${Date.now()}`,
-      studentId: s.id,
-      feeAmount: amount,
-      month: targetMonth,
+    const generatedObligations: FeeObligation[] = classEnrolledStudents.map((student) => ({
+      id: `fee-${student.id}-${Date.now()}`,
+      studentId: student.id,
+      feeAmount: feeAmount,
+      month: targetAcademicMonth,
       feeType: "tuition",
       feeStatus: "pending",
     }));
 
-    setFeeObligationList((prev) => [...prev, ...newBills]);
-    alert(`Successfully generated ${newBills.length} fee obligations for Class ${targetClass} (${targetMonth}).`);
+    setFeeObligationsDatabase((previousObligations) => [
+      ...previousObligations,
+      ...generatedObligations,
+    ]);
+
+    alert(
+      `Successfully generated ${generatedObligations.length} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth}).`
+    );
   }
 
-  // Annual Class Promotion (Admin)
-  function handlePromoteStudents(selectedStudentIds: string[]) {
-    const currentIndex = gradeArray.indexOf(adminSelectedGrade);
-    const nextGrade =
-      currentIndex < gradeArray.length - 1
-        ? gradeArray[currentIndex + 1]
+  /**
+   * LOGIC FOR: AdminPromoteClass.tsx (Component #10)
+   * 
+   * Purpose:
+   * Advances selected student cohort to the next grade on the academic ladder.
+   */
+  function handleExecuteAnnualPromotion(studentIdsToPromote: string[]) {
+    const currentGradeIndex = gradeArray.indexOf(selectedGradeForFilter);
+    const nextGradeLevel =
+      currentGradeIndex < gradeArray.length - 1
+        ? gradeArray[currentGradeIndex + 1]
         : "Graduated";
 
-    setStudentList((prev) =>
-      prev.map((student) => {
-        if (selectedStudentIds.includes(student.id)) {
-          return { ...student, gradeName: nextGrade };
+    setStudentsDatabase((previousStudents) =>
+      previousStudents.map((student) => {
+        if (studentIdsToPromote.includes(student.id)) {
+          return { ...student, gradeName: nextGradeLevel };
         }
         return student;
       })
     );
 
-    alert(`Promoted ${selectedStudentIds.length} students from Class ${adminSelectedGrade} to Class ${nextGrade}!`);
+    alert(
+      `Promoted ${studentIdsToPromote.length} students from Class ${selectedGradeForFilter} to Class ${nextGradeLevel}!`
+    );
   }
 
-  const activeParent = parentList.find(
-    (p) => p.id === (editingStudent ? editingStudent.parentId : selectedParentId)
+  // --------------------------------------------------------------------------
+  // DERIVED SELECTORS (Pure Calculations)
+  // --------------------------------------------------------------------------
+  
+  // Derived for: AdminEditStudentModal.tsx
+  const activeGuardianProfile = parentsDatabase.find(
+    (guardian) =>
+      guardian.id ===
+      (studentTargetForEdit ? studentTargetForEdit.parentId : selectedParentAccountId)
   );
 
+  // Derived for: FeeDetail.tsx & PayFeesForm.tsx
+  const activeStudentFinancials = getStudentFinancialSummary(
+    selectedStudentProfileId,
+    feeObligationsDatabase,
+    paymentsDatabase
+  );
+
+  // ==========================================================================
+  // VIEW RENDERING
+  // ==========================================================================
   return (
     <div className="app-container">
-      {/* 1. Global Header */}
-      <Header role={role} onRoleChange={setRole} />
+      {/* 1. Global Navigation Header */}
+      <Header role={activeUserRole} onRoleChange={setActiveUserRole} />
 
       <main className="main-content">
-        {/* ========================================== */}
-        {/* PARENT PORTAL VIEW */}
-        {/* ========================================== */}
-        {role === "parent" && (
-          <div className="portal-layout parent-portal">
-            <ParentStudentSelector
-              parents={parentList}
-              students={studentList}
-              selectedParentId={selectedParentId}
-              selectedStudentId={selectedStudentId}
-              onSelectParent={setSelectedParentId}
-              onSelectStudent={setSelectedStudentId}
-            />
+        {/* =================================================================== */}
+        {/* PARENT PORTAL VIEW (2-COLUMN MASTER GRID)                           */}
+        {/* =================================================================== */}
+        {activeUserRole === "parent" && (
+          <div className="parent-grid">
+            {/* LEFT COLUMN: Account Selector (Top) + Financial Ledger (Bottom) */}
+            <div className="column-left">
+              {/* COMPONENT 1: Parent & Student Cascade Dropdowns */}
+              <ParentStudentSelector
+                parents={parentsDatabase}
+                students={studentsDatabase}
+                selectedParentId={selectedParentAccountId}
+                selectedStudentId={selectedStudentProfileId}
+                onSelectParent={setSelectedParentAccountId}
+                onSelectStudent={setSelectedStudentProfileId}
+              />
 
-            {selectedStudentId && (
-              <>
+              {/* COMPONENT 2: Student Fee Statement & Monthly Breakdown */}
+              {selectedStudentProfileId && (
                 <FeeDetail
-                  feeObligations={feeObligationList}
-                  payments={payments}
-                  selectedStudentId={selectedStudentId}
+                  feeObligations={feeObligationsDatabase}
+                  payments={paymentsDatabase}
+                  selectedStudentId={selectedStudentProfileId}
                 />
+              )}
+            </div>
 
-                <PayFeesForm
-                  netBalance={
-                    feeObligationList
-                      .filter((f) => f.studentId === selectedStudentId)
-                      .reduce((acc, curr) => acc + curr.feeAmount, 0) -
-                    payments
-                      .filter((p) => p.belongsTo === selectedStudentId)
-                      .reduce((acc, curr) => acc + curr.amount, 0)
-                  }
-                  onSubmitPayment={handlePayment}
-                />
+            {/* RIGHT COLUMN: Payment Authorization (Top) + Receipt History (Bottom) */}
+            <div className="column-right">
+              {selectedStudentProfileId && (
+                <>
+                  {/* COMPONENT 3: Online Fee Payment Form & 2-Step Modal */}
+                  <PayFeesForm
+                    netBalance={activeStudentFinancials.netBalance}
+                    onSubmitPayment={handleProcessPayment}
+                  />
 
-                <PaymentHistory
-                  payments={payments}
-                  selectedStudentId={selectedStudentId}
-                />
-              </>
-            )}
+                  {/* COMPONENT 4: Transaction Receipts & Audit History */}
+                  <PaymentHistory
+                    payments={paymentsDatabase}
+                    selectedStudentId={selectedStudentProfileId}
+                  />
+                </>
+              )}
+            </div>
           </div>
         )}
 
-        {/* ========================================== */}
-        {/* ADMIN PORTAL VIEW */}
-        {/* ========================================== */}
-        {role === "admin" && (
+        {/* =================================================================== */}
+        {/* ADMIN PORTAL VIEW                                                   */}
+        {/* =================================================================== */}
+        {activeUserRole === "admin" && (
           <div className="portal-layout admin-portal">
-            <AdminCollectionsSummary payments={payments} />
+            {/* COMPONENT 5: School-Wide Financial Revenue Overview */}
+            <AdminCollectionsSummary payments={paymentsDatabase} />
 
             <div className="admin-roster-section">
+              {/* COMPONENT 6: Active Classroom Grade Filter */}
               <SelectClassComponent
                 classGrade={gradeArray}
-                selectedGrade={adminSelectedGrade}
-                onSelectGrade={setAdminSelectedGrade}
+                selectedGrade={selectedGradeForFilter}
+                onSelectGrade={setSelectedGradeForFilter}
               />
 
+              {/* COMPONENT 7: Classroom Student Roster Table & Edit Triggers */}
               <AdminClassRoster
-                students={studentList}
-                parents={parentList}
-                feeObligations={feeObligationList}
-                payments={payments}
-                selectedGrade={adminSelectedGrade}
-                onEditStudent={handleOpenEditModal}
+                students={studentsDatabase}
+                parents={parentsDatabase}
+                feeObligations={feeObligationsDatabase}
+                payments={paymentsDatabase}
+                selectedGrade={selectedGradeForFilter}
+                onEditStudent={handleInitiateStudentEdit}
               />
             </div>
 
+            {/* COMPONENT 8: New Student & Guardian Enrollment Form */}
             <AdminAddStudentForm
               classGrade={gradeArray}
-              onAddStudent={handleAddStudent}
+              onAddStudent={handleEnrollStudentAccount}
             />
 
+            {/* COMPONENT 9: Batch Class Monthly Fee Obligation Generator */}
             <AdminAssignFeesForm
-              assignFees={inputAssignFees}
+              assignFees={standardTuitionFeeInput}
               pickClass={gradeArray}
               pickMonth={months}
-              onInputChange={setInputAssignFees}
-              onSubmitFeesForm={handleAssignFees}
+              onInputChange={setStandardTuitionFeeInput}
+              onSubmitFeesForm={handleBatchGenerateClassFees}
             />
 
+            {/* COMPONENT 10: Annual Classroom Cohort Promotion Tool */}
             <AdminPromoteClass
               gradeClass={gradeArray}
-              gradeStudents={studentList.filter(
-                (s) => s.gradeName === adminSelectedGrade
+              gradeStudents={studentsDatabase.filter(
+                (student) => student.gradeName === selectedGradeForFilter
               )}
-              selectedGrade={adminSelectedGrade}
-              onDropdownChange={setAdminSelectedGrade}
-              onPromoteSubmit={handlePromoteStudents}
+              selectedGrade={selectedGradeForFilter}
+              onDropdownChange={setSelectedGradeForFilter}
+              onPromoteSubmit={handleExecuteAnnualPromotion}
             />
 
+            {/* COMPONENT 11: School-Wide Master Audit Transaction Log */}
             <AdminPaymentHistory
-              payments={payments}
-              students={studentList}
+              payments={paymentsDatabase}
+              students={studentsDatabase}
             />
           </div>
         )}
       </main>
 
-      {/* Global Edit Student Modal */}
+      {/* COMPONENT 12: Global Student & Guardian Record Edit Modal */}
       <AdminEditStudentModal
-        student={editingStudent}
-        parent={activeParent}
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleSaveStudent}
+        student={studentTargetForEdit}
+        parent={activeGuardianProfile}
+        isOpen={isEditStudentRecordModalOpen}
+        onClose={() => setIsEditStudentRecordModalOpen(false)}
+        onSave={handleSaveStudentProfileChanges}
       />
     </div>
   );

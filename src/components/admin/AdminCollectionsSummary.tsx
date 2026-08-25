@@ -7,12 +7,15 @@ export interface AdminCollectionsSummaryProps {
 export function AdminCollectionsSummary({
   payments,
 }: AdminCollectionsSummaryProps) {
-  const totalRevenue = payments.reduce((acc, curr) => acc + curr.amount, 0);
-  const transactionCount = payments.length;
+  // Only calculate revenue from SUCCESSFUL payments!
+  const successfulPayments = payments.filter((p) => p.status === "SUCCESS");
+  const totalRevenue = successfulPayments.reduce((acc, curr) => acc + curr.amount, 0);
+  const transactionCount = successfulPayments.length;
+  const failedCount = payments.filter((p) => p.status === "FAILED").length;
 
   return (
     <div className="card admin-summary-card">
-      <div className="card-title">COLLECTIONS OVERVIEW</div>
+      <div className="card-title text-center">COLLECTIONS OVERVIEW</div>
 
       <div className="summary-stats">
         <div className="stat-box highlight">
@@ -23,17 +26,18 @@ export function AdminCollectionsSummary({
         </div>
 
         <div className="stat-box">
-          <span className="stat-label">SETTLED TRANSACTIONS</span>
-          <span className="stat-value">{transactionCount} Receipts</span>
+          <span className="stat-label">SETTLED RECEIPTS</span>
+          <span className="stat-value">{transactionCount} Settled</span>
         </div>
 
         <div className="stat-box">
-          <span className="stat-label">AVERAGE PAYMENT</span>
-          <span className="stat-value">
-            ₹
-            {transactionCount > 0
-              ? Math.round(totalRevenue / transactionCount).toLocaleString()
-              : 0}
+          <span className="stat-label">FAILED ATTEMPTS</span>
+          <span
+            className={`stat-value ${
+              failedCount > 0 ? "text-danger" : "text-muted"
+            }`}
+          >
+            {failedCount} Failed
           </span>
         </div>
       </div>

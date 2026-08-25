@@ -10,89 +10,108 @@ export interface FeeDetailProps {
   selectedStudentId: string;
 }
 
+/**
+ * Helper to format raw numbers into standard Indian Rupee notation.
+ */
+function formatRupees(amount: number): string {
+  return `₹${amount.toLocaleString("en-IN")}`;
+}
+
+/**
+ * FeeDetail Component
+ * 
+ * Purpose:
+ * Renders the comprehensive financial ledger for the currently selected student.
+ * 
+ * Key Architectural Decisions:
+ * 1. Decoupled Business Engine: Delegates summary totals & sequential knockout to pure utility functions.
+ * 2. High-Contrast KPI Cards: Displays Total Fees, Total Paid, and Net Balance due.
+ * 3. Chronological Obligation Feed: Displays monthly fee obligations with real-time status badges.
+ */
 export function FeeDetail({
   feeObligations,
   payments,
   selectedStudentId,
 }: FeeDetailProps) {
-  // 1. Filter raw obligations and payments for the active student
+  // Filter obligations assigned specifically to this child
   const studentObligations = feeObligations.filter(
     (item) => item.studentId === selectedStudentId
   );
-  const studentPayments = payments.filter(
-    (item) => item.belongsTo === selectedStudentId
-  );
 
-  // 2. Derive high-level financial summary
-  const { totalFees, totalPaid, netBalance } = getStudentFinancialSummary(
+  // Derive high-level financial summary (Total Fees, Total Paid, Net Balance)
+  const financialSummary = getStudentFinancialSummary(
     selectedStudentId,
     feeObligations,
     payments
   );
 
-  // 3. Run the Sequential Wallet Knockout algorithm
-  const knockoutList = calculateSequentialFeeKnockout(
+  // Execute Sequential Wallet Knockout algorithm
+  const sequentialKnockoutList = calculateSequentialFeeKnockout(
     studentObligations,
-    totalPaid
+    financialSummary.totalPaid
   );
 
   return (
-    <div className="card fee-detail-card">
-      <div className="card-title">STUDENT FEE STATEMENT</div>
+    <div className="card fee-detail-card" role="region" aria-label="Student Fee Statement">
+      <div className="card-title text-center">STUDENT FEE STATEMENT</div>
 
-      {/* 3 Summary Metric Cards */}
+      {/* High-Level Financial Metrics */}
       <div className="summary-stats">
         <div className="stat-box">
-          <span className="stat-label">TOTAL ASSIGNED FEES</span>
-          <span className="stat-value">₹{totalFees.toLocaleString()}</span>
+          <span className="stat-label">TOTAL FEES:</span>
+          <span className="stat-value">
+            {formatRupees(financialSummary.totalFees)}
+          </span>
         </div>
 
         <div className="stat-box">
-          <span className="stat-label">TOTAL PAID TO DATE</span>
+          <span className="stat-label">TOTAL PAID:</span>
           <span className="stat-value text-success">
-            ₹{totalPaid.toLocaleString()}
+            {formatRupees(financialSummary.totalPaid)}
           </span>
         </div>
 
         <div className="stat-box highlight">
-          <span className="stat-label">CURRENT NET BALANCE</span>
+          <span className="stat-label">NET BALANCE:</span>
           <span
             className={`stat-value ${
-              netBalance === 0 ? "text-success" : "text-danger"
+              financialSummary.netBalance === 0 ? "text-success" : "text-danger"
             }`}
           >
-            ₹{netBalance.toLocaleString()}
+            {formatRupees(financialSummary.netBalance)}
           </span>
         </div>
       </div>
 
-      {/* Monthly Breakdown Feed */}
+      {/* Scrollable Monthly Fee Breakdown */}
       <div className="fee-breakdown-section">
-        <h3 className="section-subtitle">MONTHLY FEE OBLIGATIONS</h3>
+        <div className="section-header-mini">
+          <span className="stat-label">MONTHLY FEE BREAKDOWN</span>
+        </div>
 
-        {knockoutList.length === 0 ? (
-          <p className="empty-history">
+        {sequentialKnockoutList.length === 0 ? (
+          <p className="empty-history text-center">
             No fee obligations assigned to this student yet.
           </p>
         ) : (
-          <div className="history-list">
-            {knockoutList.map((bill) => (
-              <div key={bill.id} className="history-item">
+          <div className="history-list scrollable-feed">
+            {sequentialKnockoutList.map((obligation) => (
+              <div key={obligation.id} className="history-item">
                 <div className="history-meta">
-                  <strong className="month-name">{bill.month} Session</strong>
-                  <span className="fee-type-tag">{bill.feeType}</span>
+                  <strong className="month-name">{obligation.month}</strong>
+                  <span className="fee-type-tag">({obligation.feeType})</span>
                 </div>
 
                 <div className="history-finance">
                   <span className="amount-text">
-                    ₹{bill.feeAmount.toLocaleString()}
+                    {formatRupees(obligation.feeAmount)}
                   </span>
                   <span
                     className={`status-badge ${
-                      bill.isCovered ? "paid" : "pending"
+                      obligation.isCovered ? "paid" : "pending"
                     }`}
                   >
-                    {bill.isCovered ? "PAID" : "PENDING"}
+                    {obligation.isCovered ? "PAID" : "PENDING"}
                   </span>
                 </div>
               </div>

@@ -9,6 +9,18 @@ export interface ParentStudentSelectorProps {
   onSelectStudent: (studentId: string) => void;
 }
 
+/**
+ * ParentStudentSelector Component
+ *
+ * Purpose:
+ * Provides a cascading two-tier dropdown interface allowing a parent to select
+ * their family profile and switch between their enrolled children.
+ *
+ * Key Architectural Decisions:
+ * 1. Cascading Filter: Only displays children that belong to the active parent.
+ * 2. Ghost-Child Prevention: Automatically selects the first child when switching parents.
+ * 3. Graceful Empty State: Displays an informational banner when no accounts exist.
+ */
 export function ParentStudentSelector({
   parents,
   students,
@@ -17,46 +29,74 @@ export function ParentStudentSelector({
   onSelectParent,
   onSelectStudent,
 }: ParentStudentSelectorProps) {
-  // Cascading Filter: Only show children belonging to the selected parent
-  const parentChildren = students.filter(
-    (student) => student.parentId === selectedParentId
+  // Derive children associated with the active parent
+  const enrolledChildren = students.filter(
+    (student) => student.parentId === selectedParentId,
   );
 
-  function handleParentChange(newParentId: string) {
+  function handleParentSelectChange(
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ) {
+    const newParentId = event.target.value;
     onSelectParent(newParentId);
-    // Cascade-select the first child of the new parent to prevent "Ghost Child" state
-    const newChildren = students.filter((s) => s.parentId === newParentId);
-    if (newChildren.length > 0) {
-      onSelectStudent(newChildren[0].id);
+
+    // Cascade: Auto-select the first enrolled child of the newly selected parent
+    const associatedChildren = students.filter(
+      (s) => s.parentId === newParentId,
+    );
+    if (associatedChildren.length > 0) {
+      onSelectStudent(associatedChildren[0].id);
     } else {
       onSelectStudent("");
     }
   }
 
+  function handleStudentSelectChange(
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ) {
+    onSelectStudent(event.target.value);
+  }
+
+  // Render friendly empty state when the school database is empty
   if (parents.length === 0) {
     return (
-      <div className="card empty-state-card">
-        <p className="empty-message">
-          🏫 <strong>No Students Enrolled Yet</strong>
+      <div
+        className="card selector-card empty-state-card"
+        role="region"
+        aria-label="Family Account Selection"
+      >
+        <div className="card-title text-center">ACCOUNT SELECTION</div>
+        <p className="empty-message text-center">
+          🏫 <strong>No Student Records Found</strong>
         </p>
-        <p className="empty-subtext">
-          Switch to the <strong>Admin Office</strong> tab above to enroll your first student and generate fee obligations.
+        <p className="empty-subtext text-center">
+          Please navigate to the <strong>Admin Office</strong> in the top
+          navigation bar to enroll students.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="card selector-card">
-      <div className="card-title">SELECT FAMILY ACCOUNT</div>
+    <div
+      className="card selector-card"
+      role="region"
+      aria-label="Family Account Selection"
+    >
+      <div className="card-title text-center">SELECT FAMILY ACCOUNT</div>
 
-      <div className="selector-grid">
-        <div className="selector-group">
-          <label className="selector-label">1. Select Parent Account</label>
+      <div className="selector-stack">
+        {/* Tier 1: Parent Account Selector */}
+        <div className="selector-box">
+          <label htmlFor="parent-select" className="box-label">
+            1. Select Parent Account
+          </label>
           <select
-            className="class-selector"
+            id="parent-select"
+            className="class-selector custom-select"
             value={selectedParentId}
-            onChange={(e) => handleParentChange(e.target.value)}
+            onChange={handleParentSelectChange}
+            aria-label="Select Parent Account"
           >
             {parents.map((parent) => (
               <option key={parent.id} value={parent.id}>
@@ -66,20 +106,27 @@ export function ParentStudentSelector({
           </select>
         </div>
 
-        <div className="selector-group">
-          <label className="selector-label">2. Select Enrolled Child</label>
+        {/* Tier 2: Enrolled Child Selector */}
+        <div className="selector-box">
+          <label htmlFor="student-select" className="box-label">
+            2. Select Enrolled Student
+          </label>
           <select
-            className="class-selector"
+            id="student-select"
+            className="class-selector custom-select"
             value={selectedStudentId}
-            onChange={(e) => onSelectStudent(e.target.value)}
-            disabled={parentChildren.length === 0}
+            onChange={handleStudentSelectChange}
+            disabled={enrolledChildren.length === 0}
+            aria-label="Select Enrolled Student"
           >
-            {parentChildren.length === 0 ? (
-              <option value="">No children linked to this parent</option>
+            {enrolledChildren.length === 0 ? (
+              <option value="">
+                No children registered under this account
+              </option>
             ) : (
-              parentChildren.map((child) => (
+              enrolledChildren.map((child) => (
                 <option key={child.id} value={child.id}>
-                  🎒 {child.name} — Class {child.gradeName}
+                  🎒 {child.name} (Class {child.gradeName})
                 </option>
               ))
             )}
