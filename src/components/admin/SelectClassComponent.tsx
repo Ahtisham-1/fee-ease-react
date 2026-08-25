@@ -1,29 +1,30 @@
-export interface Grades {
-  classGrade: string;
-  selectedGrade: string;
-}
 export interface SelectClassComponentProps {
   classGrade: string[];
   selectedGrade: string;
   onSelectGrade: (grade: string) => void;
 }
 
-function SelectClassComponent({
+export function SelectClassComponent({
   classGrade,
   selectedGrade,
   onSelectGrade,
 }: SelectClassComponentProps) {
   return (
-    <div>
+    <div className="class-selector-wrapper">
+      <label className="selector-label">Active Classroom Filter:</label>
       <select
+        className="class-selector"
         value={selectedGrade}
         onChange={(e) => onSelectGrade(e.target.value)}
       >
         {classGrade.map((grade) => (
-          <option key={grade}>{grade}</option>
+          <option key={grade} value={grade}>
+            Class {grade}
+          </option>
         ))}
       </select>
     </div>
   );
 }
+
 export default SelectClassComponent;
