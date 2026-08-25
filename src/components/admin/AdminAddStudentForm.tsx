@@ -19,6 +19,7 @@ export function AdminAddStudentForm({
   const [phoneNumber, setPhoneNumber] = useState("");
   const [baseMonthlyTuition, setBaseMonthlyTuition] = useState("1500");
   const [hasBusTransport, setHasBusTransport] = useState(false);
+  const [transportFeeInput, setTransportFeeInput] = useState("1000");
   const [validationError, setValidationError] = useState<string | null>(null);
 
   function handleClassroomSelectChange(event: React.ChangeEvent<HTMLSelectElement>) {
@@ -34,6 +35,7 @@ export function AdminAddStudentForm({
     setValidationError(null);
 
     const parsedTuition = Number(baseMonthlyTuition);
+    const parsedTransport = hasBusTransport ? Number(transportFeeInput) || 1000 : 0;
 
     if (!studentFullName.trim()) {
       setValidationError("Please enter the student's full name.");
@@ -59,6 +61,7 @@ export function AdminAddStudentForm({
       grade: selectedGrade,
       tuitionFee: parsedTuition,
       hasTransport: hasBusTransport,
+      transportFee: parsedTransport,
     });
 
     setStudentFullName("");
@@ -66,6 +69,7 @@ export function AdminAddStudentForm({
     setPhoneNumber("");
     setBaseMonthlyTuition("1500");
     setHasBusTransport(false);
+    setTransportFeeInput("1000");
   }
 
   return (
@@ -133,7 +137,7 @@ export function AdminAddStudentForm({
           </div>
         </div>
 
-        {/* Row 2: Phone Number & Transport Option */}
+        {/* Row 2: Phone Number & Transport Toggle */}
         <div className="form-two-col align-center mt-3">
           <div className="input-group">
             <label htmlFor="phone-input" className="box-label">
@@ -161,17 +165,41 @@ export function AdminAddStudentForm({
               />
               <span className="student-name-label">
                 <BusIcon className="item-icon-inline" />
-                <span>Add Bus Service (+₹1,000/mo)</span>
+                <span>Add Bus Service</span>
               </span>
             </label>
           </div>
         </div>
 
+        {/* Conditional Transport Fee Input based on distance */}
+        {hasBusTransport && (
+          <div className="input-group mt-3" style={{ background: "var(--input-bg)", padding: "0.75rem 1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--input-border)" }}>
+            <label htmlFor="enroll-transport-fee" className="box-label">
+              CUSTOM MONTHLY TRANSPORT FEE (₹) — ROUTE / DISTANCE PRICING
+            </label>
+            <div className="currency-input-wrapper">
+              <span className="currency-symbol">₹</span>
+              <input
+                id="enroll-transport-fee"
+                type="number"
+                className="number-input"
+                placeholder="e.g. 500, 1000, 1500"
+                value={transportFeeInput}
+                onChange={(e) => setTransportFeeInput(e.target.value)}
+                min="0"
+              />
+            </div>
+            <span className="timestamp" style={{ color: "var(--emerald-dark)" }}>
+              💡 Set custom fare according to student distance (e.g. 2km = ₹500, 10km = ₹1,000).
+            </span>
+          </div>
+        )}
+
         {/* Row 3: Base Monthly Fee & Submit Button */}
         <div className="form-two-col align-center mt-3">
           <div className="input-group">
             <label htmlFor="tuition-fee-input" className="box-label">
-              BASE MONTHLY FEE (₹)
+              BASE MONTHLY TUITION (₹)
             </label>
             <div className="currency-input-wrapper">
               <span className="currency-symbol">₹</span>

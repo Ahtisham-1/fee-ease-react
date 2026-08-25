@@ -35,6 +35,13 @@ export function AdminAssignFeesForm({
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const classStudents = students.filter((s) => s.gradeName === selectGrade);
+  const transportCount = classStudents.filter((s) => Boolean(s.hasTransport)).length;
+  const standardCount = classStudents.length - transportCount;
+  const parsedFee = Number(feeInputString) || 0;
+  const totalBatchAmount = classStudents.reduce(
+    (sum, s) => sum + (parsedFee + (s.hasTransport ? (s.transportFee ?? 1000) : 0)),
+    0
+  );
 
   function isMonthAssignedToClass(monthName: string, gradeName: string): boolean {
     const classStudentIds = students
@@ -55,9 +62,9 @@ export function AdminAssignFeesForm({
     event.preventDefault();
     setValidationError(null);
 
-    const parsedFee = Number(feeInputString);
+    const validFee = Number(feeInputString);
 
-    if (isNaN(parsedFee) || parsedFee <= 0) {
+    if (isNaN(validFee) || validFee <= 0) {
       setValidationError("Please specify a valid tuition fee amount greater than ₹0.");
       return;
     }
@@ -82,8 +89,8 @@ export function AdminAssignFeesForm({
   }
 
   function handleProceedGeneration() {
-    const parsedFee = Number(feeInputString);
-    onSubmitFeesForm(selectGrade, selectMonth, parsedFee, currentAcademicYear);
+    const validFee = Number(feeInputString);
+    onSubmitFeesForm(selectGrade, selectMonth, validFee, currentAcademicYear);
     setIsConfirmModalOpen(false);
   }
 
@@ -144,7 +151,7 @@ export function AdminAssignFeesForm({
           {/* 3. Assigned Tuition Fee */}
           <div className="input-group">
             <label htmlFor="assign-fee-amount-input" className="box-label">
-              TUITION FEE PER STUDENT (₹)
+              BASE TUITION FEE PER STUDENT (₹)
             </label>
             <div className="currency-input-wrapper">
               <span className="currency-symbol">₹</span>
@@ -183,7 +190,9 @@ export function AdminAssignFeesForm({
           disabled={isCurrentSelectionAssigned || classStudents.length === 0}
         >
           <PlusIcon className="btn-icon" />
-          <span>Generate ₹{Number(feeInputString) || 0} Fee for Class {selectGrade} ({selectMonth} {currentAcademicYear})</span>
+          <span>
+            Generate Fees for Class {selectGrade} ({selectMonth} {currentAcademicYear})
+          </span>
         </button>
       </form>
 
@@ -217,16 +226,16 @@ export function AdminAssignFeesForm({
                   Class {selectGrade} — {selectMonth} {currentAcademicYear}
                 </strong>
                 <span className="confirmation-amount">
-                  ₹{(classStudents.length * (Number(feeInputString) || 0)).toLocaleString("en-IN")} Total Batch
+                  ₹{totalBatchAmount.toLocaleString("en-IN")} Total Batch
                 </span>
                 <span className="timestamp">
-                  Cohort: {classStudents.length} Students × ₹{Number(feeInputString) || 0}
+                  Cohort: {classStudents.length} Students ({standardCount} Standard @ ₹{parsedFee.toLocaleString("en-IN")}{transportCount > 0 ? ` + ${transportCount} Bus Transport @ ₹${(parsedFee + 1000).toLocaleString("en-IN")}` : ""})
                 </span>
               </div>
 
               <p className="security-notice">
                 <ShieldIcon className="security-icon" />
-                <span>Credits {classStudents.length} student ledgers and updates parent portals.</span>
+                <span>Automatically applies +₹1,000 transport fee for students enrolled in bus service.</span>
               </p>
             </div>
 

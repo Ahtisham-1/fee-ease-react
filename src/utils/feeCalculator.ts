@@ -1,4 +1,5 @@
 import type { FeeObligation, Payment } from "../types";
+import { months } from "../data/mockData";
 
 export interface StudentFinancialSummary {
   totalFees: number;
@@ -35,12 +36,16 @@ export function getStudentFinancialSummary(
 
 export interface KnockoutFeeItem extends FeeObligation {
   isCovered: boolean;
+  paidAmount: number;
+  remainingDue: number;
 }
 
 /**
- * The Sequential Wallet Knockout Algorithm:
- * Iterates through monthly fee obligations in chronological order and marks
- * each bill as paid/pending based on total successful cash paid by this student.
+ * The Strict FIFO Chronological Wallet Knockout Algorithm:
+ * 1. Strictly sorts monthly fee obligations by Academic Year ASC, then Calendar Month ASC (Jan -> Dec).
+ * 2. Deducts cash sequentially from the OLDEST unpaid month first (FIFO).
+ * 3. Never touches subsequent months until the previous month's bill is 100% paid!
+ * 4. Calculates exact paid amount, remaining due, and covered status on every month.
  */
 export function calculateSequentialFeeKnockout(
   studentId: string,
@@ -53,15 +58,35 @@ export function calculateSequentialFeeKnockout(
   );
   let remainingWallet = studentSuccessfulPayments.reduce((acc, curr) => acc + curr.amount, 0);
 
-  return studentObligations.map((obligation) => {
-    const isCovered = remainingWallet >= obligation.feeAmount;
-    if (isCovered) {
-      remainingWallet -= obligation.feeAmount;
+  // Strict Chronological FIFO Sorting: (Academic Year ASC -> Calendar Month ASC)
+  const chronologicalObligations = [...studentObligations].sort((obligationA, obligationB) => {
+    // 1. Compare Academic Year
+    const yearA = obligationA.academicYear || 0;
+    const yearB = obligationB.academicYear || 0;
+    if (yearA !== yearB) {
+      return yearA - yearB;
     }
+
+    // 2. Compare Calendar Month Order (January: 0 ... December: 11)
+    const monthAIndex = months.indexOf(obligationA.month);
+    const monthBIndex = months.indexOf(obligationB.month);
+
+    return (monthAIndex !== -1 ? monthAIndex : 0) - (monthBIndex !== -1 ? monthBIndex : 0);
+  });
+
+  return chronologicalObligations.map((obligation) => {
+    // Deduct strictly from this month first
+    const allocatedToThisMonth = Math.min(remainingWallet, obligation.feeAmount);
+    remainingWallet -= allocatedToThisMonth;
+
+    const remainingDue = obligation.feeAmount - allocatedToThisMonth;
+    const isCovered = remainingDue === 0;
 
     return {
       ...obligation,
       isCovered,
+      paidAmount: allocatedToThisMonth,
+      remainingDue,
       feeStatus: isCovered ? "paid" : "pending",
     };
   });

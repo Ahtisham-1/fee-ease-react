@@ -1333,3 +1333,41 @@ button:disabled, .pay-btn:disabled {
 .mt-2 { margin-top: 0.4rem; }
 .mt-3 { margin-top: 0.65rem; }
 .mt-4 { margin-top: 1rem; }
+
+/* Monthly Financial Pill & Partial Status */
+.monthly-financial-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.monthly-sub-status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.payment-impact-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--emerald-light);
+  border: 1px solid var(--success-border);
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.impact-label {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.impact-value {
+  font-size: 0.88rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}

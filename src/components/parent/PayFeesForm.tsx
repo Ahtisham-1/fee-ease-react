@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Student } from "../../types";
-import { WalletIcon, CheckCircleIcon, XIcon, ShieldIcon } from "../common/Icons";
+import { WalletIcon, XIcon, ShieldIcon, CheckIcon } from "../common/Icons";
 
 export interface PayFeesFormProps {
   student: Student | undefined;
@@ -17,13 +17,16 @@ export function PayFeesForm({
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [validationErrorMessage, setValidationErrorMessage] = useState<string | null>(null);
 
+  const numericAmount = Number(paymentAmountInput) || 0;
+  const remainingAfterPayment = Math.max(0, netPendingBalance - numericAmount);
+
   function handleInitiatePayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setValidationErrorMessage(null);
 
-    const numericAmount = Number(paymentAmountInput);
+    const validAmount = Number(paymentAmountInput);
 
-    if (isNaN(numericAmount) || numericAmount <= 0) {
+    if (isNaN(validAmount) || validAmount <= 0) {
       setValidationErrorMessage("Please enter a valid positive payment amount.");
       return;
     }
@@ -33,7 +36,7 @@ export function PayFeesForm({
       return;
     }
 
-    if (numericAmount > netPendingBalance) {
+    if (validAmount > netPendingBalance) {
       setValidationErrorMessage(
         `Payment amount cannot exceed the pending balance of ₹${netPendingBalance.toLocaleString("en-IN")}.`
       );
@@ -48,8 +51,8 @@ export function PayFeesForm({
   }
 
   function handleConfirmAndProceedPayment() {
-    const numericAmount = Number(paymentAmountInput);
-    onPayFee(numericAmount);
+    const validAmount = Number(paymentAmountInput);
+    onPayFee(validAmount);
     setPaymentAmountInput("");
     setIsConfirmationModalOpen(false);
   }
@@ -86,6 +89,16 @@ export function PayFeesForm({
             />
           </div>
         </div>
+
+        {/* Real-time Payment Impact Preview (Parent Satisfaction) */}
+        {!isFormDisabled && numericAmount > 0 && numericAmount <= netPendingBalance && (
+          <div className="payment-impact-preview">
+            <span className="impact-label">Remaining Dues After Payment:</span>
+            <strong className={`impact-value ${remainingAfterPayment === 0 ? "text-emerald" : "text-amber"}`}>
+              ₹{remainingAfterPayment.toLocaleString("en-IN")} {remainingAfterPayment === 0 ? "(Fully Cleared)" : ""}
+            </strong>
+          </div>
+        )}
 
         {validationErrorMessage && (
           <div className="error-banner" role="alert">
@@ -139,11 +152,14 @@ export function PayFeesForm({
                 <span className="confirmation-amount">
                   ₹{Number(paymentAmountInput).toLocaleString("en-IN")}
                 </span>
+                <span className="timestamp" style={{ color: "var(--emerald-dark)", fontWeight: 700 }}>
+                  {remainingAfterPayment === 0 ? "✅ This will clear all pending monthly obligations!" : `Remaining Debt After Payment: ₹${remainingAfterPayment.toLocaleString("en-IN")}`}
+                </span>
               </div>
 
               <p className="security-notice">
                 <ShieldIcon className="security-icon" />
-                <span>Encrypted Banking Gateway • Instant Receipt</span>
+                <span>Encrypted Banking Gateway • Instant Ledger Settlement</span>
               </p>
             </div>
 
@@ -162,7 +178,7 @@ export function PayFeesForm({
                 className="pay-btn confirm-proceed-btn"
                 onClick={handleConfirmAndProceedPayment}
               >
-                <CheckCircleIcon className="btn-icon" />
+                <CheckIcon className="btn-icon" />
                 <span>Proceed & Pay</span>
               </button>
             </div>

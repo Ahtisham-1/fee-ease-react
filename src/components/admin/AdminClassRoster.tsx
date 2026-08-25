@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Student, Parent, FeeObligation, Payment } from "../../types";
 import { getStudentFinancialSummary } from "../../utils/feeCalculator";
-import { EyeIcon, EyeOffIcon, EditIcon, TrashIcon, UsersIcon, UserIcon } from "../common/Icons";
+import { EyeIcon, EyeOffIcon, EditIcon, TrashIcon, UsersIcon, UserIcon, BusIcon } from "../common/Icons";
 
 export type SortCriteria = "name-asc" | "name-desc" | "fees-high" | "fees-low";
 
@@ -60,14 +60,9 @@ export function AdminClassRoster({
     <div className="card roster-card" role="region" aria-label="Classroom Student Roster">
       {/* Header Bar */}
       <div className="roster-header-controls">
-        <div className="roster-title-box">
-          <div className="card-title" style={{ marginBottom: 0 }}>
-            <UsersIcon className="title-icon" />
-            <span>CLASS {selectedGrade} ROSTER</span>
-          </div>
-          <span className="badge paid" style={{ marginTop: "0.2rem" }}>
-            {classStudents.length} Enrolled
-          </span>
+        <div className="card-title mb-0">
+          <UsersIcon className="title-icon" />
+          <span>CLASS {selectedGrade} ROSTER ({classStudents.length} ENROLLED)</span>
         </div>
 
         <div className="roster-action-bar">
@@ -75,10 +70,10 @@ export function AdminClassRoster({
             className="class-selector mini-select"
             value={selectedGrade}
             onChange={(e) => onSelectGrade?.(e.target.value)}
-            aria-label="Filter Classroom"
+            aria-label="Filter by Grade"
           >
-            {(classGrade || []).map((grade) => (
-              <option key={grade} value={grade}>
+            {classGrade.map((grade) => (
+              <option value={grade} key={grade}>
                 Class {grade}
               </option>
             ))}
@@ -147,7 +142,15 @@ export function AdminClassRoster({
                   <span className="parent-subtext">
                     Parent: {guardian ? guardian.name : "N/A"} ({guardian ? guardian.phone : ""})
                   </span>
-                  <span className="grade-tag">Class {student.gradeName}</span>
+                  <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", marginTop: "0.2rem" }}>
+                    <span className="grade-tag">Class {student.gradeName}</span>
+                    {student.hasTransport && (
+                      <span className="badge-pill" style={{ background: "var(--amber-light)", color: "var(--warning-text)", border: "1px solid var(--warning-border)", fontSize: "0.68rem", padding: "0.15rem 0.45rem", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                        <BusIcon style={{ width: "12px", height: "12px" }} />
+                        <span>Bus (+₹{(student.transportFee ?? 1000).toLocaleString("en-IN")})</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="roster-right-info">

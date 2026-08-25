@@ -20,6 +20,8 @@ export interface Student {
   name: string;
   parentId: string;
   gradeName: string;
+  hasTransport?: boolean;
+  transportFee?: number;
 }
 
 export interface FeeObligation {
@@ -47,6 +49,7 @@ export interface NewStudentData {
   grade: string;
   tuitionFee: number;
   hasTransport: boolean;
+  transportFee?: number;
 }
 
 export interface AssignFeesPayload {

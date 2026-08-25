@@ -77,44 +77,64 @@ export function FeeDetail({
             No fee obligations assigned for this academic session.
           </p>
         ) : (
-          sequentialKnockoutSchedule.map((obligation) => (
-            <div key={obligation.id} className="history-item">
-              <div className="history-meta">
-                <strong className="month-name">
-                  <CalendarIcon className="item-icon-inline" />
-                  <span>{obligation.month} {obligation.academicYear}</span>
-                </strong>
-                <span className="fee-type-tag">
-                  {obligation.feeType === "tuition+transport"
-                    ? "Tuition + Bus Transport"
-                    : "Tuition Fee"}
-                </span>
-              </div>
+          sequentialKnockoutSchedule.map((obligation) => {
+            const isFullyCleared = obligation.isCovered;
+            const isPartiallyPaid = obligation.paidAmount > 0 && !isFullyCleared;
 
-              <div className="history-finance">
-                <span className="amount-text">
-                  ₹{obligation.feeAmount.toLocaleString("en-IN")}
-                </span>
-                <span
-                  className={`status-badge ${
-                    obligation.feeStatus === "paid" ? "paid" : "pending"
-                  }`}
-                >
-                  {obligation.feeStatus === "paid" ? (
-                    <>
-                      <CheckCircleIcon className="badge-icon" />
-                      <span>Cleared</span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircleIcon className="badge-icon" />
-                      <span>Due</span>
-                    </>
-                  )}
-                </span>
+            return (
+              <div key={obligation.id} className="history-item">
+                <div className="history-meta">
+                  <strong className="month-name">
+                    <CalendarIcon className="item-icon-inline" />
+                    <span>{obligation.month} {obligation.academicYear}</span>
+                  </strong>
+                  <span className="fee-type-tag">
+                    {obligation.feeType === "tuition+transport"
+                      ? "Tuition + Bus Transport"
+                      : "Tuition Fee"}
+                  </span>
+                </div>
+
+                <div className="history-finance">
+                  <div className="monthly-financial-pill">
+                    <span className="amount-text">
+                      ₹{obligation.feeAmount.toLocaleString("en-IN")}
+                    </span>
+
+                    {/* Real-time Monthly Net Balance Feedback */}
+                    {isPartiallyPaid && (
+                      <span className="monthly-sub-status text-amber">
+                        Paid: ₹{obligation.paidAmount.toLocaleString("en-IN")} • Due: ₹{obligation.remainingDue.toLocaleString("en-IN")}
+                      </span>
+                    )}
+                  </div>
+
+                  <span
+                    className={`status-badge ${
+                      isFullyCleared ? "paid" : "pending"
+                    }`}
+                  >
+                    {isFullyCleared ? (
+                      <>
+                        <CheckCircleIcon className="badge-icon" />
+                        <span>Cleared</span>
+                      </>
+                    ) : isPartiallyPaid ? (
+                      <>
+                        <AlertCircleIcon className="badge-icon" />
+                        <span>Due: ₹{obligation.remainingDue.toLocaleString("en-IN")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircleIcon className="badge-icon" />
+                        <span>Due</span>
+                      </>
+                    )}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

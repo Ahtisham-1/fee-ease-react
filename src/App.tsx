@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Role, AdminTab, Student, Parent, FeeObligation, Payment, NewStudentData } from "./types";
+import type { Role, AdminTab, Student, Parent, FeeObligation, Payment, NewStudentData, FeeType } from "./types";
 import {
   initialParents,
   initialStudents,
@@ -124,14 +124,17 @@ export function App() {
     }
 
     const newStudentId = `s-${Date.now()}`;
+    const transportRate = enrollmentData.hasTransport ? (enrollmentData.transportFee ?? 1000) : 0;
     const newStudentRecord: Student = {
       id: newStudentId,
       name: enrollmentData.studentName,
       gradeName: enrollmentData.grade,
       parentId: guardianId,
+      hasTransport: enrollmentData.hasTransport,
+      transportFee: enrollmentData.hasTransport ? transportRate : undefined,
     };
 
-    const baseMonthlyFee = enrollmentData.tuitionFee + (enrollmentData.hasTransport ? 1000 : 0);
+    const baseMonthlyFee = enrollmentData.tuitionFee + transportRate;
     const initialObligation: FeeObligation = {
       id: `fee-${Date.now()}`,
       studentId: newStudentId,
@@ -188,11 +191,20 @@ export function App() {
     studentId: string,
     updatedStudentName: string,
     updatedParentName: string,
-    updatedPhoneNumber: string
+    updatedPhoneNumber: string,
+    hasTransport: boolean,
+    transportFee: number
   ) {
     setStudentsDatabase((previousStudents) =>
       previousStudents.map((student) =>
-        student.id === studentId ? { ...student, name: updatedStudentName } : student
+        student.id === studentId
+          ? {
+              ...student,
+              name: updatedStudentName,
+              hasTransport,
+              transportFee: hasTransport ? transportFee : undefined,
+            }
+          : student
       )
     );
 
@@ -225,15 +237,22 @@ export function App() {
       return;
     }
 
-    const generatedObligations: FeeObligation[] = classEnrolledStudents.map((student) => ({
-      id: `fee-${student.id}-${Date.now()}`,
-      studentId: student.id,
-      feeAmount: feeAmount,
-      month: targetAcademicMonth,
-      academicYear,
-      feeType: "tuition",
-      feeStatus: "pending",
-    }));
+    const generatedObligations: FeeObligation[] = classEnrolledStudents.map((student) => {
+      const isBusUser = Boolean(student.hasTransport);
+      const transportCharge = isBusUser ? (student.transportFee ?? 1000) : 0;
+      const studentTotalFee = feeAmount + transportCharge;
+      const feeType: FeeType = isBusUser ? "tuition+transport" : "tuition";
+
+      return {
+        id: `fee-${student.id}-${Date.now()}`,
+        studentId: student.id,
+        feeAmount: studentTotalFee,
+        month: targetAcademicMonth,
+        academicYear,
+        feeType: feeType,
+        feeStatus: "pending",
+      };
+    });
 
     setFeeObligationsDatabase((previousObligations) => [
       ...previousObligations,
