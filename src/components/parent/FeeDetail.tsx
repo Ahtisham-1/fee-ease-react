@@ -1,122 +1,120 @@
-import type { FeeObligation, Payment } from "../../types";
+import type { Student, FeeObligation, Payment } from "../../types";
 import {
   getStudentFinancialSummary,
   calculateSequentialFeeKnockout,
 } from "../../utils/feeCalculator";
+import { CreditCardIcon, CheckCircleIcon, AlertCircleIcon, CalendarIcon } from "../common/Icons";
 
 export interface FeeDetailProps {
+  student: Student | undefined;
   feeObligations: FeeObligation[];
   payments: Payment[];
-  selectedStudentId: string;
 }
 
-/**
- * Helper to format raw numbers into standard Indian Rupee notation.
- */
-function formatRupees(amount: number): string {
-  return `₹${amount.toLocaleString("en-IN")}`;
-}
-
-/**
- * FeeDetail Component
- * 
- * Purpose:
- * Renders the comprehensive financial ledger for the currently selected student.
- * 
- * Key Architectural Decisions:
- * 1. Decoupled Business Engine: Delegates summary totals & sequential knockout to pure utility functions.
- * 2. High-Contrast KPI Cards: Displays Total Fees, Total Paid, and Net Balance due.
- * 3. Chronological Obligation Feed: Displays monthly fee obligations with real-time status badges.
- */
 export function FeeDetail({
+  student,
   feeObligations,
   payments,
-  selectedStudentId,
 }: FeeDetailProps) {
-  // Filter obligations assigned specifically to this child
-  const studentObligations = feeObligations.filter(
-    (item) => item.studentId === selectedStudentId
-  );
+  if (!student) {
+    return (
+      <div className="card fee-detail-card empty-state-card" role="region" aria-label="Fee Ledger">
+        <div className="card-title text-center">STUDENT FEE LEDGER</div>
+        <p className="empty-message text-center">No student selected.</p>
+      </div>
+    );
+  }
 
-  // Derive high-level financial summary (Total Fees, Total Paid, Net Balance)
-  const financialSummary = getStudentFinancialSummary(
-    selectedStudentId,
+  const { totalAssigned, totalPaid, netBalance } = getStudentFinancialSummary(
+    student.id,
     feeObligations,
     payments
   );
 
-  // Execute Sequential Wallet Knockout algorithm
-  const sequentialKnockoutList = calculateSequentialFeeKnockout(
-    studentObligations,
-    financialSummary.totalPaid
+  const sequentialKnockoutSchedule = calculateSequentialFeeKnockout(
+    student.id,
+    feeObligations,
+    payments
   );
 
   return (
-    <div className="card fee-detail-card" role="region" aria-label="Student Fee Statement">
-      <div className="card-title text-center">STUDENT FEE STATEMENT</div>
+    <div className="card fee-detail-card" role="region" aria-label="Fee Ledger Breakdown">
+      <div className="card-title text-center">
+        <CreditCardIcon className="title-icon" />
+        <span>FEE BREAKDOWN — {student.name.toUpperCase()} (CLASS {student.gradeName})</span>
+      </div>
 
-      {/* High-Level Financial Metrics */}
+      {/* Top Stats Ribbon */}
       <div className="summary-stats">
         <div className="stat-box">
-          <span className="stat-label">TOTAL FEES:</span>
-          <span className="stat-value">
-            {formatRupees(financialSummary.totalFees)}
-          </span>
+          <span className="stat-label">TOTAL ASSIGNED</span>
+          <strong className="stat-value">₹{totalAssigned.toLocaleString("en-IN")}</strong>
         </div>
 
         <div className="stat-box">
-          <span className="stat-label">TOTAL PAID:</span>
-          <span className="stat-value text-success">
-            {formatRupees(financialSummary.totalPaid)}
-          </span>
+          <span className="stat-label">TOTAL PAID</span>
+          <strong className="stat-value text-success">
+            ₹{totalPaid.toLocaleString("en-IN")}
+          </strong>
         </div>
 
-        <div className="stat-box highlight">
-          <span className="stat-label">NET BALANCE:</span>
-          <span
+        <div className="stat-box">
+          <span className="stat-label">NET BALANCE</span>
+          <strong
             className={`stat-value ${
-              financialSummary.netBalance === 0 ? "text-success" : "text-danger"
+              netBalance === 0 ? "text-success" : "text-amber"
             }`}
           >
-            {formatRupees(financialSummary.netBalance)}
-          </span>
+            ₹{netBalance.toLocaleString("en-IN")}
+          </strong>
         </div>
       </div>
 
-      {/* Scrollable Monthly Fee Breakdown */}
-      <div className="fee-breakdown-section">
-        <div className="section-header-mini">
-          <span className="stat-label">MONTHLY FEE BREAKDOWN</span>
-        </div>
-
-        {sequentialKnockoutList.length === 0 ? (
+      {/* Monthly Fee Schedule Feed */}
+      <div className="history-list scrollable-feed">
+        {sequentialKnockoutSchedule.length === 0 ? (
           <p className="empty-history text-center">
-            No fee obligations assigned to this student yet.
+            No fee obligations assigned for this academic session.
           </p>
         ) : (
-          <div className="history-list scrollable-feed">
-            {sequentialKnockoutList.map((obligation) => (
-              <div key={obligation.id} className="history-item">
-                <div className="history-meta">
-                  <strong className="month-name">{obligation.month}</strong>
-                  <span className="fee-type-tag">({obligation.feeType})</span>
-                </div>
-
-                <div className="history-finance">
-                  <span className="amount-text">
-                    {formatRupees(obligation.feeAmount)}
-                  </span>
-                  <span
-                    className={`status-badge ${
-                      obligation.isCovered ? "paid" : "pending"
-                    }`}
-                  >
-                    {obligation.isCovered ? "PAID" : "PENDING"}
-                  </span>
-                </div>
+          sequentialKnockoutSchedule.map((obligation) => (
+            <div key={obligation.id} className="history-item">
+              <div className="history-meta">
+                <strong className="month-name">
+                  <CalendarIcon className="item-icon-inline" />
+                  <span>{obligation.month} {obligation.academicYear}</span>
+                </strong>
+                <span className="fee-type-tag">
+                  {obligation.feeType === "tuition+transport"
+                    ? "Tuition + Bus Transport"
+                    : "Tuition Fee"}
+                </span>
               </div>
-            ))}
-          </div>
+
+              <div className="history-finance">
+                <span className="amount-text">
+                  ₹{obligation.feeAmount.toLocaleString("en-IN")}
+                </span>
+                <span
+                  className={`status-badge ${
+                    obligation.feeStatus === "paid" ? "paid" : "pending"
+                  }`}
+                >
+                  {obligation.feeStatus === "paid" ? (
+                    <>
+                      <CheckCircleIcon className="badge-icon" />
+                      <span>Cleared</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircleIcon className="badge-icon" />
+                      <span>Due</span>
+                    </>
+                  )}
+                </span>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>

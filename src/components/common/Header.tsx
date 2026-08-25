@@ -1,30 +1,32 @@
 import type { Role } from "../../types";
+import { SchoolIcon, UsersIcon, ShieldIcon } from "./Icons";
 
 export interface HeaderProps {
   role: Role;
   onRoleChange: (newRole: Role) => void;
 }
 
+/**
+ * Modern Emerald & Gold Navigation Header
+ */
 export function Header({ role, onRoleChange }: HeaderProps) {
   return (
     <header className="header-bar" role="banner">
       <div className="header-inner">
+        {/* Left Corner: Brand Logo */}
         <div className="header-title">
-          <span>
-            Fee<span style={{ color: "var(--accent-color)" }}>Ease</span>
+          <div className="brand-icon-wrapper">
+            <SchoolIcon className="brand-svg-icon" />
+          </div>
+          <span className="brand-name">
+            Fee<span className="accent-brand">Ease</span>
           </span>
-          <span
-            className="status-badge paid"
-            style={{
-              fontSize: "0.68rem",
-              padding: "0.2rem 0.6rem",
-              marginLeft: "0.5rem",
-            }}
-          >
+          <span className="status-badge paid brand-badge">
             Kashmir Academic
           </span>
         </div>
 
+        {/* Right Corner: Segmented Role Switcher */}
         <nav className="role-switcher" aria-label="Portal Navigation">
           <button
             type="button"
@@ -32,7 +34,8 @@ export function Header({ role, onRoleChange }: HeaderProps) {
             onClick={() => onRoleChange("parent")}
             aria-pressed={role === "parent"}
           >
-            👨‍👩‍👧 Parent Portal
+            <UsersIcon className="nav-btn-icon" />
+            <span>Parent Portal</span>
           </button>
 
           <button
@@ -41,7 +44,8 @@ export function Header({ role, onRoleChange }: HeaderProps) {
             onClick={() => onRoleChange("admin")}
             aria-pressed={role === "admin"}
           >
-            🛡️ Admin Office
+            <ShieldIcon className="nav-btn-icon" />
+            <span>Admin Office</span>
           </button>
         </nav>
       </div>

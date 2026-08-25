@@ -1,165 +1,149 @@
 import { useState } from "react";
+import type { Student } from "../../types";
+import { WalletIcon, CheckCircleIcon, XIcon, ShieldIcon } from "../common/Icons";
 
 export interface PayFeesFormProps {
-  netBalance: number;
-  onSubmitPayment: (amount: number) => void;
+  student: Student | undefined;
+  netPendingBalance: number;
+  onPayFee: (amount: number) => void;
 }
 
-/**
- * PayFeesForm Component
- * 
- * Purpose:
- * Provides a secure, validated interface for parents to submit online fee payments.
- * 
- * Key Architectural Decisions:
- * 1. 3-Tier Defensive Validation: Blocks negative numbers, zero balances, and overpayments.
- * 2. Two-Step Authorization Modal: Requires explicit parent confirmation before debiting funds.
- * 3. Controlled State Isolation: Retains transaction state locally until confirmed by the user.
- */
 export function PayFeesForm({
-  netBalance,
-  onSubmitPayment,
+  student,
+  netPendingBalance,
+  onPayFee,
 }: PayFeesFormProps) {
-  // Local Form State
-  const [paymentInputValue, setPaymentInputValue] = useState("");
+  const [paymentAmountInput, setPaymentAmountInput] = useState<string>("");
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [validationErrorMessage, setValidationErrorMessage] = useState<string | null>(null);
 
-  // Two-Step Confirmation State
-  const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
-  const [pendingPaymentAmount, setPendingPaymentAmount] = useState<number | null>(null);
-
-  function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleInitiatePayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setValidationErrorMessage(null);
 
-    const parsedAmount = Number(paymentInputValue);
+    const numericAmount = Number(paymentAmountInput);
 
-    // Defensive Guard 1: Must be a positive numeric value
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    if (isNaN(numericAmount) || numericAmount <= 0) {
       setValidationErrorMessage("Please enter a valid positive payment amount.");
       return;
     }
 
-    // Defensive Guard 2: No balance currently due
-    if (netBalance <= 0) {
-      setValidationErrorMessage("All fees are fully settled. No pending balance due.");
+    if (netPendingBalance <= 0) {
+      setValidationErrorMessage("No pending fee balance remaining for this student.");
       return;
     }
 
-    // Defensive Guard 3: Overpayment prevention
-    if (parsedAmount > netBalance) {
+    if (numericAmount > netPendingBalance) {
       setValidationErrorMessage(
-        `Payment amount exceeds current balance. Maximum payable is ₹${netBalance.toLocaleString("en-IN")}.`
+        `Payment amount cannot exceed the pending balance of ₹${netPendingBalance.toLocaleString("en-IN")}.`
       );
       return;
     }
 
-    // Open Confirmation Dialog
-    setPendingPaymentAmount(parsedAmount);
-    setIsConfirmationModalVisible(true);
+    setIsConfirmationModalOpen(true);
   }
 
   function handleCancelPayment() {
-    setIsConfirmationModalVisible(false);
-    setPendingPaymentAmount(null);
+    setIsConfirmationModalOpen(false);
   }
 
   function handleConfirmAndProceedPayment() {
-    if (pendingPaymentAmount && pendingPaymentAmount > 0) {
-      onSubmitPayment(pendingPaymentAmount);
-    }
-    setIsConfirmationModalVisible(false);
-    setPendingPaymentAmount(null);
-    setPaymentInputValue("");
+    const numericAmount = Number(paymentAmountInput);
+    onPayFee(numericAmount);
+    setPaymentAmountInput("");
+    setIsConfirmationModalOpen(false);
   }
+
+  const isFormDisabled = !student || netPendingBalance <= 0;
 
   return (
     <div className="card pay-fees-card" role="region" aria-label="Fee Payment Form">
-      <div className="card-title text-center">SUBMIT ONLINE FEE PAYMENT</div>
+      <div className="card-title text-center">
+        <WalletIcon className="title-icon" />
+        <span>SUBMIT FEE PAYMENT</span>
+      </div>
 
-      <form onSubmit={handleFormSubmit} className="vertical-pay-form">
-        <div className="input-group full-width">
-          <label htmlFor="payment-amount-input" className="input-label">
-            Enter Payment Amount (₹)
+      <form onSubmit={handleInitiatePayment} className="pay-form-vertical">
+        <div className="input-group">
+          <label htmlFor="payment-amount-input" className="box-label">
+            ENTER PAYMENT AMOUNT (₹)
           </label>
           <div className="currency-input-wrapper">
-            <span className="currency-symbol" aria-hidden="true">
-              ₹
-            </span>
+            <span className="currency-symbol">₹</span>
             <input
               id="payment-amount-input"
               type="number"
-              className="number-input full-width-input"
-              placeholder={
-                netBalance > 0
-                  ? `Enter amount (Max: ₹${netBalance.toLocaleString("en-IN")})`
-                  : "0"
-              }
-              value={paymentInputValue}
+              className="number-input"
+              placeholder={isFormDisabled ? "0" : "Enter amount to pay"}
+              value={paymentAmountInput}
               onChange={(e) => {
-                setPaymentInputValue(e.target.value);
+                setPaymentAmountInput(e.target.value);
                 if (validationErrorMessage) setValidationErrorMessage(null);
               }}
-              disabled={netBalance <= 0}
               min="1"
-              max={netBalance}
-              aria-label="Payment Amount in Rupees"
+              max={netPendingBalance}
+              disabled={isFormDisabled}
             />
           </div>
         </div>
 
         {validationErrorMessage && (
           <div className="error-banner" role="alert">
-            ⚠️ {validationErrorMessage}
+            {validationErrorMessage}
           </div>
         )}
 
         <button
           type="submit"
-          className="pay-btn full-width-btn mt-3"
-          disabled={netBalance <= 0 || !paymentInputValue}
+          className="pay-btn full-width-btn"
+          disabled={isFormDisabled || !paymentAmountInput}
         >
-          {netBalance <= 0
-            ? "✅ Fees Fully Settled"
-            : `💳 Pay ₹${Number(paymentInputValue) || 0} Towards Balance`}
+          <WalletIcon className="btn-icon" />
+          <span>
+            {netPendingBalance <= 0
+              ? "All Fees Cleared"
+              : `Proceed to Pay ₹${Number(paymentAmountInput) || 0}`}
+          </span>
         </button>
       </form>
 
-      {/* ========================================== */}
-      {/* TWO-STEP CONFIRMATION MODAL DIALOG         */}
-      {/* ========================================== */}
-      {isConfirmationModalVisible && pendingPaymentAmount && (
+      {/* Confirmation Modal */}
+      {isConfirmationModalOpen && (
         <div
           className="modal-overlay"
           onClick={handleCancelPayment}
           role="dialog"
           aria-modal="true"
-          aria-labelledby="confirm-modal-title"
+          aria-labelledby="modal-confirm-title"
         >
           <div
             className="modal-card confirmation-card"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <h3 id="confirm-modal-title" className="modal-title">
-                CONFIRM ONLINE PAYMENT
+              <h3 id="modal-confirm-title" className="modal-title">
+                CONFIRM FEE PAYMENT
               </h3>
             </div>
 
             <div className="confirmation-body">
               <p className="confirmation-subtext">
-                Please verify your transaction details before proceeding:
+                You are authorizing an online school fee payment for:
               </p>
 
               <div className="confirmation-amount-box">
-                <span className="confirmation-label">AMOUNT TO DEBIT:</span>
-                <strong className="confirmation-amount">
-                  ₹{pendingPaymentAmount.toLocaleString("en-IN")}
+                <span className="confirmation-label">STUDENT BENEFICIARY:</span>
+                <strong className="confirmation-student">
+                  {student?.name} (Class {student?.gradeName})
                 </strong>
+                <span className="confirmation-amount">
+                  ₹{Number(paymentAmountInput).toLocaleString("en-IN")}
+                </span>
               </div>
 
               <p className="security-notice">
-                🔒 Authorizing will generate an official receipt and update your student fee ledger.
+                <ShieldIcon className="security-icon" />
+                <span>Encrypted Banking Gateway • Instant Receipt</span>
               </p>
             </div>
 
@@ -169,7 +153,8 @@ export function PayFeesForm({
                 className="role-btn cancel-btn"
                 onClick={handleCancelPayment}
               >
-                ❌ Cancel
+                <XIcon className="btn-icon" />
+                <span>Cancel</span>
               </button>
 
               <button
@@ -177,7 +162,8 @@ export function PayFeesForm({
                 className="pay-btn confirm-proceed-btn"
                 onClick={handleConfirmAndProceedPayment}
               >
-                ✅ Proceed & Authorize ₹{pendingPaymentAmount.toLocaleString("en-IN")}
+                <CheckCircleIcon className="btn-icon" />
+                <span>Proceed & Pay</span>
               </button>
             </div>
           </div>

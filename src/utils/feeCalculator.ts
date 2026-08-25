@@ -2,12 +2,13 @@ import type { FeeObligation, Payment } from "../types";
 
 export interface StudentFinancialSummary {
   totalFees: number;
+  totalAssigned: number;
   totalPaid: number;
   netBalance: number;
 }
 
 /**
- * Calculates total fees, total paid, and net balance for a specific student.
+ * Calculates total fees, total assigned, total paid, and net balance for a specific student.
  * Critical Rule: ONLY payments with status === "SUCCESS" are counted towards totalPaid!
  */
 export function getStudentFinancialSummary(
@@ -26,6 +27,7 @@ export function getStudentFinancialSummary(
 
   return {
     totalFees,
+    totalAssigned: totalFees,
     totalPaid,
     netBalance,
   };
@@ -38,13 +40,18 @@ export interface KnockoutFeeItem extends FeeObligation {
 /**
  * The Sequential Wallet Knockout Algorithm:
  * Iterates through monthly fee obligations in chronological order and marks
- * each bill as paid/pending based on total successful cash paid.
+ * each bill as paid/pending based on total successful cash paid by this student.
  */
 export function calculateSequentialFeeKnockout(
-  studentObligations: FeeObligation[],
-  totalPaid: number
+  studentId: string,
+  obligations: FeeObligation[],
+  payments: Payment[]
 ): KnockoutFeeItem[] {
-  let remainingWallet = totalPaid;
+  const studentObligations = obligations.filter((o) => o.studentId === studentId);
+  const studentSuccessfulPayments = payments.filter(
+    (p) => p.belongsTo === studentId && p.status === "SUCCESS"
+  );
+  let remainingWallet = studentSuccessfulPayments.reduce((acc, curr) => acc + curr.amount, 0);
 
   return studentObligations.map((obligation) => {
     const isCovered = remainingWallet >= obligation.feeAmount;

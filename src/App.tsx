@@ -11,6 +11,7 @@ import { getStudentFinancialSummary } from "./utils/feeCalculator";
 
 // Universal Components
 import Header from "./components/common/Header";
+import { TrendingUpIcon, UsersIcon, CalendarIcon, ArrowRightIcon } from "./components/common/Icons";
 
 // Parent Portal Suite
 import ParentStudentSelector from "./components/parent/ParentStudentSelector";
@@ -20,7 +21,6 @@ import PaymentHistory from "./components/parent/PaymentHistory";
 
 // Admin Portal Suite
 import AdminCollectionsSummary from "./components/admin/AdminCollectionsSummary";
-import SelectClassComponent from "./components/admin/SelectClassComponent";
 import AdminClassRoster from "./components/admin/AdminClassRoster";
 import AdminAssignFeesForm from "./components/admin/AdminAssignFeesForm";
 import AdminPromoteClass from "./components/admin/AdminPromoteClass";
@@ -136,7 +136,8 @@ export function App() {
       id: `fee-${Date.now()}`,
       studentId: newStudentId,
       feeAmount: baseMonthlyFee,
-      month: months[new Date().getMonth()] || "Current",
+      month: months[new Date().getMonth()] || "January",
+      academicYear: new Date().getFullYear(),
       feeType: enrollmentData.hasTransport ? "tuition+transport" : "tuition",
       feeStatus: "pending",
     };
@@ -212,7 +213,8 @@ export function App() {
   function handleBatchGenerateClassFees(
     targetGradeClass: string,
     targetAcademicMonth: string,
-    feeAmount: number
+    feeAmount: number,
+    academicYear: number
   ) {
     const classEnrolledStudents = studentsDatabase.filter(
       (student) => student.gradeName === targetGradeClass
@@ -228,6 +230,7 @@ export function App() {
       studentId: student.id,
       feeAmount: feeAmount,
       month: targetAcademicMonth,
+      academicYear,
       feeType: "tuition",
       feeStatus: "pending",
     }));
@@ -238,7 +241,7 @@ export function App() {
     ]);
 
     alert(
-      `Successfully generated ${generatedObligations.length} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth}).`
+      `Successfully generated ${generatedObligations.length} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth} ${academicYear}).`
     );
   }
 
@@ -275,6 +278,10 @@ export function App() {
       (studentTargetForEdit ? studentTargetForEdit.parentId : selectedParentAccountId)
   );
 
+  const activeSelectedStudent = studentsDatabase.find(
+    (student) => student.id === selectedStudentProfileId
+  );
+
   const activeStudentFinancials = getStudentFinancialSummary(
     selectedStudentProfileId,
     feeObligationsDatabase,
@@ -302,26 +309,28 @@ export function App() {
                 onSelectStudent={setSelectedStudentProfileId}
               />
 
-              {selectedStudentProfileId && (
+              {activeSelectedStudent && (
                 <FeeDetail
+                  student={activeSelectedStudent}
                   feeObligations={feeObligationsDatabase}
                   payments={paymentsDatabase}
-                  selectedStudentId={selectedStudentProfileId}
                 />
               )}
             </div>
 
             <div className="column-right">
-              {selectedStudentProfileId && (
+              {activeSelectedStudent && (
                 <>
                   <PayFeesForm
-                    netBalance={activeStudentFinancials.netBalance}
-                    onSubmitPayment={handleProcessPayment}
+                    student={activeSelectedStudent}
+                    netPendingBalance={activeStudentFinancials.netBalance}
+                    onPayFee={handleProcessPayment}
                   />
 
                   <PaymentHistory
-                    payments={paymentsDatabase}
-                    selectedStudentId={selectedStudentProfileId}
+                    payments={paymentsDatabase.filter(
+                      (receipt) => receipt.belongsTo === selectedStudentProfileId
+                    )}
                   />
                 </>
               )}
@@ -341,7 +350,8 @@ export function App() {
                 className={`admin-tab-btn ${activeAdminTab === "overview" ? "active" : ""}`}
                 onClick={() => setActiveAdminTab("overview")}
               >
-                📊 Overview & Audit
+                <TrendingUpIcon className="nav-btn-icon" />
+                <span>Overview & Audit</span>
               </button>
 
               <button
@@ -349,7 +359,8 @@ export function App() {
                 className={`admin-tab-btn ${activeAdminTab === "students" ? "active" : ""}`}
                 onClick={() => setActiveAdminTab("students")}
               >
-                👥 Class Roster & Enrollment
+                <UsersIcon className="nav-btn-icon" />
+                <span>Class Roster & Enrollment</span>
               </button>
 
               <button
@@ -357,7 +368,8 @@ export function App() {
                 className={`admin-tab-btn ${activeAdminTab === "fees" ? "active" : ""}`}
                 onClick={() => setActiveAdminTab("fees")}
               >
-                📢 Generate Class Fees
+                <CalendarIcon className="nav-btn-icon" />
+                <span>Generate Class Fees</span>
               </button>
 
               <button
@@ -365,7 +377,8 @@ export function App() {
                 className={`admin-tab-btn ${activeAdminTab === "promotion" ? "active" : ""}`}
                 onClick={() => setActiveAdminTab("promotion")}
               >
-                🚀 Class Promotion
+                <ArrowRightIcon className="nav-btn-icon" />
+                <span>Class Promotion</span>
               </button>
             </nav>
 
@@ -411,6 +424,8 @@ export function App() {
                 assignFees={standardTuitionFeeInput}
                 pickClass={gradeArray}
                 pickMonth={months}
+                feeObligations={feeObligationsDatabase}
+                students={studentsDatabase}
                 onInputChange={setStandardTuitionFeeInput}
                 onSubmitFeesForm={handleBatchGenerateClassFees}
               />

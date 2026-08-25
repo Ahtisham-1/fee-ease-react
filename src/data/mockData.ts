@@ -11,7 +11,8 @@ export const gradeArray = [
   "11th", "12th"
 ];
 
+// Full Month Names Standard
 export const months = [
-  "Jan", "Feb", "March", "April", "May", "June",
-  "July", "Aug", "Sep", "Oct", "Nov", "Dec"
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
 ];

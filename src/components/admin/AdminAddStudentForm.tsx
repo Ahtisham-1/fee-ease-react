@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { NewStudentData } from "../../types";
+import { PlusIcon, BusIcon } from "../common/Icons";
 
 export interface AdminAddStudentFormProps {
   classGrade: string[];
@@ -7,22 +8,11 @@ export interface AdminAddStudentFormProps {
   onClassChange?: (grade: string) => void;
 }
 
-/**
- * AdminAddStudentForm Component
- * 
- * Purpose:
- * Renders the new student and guardian enrollment form.
- * 
- * Architectural Features:
- * 1. String-based numeric input: Allows complete field clearance without forcing 0.
- * 2. One-Way Master Class Sync: Changing class here updates the Roster view, but Roster changes do not alter this form.
- */
 export function AdminAddStudentForm({
   classGrade,
   onAddStudent,
   onClassChange,
 }: AdminAddStudentFormProps) {
-  // Local Form State
   const [selectedGrade, setSelectedGrade] = useState(classGrade[0] || "1st");
   const [studentFullName, setStudentFullName] = useState("");
   const [parentFullName, setParentFullName] = useState("");
@@ -34,8 +24,6 @@ export function AdminAddStudentForm({
   function handleClassroomSelectChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const newGrade = event.target.value;
     setSelectedGrade(newGrade);
-
-    // One-Way Master Push: Sync the active Roster view to this classroom
     if (onClassChange) {
       onClassChange(newGrade);
     }
@@ -47,7 +35,6 @@ export function AdminAddStudentForm({
 
     const parsedTuition = Number(baseMonthlyTuition);
 
-    // Defensive Validations
     if (!studentFullName.trim()) {
       setValidationError("Please enter the student's full name.");
       return;
@@ -65,7 +52,6 @@ export function AdminAddStudentForm({
       return;
     }
 
-    // Dispatch Enrollment Payload
     onAddStudent({
       studentName: studentFullName.trim(),
       parentName: parentFullName.trim(),
@@ -75,7 +61,6 @@ export function AdminAddStudentForm({
       hasTransport: hasBusTransport,
     });
 
-    // Reset Form Fields
     setStudentFullName("");
     setParentFullName("");
     setPhoneNumber("");
@@ -85,10 +70,13 @@ export function AdminAddStudentForm({
 
   return (
     <div className="card add-student-card" role="region" aria-label="Student Enrollment Form">
-      <div className="card-title text-center">ENROLL NEW STUDENT & GUARDIAN</div>
+      <div className="card-title text-center">
+        <PlusIcon className="title-icon" />
+        <span>ENROLL NEW STUDENT & GUARDIAN</span>
+      </div>
 
       <form onSubmit={handleEnrollmentSubmit} className="enrollment-form-grid">
-        {/* Top Field: Select Class (One-Way Master Switcher) */}
+        {/* Top Field: Select Class */}
         <div className="input-group full-width mb-3">
           <label htmlFor="enroll-class-select" className="box-label">
             SELECT CLASSROOM
@@ -172,13 +160,14 @@ export function AdminAddStudentForm({
                 onChange={(e) => setHasBusTransport(e.target.checked)}
               />
               <span className="student-name-label">
-                🚌 Add Bus Service (+₹1,000/mo)
+                <BusIcon className="item-icon-inline" />
+                <span>Add Bus Service (+₹1,000/mo)</span>
               </span>
             </label>
           </div>
         </div>
 
-        {/* Row 3: Base Monthly Fee (Clearable) & Submit Button */}
+        {/* Row 3: Base Monthly Fee & Submit Button */}
         <div className="form-two-col align-center mt-3">
           <div className="input-group">
             <label htmlFor="tuition-fee-input" className="box-label">
@@ -203,14 +192,15 @@ export function AdminAddStudentForm({
 
           <div className="input-group submit-cell">
             <button type="submit" className="pay-btn full-width-btn">
-              ➕ Complete Enrollment
+              <PlusIcon className="btn-icon" />
+              <span>Complete Enrollment</span>
             </button>
           </div>
         </div>
 
         {validationError && (
           <div className="error-banner mt-3" role="alert">
-            ⚠️ {validationError}
+            {validationError}
           </div>
         )}
       </form>

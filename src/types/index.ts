@@ -27,6 +27,7 @@ export interface FeeObligation {
   studentId: string;
   feeAmount: number;
   month: string;
+  academicYear: number;
   feeType: FeeType;
   feeStatus: FeeStatus;
 }
@@ -52,4 +53,5 @@ export interface AssignFeesPayload {
   targetClass: string;
   targetMonth: string;
   assignFees: number;
+  academicYear: number;
 }
