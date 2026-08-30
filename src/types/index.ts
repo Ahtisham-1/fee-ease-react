@@ -58,3 +58,4 @@ export interface AssignFeesPayload {
   assignFees: number;
   academicYear: number;
 }
+
