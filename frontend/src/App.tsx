@@ -1,5 +1,14 @@
-import { useState } from "react";
-import type { Role, AdminTab, Student, Parent, FeeObligation, Payment, NewStudentData, FeeType } from "./types";
+import { useState, useEffect } from "react";
+import type {
+  Role,
+  AdminTab,
+  Student,
+  Parent,
+  FeeObligation,
+  Payment,
+  NewStudentData,
+  FeeType,
+} from "./types";
 import {
   initialParents,
   initialStudents,
@@ -11,7 +20,12 @@ import { getStudentFinancialSummary } from "./utils/feeCalculator";
 
 // Universal Components
 import Header from "./components/common/Header";
-import { TrendingUpIcon, UsersIcon, CalendarIcon, ArrowRightIcon } from "./components/common/Icons";
+import {
+  TrendingUpIcon,
+  UsersIcon,
+  CalendarIcon,
+  ArrowRightIcon,
+} from "./components/common/Icons";
 
 // Parent Portal Suite
 import ParentStudentSelector from "./components/parent/ParentStudentSelector";
@@ -28,11 +42,14 @@ import AdminPaymentHistory from "./components/admin/AdminPaymentHistory";
 import AdminAddStudentForm from "./components/admin/AdminAddStudentForm";
 import AdminEditStudentModal from "./components/admin/AdminEditStudentModal";
 
+//Services import
+import { createStudents, getStudents } from "./services/studentApi";
+
 /**
  * ============================================================================
  * FeeEase Central Application Orchestrator (App.tsx)
  * ============================================================================
- * 
+ *
  * Architectural Purpose:
  * Serves as the central state store, in-memory domain database, and top-level
  * orchestrator connecting all Parent and Admin components.
@@ -54,35 +71,54 @@ export function App() {
   // CENTRAL IN-MEMORY DOMAIN DATABASES (Clean Slate / Zero Mock Data)
   // Shared across ALL components in the school system
   // --------------------------------------------------------------------------
-  const [parentsDatabase, setParentsDatabase] = useState<Parent[]>(initialParents);
-  const [studentsDatabase, setStudentsDatabase] = useState<Student[]>(initialStudents);
-  const [feeObligationsDatabase, setFeeObligationsDatabase] = useState<FeeObligation[]>(initialFeeObligations);
+  const [parentsDatabase, setParentsDatabase] =
+    useState<Parent[]>(initialParents);
+  const [studentsDatabase, setStudentsDatabase] = useState<Student[]>([]);
+  const [feeObligationsDatabase, setFeeObligationsDatabase] = useState<
+    FeeObligation[]
+  >(initialFeeObligations);
   const [paymentsDatabase, setPaymentsDatabase] = useState<Payment[]>([]);
 
   // --------------------------------------------------------------------------
   // PARENT PORTAL ACTIVE CONTEXT SELECTION STATE
   // Connected to: ParentStudentSelector.tsx, FeeDetail.tsx, PayFeesForm.tsx, PaymentHistory.tsx
   // --------------------------------------------------------------------------
-  const [selectedParentAccountId, setSelectedParentAccountId] = useState<string>(
-    initialParents[0]?.id || ""
-  );
-  const [selectedStudentProfileId, setSelectedStudentProfileId] = useState<string>(
-    initialStudents[0]?.id || ""
-  );
+  const [selectedParentAccountId, setSelectedParentAccountId] =
+    useState<string>(initialParents[0]?.id || "");
+  const [selectedStudentProfileId, setSelectedStudentProfileId] =
+    useState<string>(initialStudents[0]?.id || "");
 
   // --------------------------------------------------------------------------
   // ADMIN PORTAL FILTER & ASSIGNMENT STATE
   // Connected to: SelectClassComponent.tsx, AdminClassRoster.tsx, AdminAssignFeesForm.tsx, AdminPromoteClass.tsx
   // --------------------------------------------------------------------------
-  const [selectedGradeForFilter, setSelectedGradeForFilter] = useState<string>(gradeArray[0]);
-  const [standardTuitionFeeInput, setStandardTuitionFeeInput] = useState<number>(1500);
+  const [selectedGradeForFilter, setSelectedGradeForFilter] = useState<string>(
+    gradeArray[0],
+  );
+  const [standardTuitionFeeInput, setStandardTuitionFeeInput] =
+    useState<number>(1500);
 
   // --------------------------------------------------------------------------
   // ADMIN EDIT STUDENT MODAL STATE
   // Connected to: AdminClassRoster.tsx (Triggers open) & AdminEditStudentModal.tsx (Renders form)
   // --------------------------------------------------------------------------
-  const [studentTargetForEdit, setStudentTargetForEdit] = useState<Student | null>(null);
-  const [isEditStudentRecordModalOpen, setIsEditStudentRecordModalOpen] = useState<boolean>(false);
+  const [studentTargetForEdit, setStudentTargetForEdit] =
+    useState<Student | null>(null);
+  const [isEditStudentRecordModalOpen, setIsEditStudentRecordModalOpen] =
+    useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const data = await getStudents();
+        setStudentsDatabase(data);
+      } catch (error) {
+        console.error("Failed to fetch students", error);
+      }
+    };
+
+    fetchStudents();
+  }, []);
 
   // ==========================================================================
   // COMPONENT-SPECIFIC BUSINESS MUTATION HANDLERS
@@ -102,17 +138,22 @@ export function App() {
       status: "SUCCESS",
     };
 
-    setPaymentsDatabase((previousPayments) => [newPaymentReceipt, ...previousPayments]);
+    setPaymentsDatabase((previousPayments) => [
+      newPaymentReceipt,
+      ...previousPayments,
+    ]);
   }
 
   /**
    * LOGIC FOR: AdminAddStudentForm.tsx (Admin Tab: students)
    */
-  function handleEnrollStudentAccount(enrollmentData: NewStudentData) {
+  async function handleEnrollStudentAccount(enrollmentData: NewStudentData) {
     const existingGuardian = parentsDatabase.find(
-      (guardian) => guardian.phone === enrollmentData.phone
+      (guardian) => guardian.phone === enrollmentData.phone,
     );
-    const guardianId = existingGuardian ? existingGuardian.id : `p-${Date.now()}`;
+    const guardianId = existingGuardian
+      ? existingGuardian.id
+      : `p-${Date.now()}`;
 
     if (!existingGuardian) {
       const newGuardianRecord: Parent = {
@@ -120,11 +161,16 @@ export function App() {
         name: enrollmentData.parentName,
         phone: enrollmentData.phone,
       };
-      setParentsDatabase((previousGuardians) => [...previousGuardians, newGuardianRecord]);
+      setParentsDatabase((previousGuardians) => [
+        ...previousGuardians,
+        newGuardianRecord,
+      ]);
     }
 
     const newStudentId = `s-${Date.now()}`;
-    const transportRate = enrollmentData.hasTransport ? (enrollmentData.transportFee ?? 1000) : 0;
+    const transportRate = enrollmentData.hasTransport
+      ? (enrollmentData.transportFee ?? 1000)
+      : 0;
     const newStudentRecord: Student = {
       id: newStudentId,
       name: enrollmentData.studentName,
@@ -145,13 +191,24 @@ export function App() {
       feeStatus: "pending",
     };
 
-    setStudentsDatabase((previousStudents) => [...previousStudents, newStudentRecord]);
-    setFeeObligationsDatabase((previousObligations) => [...previousObligations, initialObligation]);
+    setStudentsDatabase((previousStudents) => [
+      ...previousStudents,
+      newStudentRecord,
+    ]);
+    setFeeObligationsDatabase((previousObligations) => [
+      ...previousObligations,
+      initialObligation,
+    ]);
 
     if (!selectedParentAccountId) setSelectedParentAccountId(guardianId);
     if (!selectedStudentProfileId) setSelectedStudentProfileId(newStudentId);
 
-    alert(`Successfully enrolled student ${enrollmentData.studentName} into Class ${enrollmentData.grade}!`);
+    alert(
+      `Successfully enrolled student ${enrollmentData.studentName} into Class ${enrollmentData.grade}!`,
+    );
+    await createStudents(enrollmentData);
+    const freshStudents = await getStudents();
+    setStudentsDatabase(freshStudents);
   }
 
   /**
@@ -170,12 +227,14 @@ export function App() {
     if (!studentToDelete) return;
 
     const isConfirmed = window.confirm(
-      `Are you sure you want to remove ${studentToDelete.name} from Class ${studentToDelete.gradeName}? This will also delete their associated fee records.`
+      `Are you sure you want to remove ${studentToDelete.name} from Class ${studentToDelete.gradeName}? This will also delete their associated fee records.`,
     );
     if (!isConfirmed) return;
 
     setStudentsDatabase((prev) => prev.filter((s) => s.id !== studentId));
-    setFeeObligationsDatabase((prev) => prev.filter((f) => f.studentId !== studentId));
+    setFeeObligationsDatabase((prev) =>
+      prev.filter((f) => f.studentId !== studentId),
+    );
 
     if (selectedStudentProfileId === studentId) {
       setSelectedStudentProfileId("");
@@ -193,7 +252,7 @@ export function App() {
     updatedParentName: string,
     updatedPhoneNumber: string,
     hasTransport: boolean = false,
-    transportFee: number = 1000
+    transportFee: number = 1000,
   ) {
     setStudentsDatabase((previousStudents) =>
       previousStudents.map((student) =>
@@ -204,17 +263,21 @@ export function App() {
               hasTransport,
               transportFee: hasTransport ? transportFee : undefined,
             }
-          : student
-      )
+          : student,
+      ),
     );
 
     if (studentTargetForEdit?.parentId) {
       setParentsDatabase((previousGuardians) =>
         previousGuardians.map((guardian) =>
           guardian.id === studentTargetForEdit.parentId
-            ? { ...guardian, name: updatedParentName, phone: updatedPhoneNumber }
-            : guardian
-        )
+            ? {
+                ...guardian,
+                name: updatedParentName,
+                phone: updatedPhoneNumber,
+              }
+            : guardian,
+        ),
       );
     }
   }
@@ -226,33 +289,37 @@ export function App() {
     targetGradeClass: string,
     targetAcademicMonth: string,
     feeAmount: number,
-    academicYear: number
+    academicYear: number,
   ) {
     const classEnrolledStudents = studentsDatabase.filter(
-      (student) => student.gradeName === targetGradeClass
+      (student) => student.gradeName === targetGradeClass,
     );
 
     if (classEnrolledStudents.length === 0) {
-      alert(`No students currently enrolled in Class ${targetGradeClass} to assign fees.`);
+      alert(
+        `No students currently enrolled in Class ${targetGradeClass} to assign fees.`,
+      );
       return;
     }
 
-    const generatedObligations: FeeObligation[] = classEnrolledStudents.map((student) => {
-      const isBusUser = Boolean(student.hasTransport);
-      const transportCharge = isBusUser ? (student.transportFee ?? 1000) : 0;
-      const studentTotalFee = feeAmount + transportCharge;
-      const feeType: FeeType = isBusUser ? "tuition+transport" : "tuition";
+    const generatedObligations: FeeObligation[] = classEnrolledStudents.map(
+      (student) => {
+        const isBusUser = Boolean(student.hasTransport);
+        const transportCharge = isBusUser ? (student.transportFee ?? 1000) : 0;
+        const studentTotalFee = feeAmount + transportCharge;
+        const feeType: FeeType = isBusUser ? "tuition+transport" : "tuition";
 
-      return {
-        id: `fee-${student.id}-${Date.now()}`,
-        studentId: student.id,
-        feeAmount: studentTotalFee,
-        month: targetAcademicMonth,
-        academicYear,
-        feeType: feeType,
-        feeStatus: "pending",
-      };
-    });
+        return {
+          id: `fee-${student.id}-${Date.now()}`,
+          studentId: student.id,
+          feeAmount: studentTotalFee,
+          month: targetAcademicMonth,
+          academicYear,
+          feeType: feeType,
+          feeStatus: "pending",
+        };
+      },
+    );
 
     setFeeObligationsDatabase((previousObligations) => [
       ...previousObligations,
@@ -260,7 +327,7 @@ export function App() {
     ]);
 
     alert(
-      `Successfully generated ${generatedObligations.length} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth} ${academicYear}).`
+      `Successfully generated ${generatedObligations.length} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth} ${academicYear}).`,
     );
   }
 
@@ -280,11 +347,11 @@ export function App() {
           return { ...student, gradeName: nextGradeLevel };
         }
         return student;
-      })
+      }),
     );
 
     alert(
-      `Promoted ${studentIdsToPromote.length} students from Class ${selectedGradeForFilter} to Class ${nextGradeLevel}!`
+      `Promoted ${studentIdsToPromote.length} students from Class ${selectedGradeForFilter} to Class ${nextGradeLevel}!`,
     );
   }
 
@@ -294,17 +361,19 @@ export function App() {
   const activeGuardianProfile = parentsDatabase.find(
     (guardian) =>
       guardian.id ===
-      (studentTargetForEdit ? studentTargetForEdit.parentId : selectedParentAccountId)
+      (studentTargetForEdit
+        ? studentTargetForEdit.parentId
+        : selectedParentAccountId),
   );
 
   const activeSelectedStudent = studentsDatabase.find(
-    (student) => student.id === selectedStudentProfileId
+    (student) => student.id === selectedStudentProfileId,
   );
 
   const activeStudentFinancials = getStudentFinancialSummary(
     selectedStudentProfileId,
     feeObligationsDatabase,
-    paymentsDatabase
+    paymentsDatabase,
   );
 
   return (
@@ -348,7 +417,8 @@ export function App() {
 
                   <PaymentHistory
                     payments={paymentsDatabase.filter(
-                      (receipt) => receipt.belongsTo === selectedStudentProfileId
+                      (receipt) =>
+                        receipt.belongsTo === selectedStudentProfileId,
                     )}
                   />
                 </>
@@ -455,7 +525,7 @@ export function App() {
               <AdminPromoteClass
                 gradeClass={gradeArray}
                 gradeStudents={studentsDatabase.filter(
-                  (student) => student.gradeName === selectedGradeForFilter
+                  (student) => student.gradeName === selectedGradeForFilter,
                 )}
                 selectedGrade={selectedGradeForFilter}
                 onDropdownChange={setSelectedGradeForFilter}

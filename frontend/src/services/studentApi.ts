@@ -5,7 +5,17 @@ export async function getStudents() {
   if (!response.ok) {
     throw new Error("Failed to fetch the students");
   }
-  return await response.json();
+
+  const rawStudents = await response.json();
+  const mappedStudents = rawStudents.map((s: any) => ({
+    name: s.student_name,
+    gradeName: s.grade,
+    id: String(s.id),
+    parentId: "",
+    hasTransport: s.has_transport,
+    transportFee: s.transport_fee,
+  }));
+  return mappedStudents;
 }
 
 export async function createStudents(data: NewStudentData) {
