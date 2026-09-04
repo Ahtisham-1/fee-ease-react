@@ -1,5 +1,16 @@
 import type { NewStudentData } from "../types";
 
+interface BackendStudent {
+  id: number;
+  student_name: string;
+  parent_name: string;
+  phone: string;
+  grade: string;
+  tuition_fee: number;
+  has_transport: boolean;
+  transport_fee: number;
+}
+
 export async function getStudents() {
   const response = await fetch("http://localhost:8000/api/students");
   if (!response.ok) {
@@ -7,7 +18,7 @@ export async function getStudents() {
   }
 
   const rawStudents = await response.json();
-  const mappedStudents = rawStudents.map((s: any) => ({
+  const mappedStudents = rawStudents.map((s: BackendStudent) => ({
     name: s.student_name,
     gradeName: s.grade,
     id: String(s.id),
