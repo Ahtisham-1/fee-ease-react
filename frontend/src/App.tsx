@@ -43,7 +43,7 @@ import AdminAddStudentForm from "./components/admin/AdminAddStudentForm";
 import AdminEditStudentModal from "./components/admin/AdminEditStudentModal";
 
 //Services import
-import { createStudents, getStudents } from "./services/studentApi";
+// import { createStudents, getStudents } from "./services/studentApi";
 
 /**
  * ============================================================================
@@ -107,18 +107,18 @@ export function App() {
   const [isEditStudentRecordModalOpen, setIsEditStudentRecordModalOpen] =
     useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const data = await getStudents();
-        setStudentsDatabase(data);
-      } catch (error) {
-        console.error("Failed to fetch students", error);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchStudents = async () => {
+  //     try {
+  //       const data = await getStudents();
+  //       setStudentsDatabase(data);
+  //     } catch (error) {
+  //       console.error("Failed to fetch students", error);
+  //     }
+  //   };
 
-    fetchStudents();
-  }, []);
+  //   fetchStudents();
+  // }, []);
 
   // ==========================================================================
   // COMPONENT-SPECIFIC BUSINESS MUTATION HANDLERS
@@ -206,9 +206,9 @@ export function App() {
     alert(
       `Successfully enrolled student ${enrollmentData.studentName} into Class ${enrollmentData.grade}!`,
     );
-    await createStudents(enrollmentData);
-    const freshStudents = await getStudents();
-    setStudentsDatabase(freshStudents);
+    // await createStudents(enrollmentData);
+    // const freshStudents = await getStudents();
+    // setStudentsDatabase(freshStudents);
   }
 
   /**
