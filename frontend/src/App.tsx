@@ -43,7 +43,12 @@ import AdminAddStudentForm from "./components/admin/AdminAddStudentForm";
 import AdminEditStudentModal from "./components/admin/AdminEditStudentModal";
 
 //Services import
-// import { createStudents, getStudents } from "./services/studentApi";
+import {
+  createStudents,
+  getStudents,
+  deleteStudents,
+  updateStudents,
+} from "./services/studentApi";
 
 /**
  * ============================================================================
@@ -107,18 +112,36 @@ export function App() {
   const [isEditStudentRecordModalOpen, setIsEditStudentRecordModalOpen] =
     useState<boolean>(false);
 
-  // useEffect(() => {
-  //   const fetchStudents = async () => {
-  //     try {
-  //       const data = await getStudents();
-  //       setStudentsDatabase(data);
-  //     } catch (error) {
-  //       console.error("Failed to fetch students", error);
-  //     }
-  //   };
-
-  //   fetchStudents();
-  // }, []);
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const data = await getStudents();
+        setStudentsDatabase(data);
+        // Automatically build parents list from PostgreSQL students!
+        const uniqueParents: Parent[] = [];
+        data.forEach((student: any) => {
+          if (
+            student.phone &&
+            !uniqueParents.some((p) => p.id === student.parentId)
+          ) {
+            uniqueParents.push({
+              id: student.parentId,
+              name: student.parentName || "Parent",
+              phone: student.phone,
+            });
+          }
+        });
+        setParentsDatabase(uniqueParents);
+        // Select the first parent and first student if not set
+        if (uniqueParents.length > 0) {
+          setSelectedParentAccountId(uniqueParents[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to fetch students", error);
+      }
+    };
+    fetchStudents();
+  }, []);
 
   // ==========================================================================
   // COMPONENT-SPECIFIC BUSINESS MUTATION HANDLERS
@@ -151,8 +174,8 @@ export function App() {
     const existingGuardian = parentsDatabase.find(
       (guardian) => guardian.phone === enrollmentData.phone,
     );
-    const guardianId = existingGuardian
-      ? existingGuardian.id
+    const guardianId = enrollmentData.phone
+      ? enrollmentData.phone
       : `p-${Date.now()}`;
 
     if (!existingGuardian) {
@@ -206,9 +229,9 @@ export function App() {
     alert(
       `Successfully enrolled student ${enrollmentData.studentName} into Class ${enrollmentData.grade}!`,
     );
-    // await createStudents(enrollmentData);
-    // const freshStudents = await getStudents();
-    // setStudentsDatabase(freshStudents);
+    await createStudents(enrollmentData);
+    const freshStudents = await getStudents();
+    setStudentsDatabase(freshStudents);
   }
 
   /**
@@ -222,7 +245,7 @@ export function App() {
   /**
    * LOGIC FOR: AdminClassRoster.tsx (Delete Student Action)
    */
-  function handleDeleteStudent(studentId: string) {
+  async function handleDeleteStudent(studentId: string) {
     const studentToDelete = studentsDatabase.find((s) => s.id === studentId);
     if (!studentToDelete) return;
 
@@ -230,6 +253,8 @@ export function App() {
       `Are you sure you want to remove ${studentToDelete.name} from Class ${studentToDelete.gradeName}? This will also delete their associated fee records.`,
     );
     if (!isConfirmed) return;
+
+    await deleteStudents(studentId);
 
     setStudentsDatabase((prev) => prev.filter((s) => s.id !== studentId));
     setFeeObligationsDatabase((prev) =>
@@ -246,7 +271,7 @@ export function App() {
   /**
    * LOGIC FOR: AdminEditStudentModal.tsx (Global Modal)
    */
-  function handleSaveStudentProfileChanges(
+  async function handleSaveStudentProfileChanges(
     studentId: string,
     updatedStudentName: string,
     updatedParentName: string,
@@ -254,6 +279,14 @@ export function App() {
     hasTransport: boolean = false,
     transportFee: number = 1000,
   ) {
+    await updateStudents(studentId, {
+      studentName: updatedStudentName,
+      parentName: updatedParentName,
+      phone: updatedPhoneNumber,
+      hasTransport: hasTransport,
+      transportFee: transportFee,
+    } as any);
+
     setStudentsDatabase((previousStudents) =>
       previousStudents.map((student) =>
         student.id === studentId
