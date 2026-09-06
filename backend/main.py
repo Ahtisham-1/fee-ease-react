@@ -28,6 +28,7 @@ app.add_middleware(
 )
 
 
+# Student blueprint
 class StudentBlueprint(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     student_name: str
@@ -37,6 +38,17 @@ class StudentBlueprint(SQLModel, table=True):
     tuition_fee: int
     has_transport: bool = False
     transport_fee: int = 0
+
+
+# For student update
+class StudentUpdate(SQLModel):
+    student_name: str | None = None
+    parent_name: str | None = None
+    phone: str | None = None
+    grade: str | None = None
+    tuition_fee: int | None = None
+    has_transport: bool | None = None
+    transport_fee: int | None = None
 
 
 @app.get("/")
@@ -106,3 +118,16 @@ def delete_item(student_id: int, session: SessionDep):
     session.delete(student)
     session.commit()
     return {"Ok": True}
+
+
+@app.patch("/api/students/{student_id}", response_model=StudentBlueprint)
+def update_student(student_id: int, student: StudentUpdate, session: SessionDep):
+    student_db = session.get(StudentBlueprint, student_id)
+    if not student_db:
+        raise HTTPException(status_code=404, detail="Student not found")
+    student_data = student.model_dump(exclude_unset=True)
+    student_db.sqlmodel_update(student_data)
+    session.add(student_db)
+    session.commit()
+    session.refresh(student_db)
+    return student_db
