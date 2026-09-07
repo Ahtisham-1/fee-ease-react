@@ -8,7 +8,7 @@ from typing import Annotated
 app = FastAPI()
 
 # The PostgreSQL connection String
-DATABASE_URL = "postgresql://postgres:password@localhost:5432/feeease_db"
+DATABASE_URL = "postgresql://postgres:feeEaseMainDatabase@localhost:5432/feeease_db"
 
 # Creating the Engine
 engine = create_engine(DATABASE_URL, echo=True)
