@@ -8,7 +8,7 @@ from typing import Annotated
 app = FastAPI()
 
 # The PostgreSQL connection String
-DATABASE_URL = "postgresql://postgres:feeEaseMainDatabase@localhost:5432/feeease_db"
+DATABASE_URL = "postgresql://postgres:password@localhost:5432/feeease_db"
 
 # Creating the Engine
 engine = create_engine(DATABASE_URL, echo=True)
@@ -118,7 +118,7 @@ def delete_item(student_id: int, session: SessionDep):
     session.delete(student)
     session.commit()
     return {"Ok": True}
-
+ 
 
 @app.patch("/api/students/{student_id}", response_model=StudentBlueprint)
 def update_student(student_id: int, student: StudentUpdate, session: SessionDep):
