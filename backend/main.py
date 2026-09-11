@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
-from pydantic import BaseModel
+
+# from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import create_engine, SQLModel, Field, Session, select
+from sqlmodel import Relationship, create_engine, SQLModel, Field, Session, select
 from typing import Annotated
 
 
@@ -28,22 +29,31 @@ app.add_middleware(
 )
 
 
+# Parent Blueprint
+class ParentBlueprint(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    phone: str
+    students: list["StudentBlueprint"] = Relationship(back_populates="parent")
+
+
 # Student blueprint
 class StudentBlueprint(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
+    parent_id: int | None = Field(default=None, foreign_key="parentblueprint.id")
     student_name: str
-    parent_name: str
     phone: str
     grade: str
     tuition_fee: int
     has_transport: bool = False
     transport_fee: int = 0
+    parent: ParentBlueprint | None = Relationship(back_populates="students")
 
 
 # For student update
 class StudentUpdate(SQLModel):
     student_name: str | None = None
-    parent_name: str | None = None
+    parent_id: str | None = None
     phone: str | None = None
     grade: str | None = None
     tuition_fee: int | None = None
@@ -60,9 +70,8 @@ def read_root():
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
-    # The Session: Your Request Workspace
 
-
+# The Session: Your Request Workspace
 def get_session():
     with Session(engine) as session:
         yield session
@@ -77,21 +86,6 @@ def on_startup():
     create_db_and_tables()
 
 
-@app.post("/api/students", response_model=StudentBlueprint)
-def create_student(student: StudentBlueprint, session: SessionDep):
-    # Put it in the cart
-    session.add(student)
-
-    # Hit "save"
-    session.commit()
-
-    # Get the new id from PostgreSQL
-    session.refresh(student)
-
-    # Send it back to the frontend
-    return student
-
-
 @app.get("/api/students", response_model=list[StudentBlueprint])
 def read_students(
     session: SessionDep,
@@ -102,6 +96,18 @@ def read_students(
     return students
 
 
+@app.post("/api/students", response_model=StudentBlueprint)
+def create_student(student: StudentBlueprint, session: SessionDep):
+    # Put it in the cart
+    session.add(student)
+    # Hit "save"
+    session.commit()
+    # Get the new id from PostgreSQL
+    session.refresh(student)
+    # Send it back to the frontend
+    return student
+
+
 @app.get("/api/students/{student_id}", response_model=StudentBlueprint)
 def read_one_student(student_id: int, session: SessionDep) -> StudentBlueprint:
     student = session.get(StudentBlueprint, student_id)
@@ -109,16 +115,6 @@ def read_one_student(student_id: int, session: SessionDep) -> StudentBlueprint:
         raise HTTPException(status_code=404, detail="Student not found")
     return student
 
-
-@app.delete("/api/students/{student_id}")
-def delete_item(student_id: int, session: SessionDep):
-    student = session.get(StudentBlueprint, student_id)
-    if not student:
-        raise HTTPException(status_code=404, detail="Item not found to be deleted")
-    session.delete(student)
-    session.commit()
-    return {"Ok": True}
- 
 
 @app.patch("/api/students/{student_id}", response_model=StudentBlueprint)
 def update_student(student_id: int, student: StudentUpdate, session: SessionDep):
@@ -131,3 +127,50 @@ def update_student(student_id: int, student: StudentUpdate, session: SessionDep)
     session.commit()
     session.refresh(student_db)
     return student_db
+
+
+@app.delete("/api/students/{student_id}")
+def delete_student(student_id: int, session: SessionDep):
+    student = session.get(StudentBlueprint, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Item not found to be deleted")
+    session.delete(student)
+    session.commit()
+    return {"Ok": True}
+
+
+# ------------ PARENT -----------
+@app.post("/api/parents", response_model=ParentBlueprint)
+def create_parent(parent: ParentBlueprint, session: SessionDep):
+    session.add(parent)
+    session.commit()
+    session.refresh(parent)
+    return parent
+
+
+@app.get("/api/parents", response_model=list[ParentBlueprint])
+def read_all_parents(
+    session: SessionDep,
+    offset: int = 0,
+    limit: Annotated[int, Query(le=100)] = 100,
+):
+    parents = session.exec(select(ParentBlueprint)).all()
+    return parents
+
+
+@app.get("/api/parents/{parent_id}", response_model=ParentBlueprint)
+def read_one_parent(parent_id: int, session: SessionDep) -> ParentBlueprint:
+    parent = session.get(ParentBlueprint, parent_id)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    return parent
+
+
+@app.delete("/api/parents/{parent_id}")
+def delete_parent(parent_id: int, session: SessionDep):
+    parent = session.get(ParentBlueprint, parent_id)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found to be deleted")
+    session.delete(parent)
+    session.commit()
+    return {"Ok": True}
