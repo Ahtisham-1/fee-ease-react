@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
-
 # from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Relationship, create_engine, SQLModel, Field, Session, select
@@ -35,6 +34,11 @@ class ParentBlueprint(SQLModel, table=True):
     name: str
     phone: str
     students: list["StudentBlueprint"] = Relationship(back_populates="parent")
+
+
+class ParentUpdate(SQLModel):
+    name: str
+    phone: str
 
 
 # Student blueprint
@@ -86,6 +90,9 @@ def on_startup():
     create_db_and_tables()
 
 
+# ------------- Student Endpoints------------
+
+
 @app.get("/api/students", response_model=list[StudentBlueprint])
 def read_students(
     session: SessionDep,
@@ -129,6 +136,19 @@ def update_student(student_id: int, student: StudentUpdate, session: SessionDep)
     return student_db
 
 
+@app.patch("/api/parenets/{parent_id}", response_model=ParentBlueprint)
+def update_parent(parent_id: int, parent: ParentUpdate, session: SessionDep):
+    parent_db = session.get(ParentBlueprint, parent_id)
+    if not parent_db:
+        raise HTTPException(status_code=404, detail="Parnet not found")
+    parent_data = parent.model_dump(exclude_unset=True)
+    parent_db.sqlmodel_update(parent_data)
+    session.add(parent_db)
+    session.commit()
+    session.refresh(parent_db)
+    return parent_db
+
+
 @app.delete("/api/students/{student_id}")
 def delete_student(student_id: int, session: SessionDep):
     student = session.get(StudentBlueprint, student_id)
@@ -139,7 +159,7 @@ def delete_student(student_id: int, session: SessionDep):
     return {"Ok": True}
 
 
-# ------------ PARENT -----------
+# ------------ PARENT ENDPOINTS -----------
 @app.post("/api/parents", response_model=ParentBlueprint)
 def create_parent(parent: ParentBlueprint, session: SessionDep):
     session.add(parent)
