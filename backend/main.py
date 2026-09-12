@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
+
 # from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Relationship, create_engine, SQLModel, Field, Session, select
-from typing import Annotated
+from typing import Annotated, Literal
 
 
 app = FastAPI()
@@ -52,6 +53,7 @@ class StudentBlueprint(SQLModel, table=True):
     has_transport: bool = False
     transport_fee: int = 0
     parent: ParentBlueprint | None = Relationship(back_populates="students")
+    feeobligation: list["FeeObligation"] | None = Relationship(back_populates="student")
 
 
 # For student update
@@ -63,6 +65,17 @@ class StudentUpdate(SQLModel):
     tuition_fee: int | None = None
     has_transport: bool | None = None
     transport_fee: int | None = None
+
+
+class FeeObligation(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    student_id: int | None = Field(default=None, foreign_key="studentblueprint.id")
+    fee_amount: int
+    month: str
+    academic_year: int
+    fee_type: str
+    fee_status: str = "pending"
+    student: StudentBlueprint | None = Relationship(back_populates="feeobligation")
 
 
 @app.get("/")
