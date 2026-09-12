@@ -67,6 +67,7 @@ class StudentUpdate(SQLModel):
     transport_fee: int | None = None
 
 
+# Fee Obligation
 class FeeObligation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     student_id: int | None = Field(default=None, foreign_key="studentblueprint.id")
@@ -76,6 +77,15 @@ class FeeObligation(SQLModel, table=True):
     fee_type: str
     fee_status: str = "pending"
     student: StudentBlueprint | None = Relationship(back_populates="feeobligation")
+
+
+# Fee Obligation update
+class FeeUpdate(SQLModel):
+    fee_amount: int | None = None
+    month: str | None = None
+    academic_year: int | None = None
+    fee_type: Literal["tuition", "tuition+transport"] | None = None
+    fee_status: Literal["paid", "pending"] | None = None
 
 
 @app.get("/")
@@ -149,19 +159,6 @@ def update_student(student_id: int, student: StudentUpdate, session: SessionDep)
     return student_db
 
 
-@app.patch("/api/parenets/{parent_id}", response_model=ParentBlueprint)
-def update_parent(parent_id: int, parent: ParentUpdate, session: SessionDep):
-    parent_db = session.get(ParentBlueprint, parent_id)
-    if not parent_db:
-        raise HTTPException(status_code=404, detail="Parnet not found")
-    parent_data = parent.model_dump(exclude_unset=True)
-    parent_db.sqlmodel_update(parent_data)
-    session.add(parent_db)
-    session.commit()
-    session.refresh(parent_db)
-    return parent_db
-
-
 @app.delete("/api/students/{student_id}")
 def delete_student(student_id: int, session: SessionDep):
     student = session.get(StudentBlueprint, student_id)
@@ -205,5 +202,86 @@ def delete_parent(parent_id: int, session: SessionDep):
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found to be deleted")
     session.delete(parent)
+    session.commit()
+    return {"Ok": True}
+
+
+@app.patch("/api/parents/{parent_id}", response_model=ParentBlueprint)
+def update_parent(parent_id: int, parent: ParentUpdate, session: SessionDep):
+    parent_db = session.get(ParentBlueprint, parent_id)
+    if not parent_db:
+        raise HTTPException(status_code=404, detail="Parnet not found")
+    parent_data = parent.model_dump(exclude_unset=True)
+    parent_db.sqlmodel_update(parent_data)
+    session.add(parent_db)
+    session.commit()
+    session.refresh(parent_db)
+    return parent_db
+
+
+# -------- FEE OBLIGATION END POINTS ----------
+
+
+@app.post("/api/fees", response_model=FeeObligation)
+def create_fees(createfeeobligation: FeeObligation, session: SessionDep):
+    session.add(createfeeobligation)
+    session.commit()
+    session.refresh(createfeeobligation)
+    return createfeeobligation
+
+
+@app.get("/api/fees", response_model=list[FeeObligation])
+def read_all_fees(
+    session: SessionDep,
+    offset: int = 0,
+    limit: Annotated[int, Query(le=100)] = 100,
+):
+    feeobligation = session.exec(select(FeeObligation)).all()
+    return feeobligation
+
+
+@app.get("/api/fees/{fees_id}", response_model=FeeObligation)
+def read_one_fees(fees_id: int, session: SessionDep) -> FeeObligation:
+    feeobligation = session.get(FeeObligation, fees_id)
+    if not feeobligation:
+        raise HTTPException(status_code=404, detail="Fees detail not found")
+    return feeobligation
+
+
+@app.patch("/api/fees/{fees_id}", response_model=FeeObligation)
+def update_fees(fees_id: int, feeobligation: FeeObligation, session: SessionDep):
+    fee_db = session.get(FeeObligation, fees_id)
+    if not fee_db:
+        raise HTTPException(
+            status_code=404, detail="Fees detail not found to be updated"
+        )
+    fee_data = feeobligation.model_dump(exclude_unset=True)
+    fee_db.sqlmodel_update(fee_data)
+    session.add(fee_db)
+    session.commit()
+    session.refresh(fee_db)
+    return fee_db
+
+
+@app.get("/api/students/{student_id}/fees", response_model=list[FeeObligation])
+def read_student_fees(student_id: int, session: SessionDep):
+    student = session.get(StudentBlueprint, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student Fee detail not found")
+
+    fees = session.exec(
+        select(FeeObligation).where(FeeObligation.student_id == student_id)
+    ).all()
+    return fees
+
+
+@app.delete("/api/fees/{fees_id}")
+def delete_fees(fees_id: int, session: SessionDep):
+    feeobligation = session.get(FeeObligation, fees_id)
+    if not feeobligation:
+        raise HTTPException(
+            status_code=404, detail="No Fees details found to be deleted"
+        )
+    session.delete(feeobligation)
     session.commit()
     return {"Ok": True}
