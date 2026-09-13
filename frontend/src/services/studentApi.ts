@@ -1,9 +1,10 @@
 import type { NewStudentData } from "../types";
 
+// The real shape coming from FastAPI/PostgreSQL
 interface BackendStudent {
   id: number;
   student_name: string;
-  parent_name: string;
+  parent_id: number | null;
   phone: string;
   grade: string;
   tuition_fee: number;
@@ -11,6 +12,7 @@ interface BackendStudent {
   transport_fee: number;
 }
 
+// 1. GET all students from PostgreSQL
 export async function getStudents() {
   const response = await fetch("http://localhost:8000/api/students");
   if (!response.ok) {
@@ -20,27 +22,29 @@ export async function getStudents() {
   const rawStudents = await response.json();
   const mappedStudents = rawStudents.map((s: BackendStudent) => ({
     name: s.student_name,
-    parentName: s.parent_name,
+    parentName: "",
     gradeName: s.grade,
     phone: s.phone,
     id: String(s.id),
-    parentId: s.phone,
+    parentId: s.parent_id ? String(s.parent_id) : "",
     hasTransport: s.has_transport,
     transportFee: s.transport_fee,
   }));
   return mappedStudents;
 }
 
+// 2. CREATE a student in PostgreSQL
 export async function createStudents(data: NewStudentData) {
   const payload = {
     student_name: data.studentName,
-    parent_name: data.parentName,
+    parent_id: data.parentId,
     phone: data.phone,
     grade: data.grade,
     tuition_fee: data.tuitionFee,
     has_transport: data.hasTransport,
     transport_fee: data.transportFee || 0,
   };
+
   const response = await fetch("http://localhost:8000/api/students", {
     method: "POST",
     headers: {
@@ -48,6 +52,7 @@ export async function createStudents(data: NewStudentData) {
     },
     body: JSON.stringify(payload),
   });
+
   if (!response.ok) {
     throw new Error(`Failed to enroll student: ${response.statusText}`);
   }
@@ -55,15 +60,12 @@ export async function createStudents(data: NewStudentData) {
   return savedStudent;
 }
 
+// 3. DELETE a student from PostgreSQL
 export async function deleteStudents(studentId: string) {
   const response = await fetch(
     `http://localhost:8000/api/students/${studentId}`,
     {
       method: "DELETE",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify(studentId),
     },
   );
   if (!response.ok) {
@@ -75,13 +77,14 @@ export async function deleteStudents(studentId: string) {
   return removedStudent;
 }
 
+// 4. UPDATE a student in PostgreSQL
 export async function updateStudents(
   studentId: string,
   updatedData: Partial<NewStudentData>,
 ) {
   const updatedDataPayload = {
     student_name: updatedData.studentName,
-    parent_name: updatedData.parentName,
+    parent_id: updatedData.parentId,
     phone: updatedData.phone,
     grade: updatedData.grade,
     tuition_fee: updatedData.tuitionFee,

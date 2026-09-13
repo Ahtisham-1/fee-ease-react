@@ -45,6 +45,7 @@ export interface Payment {
 export interface NewStudentData {
   studentName: string;
   parentName: string;
+  parentId?: number;
   phone: string;
   grade: string;
   tuitionFee: number;

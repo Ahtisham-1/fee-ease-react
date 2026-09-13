@@ -114,8 +114,6 @@ def on_startup():
 
 
 # ------------- Student Endpoints------------
-
-
 @app.get("/api/students", response_model=list[StudentBlueprint])
 def read_students(
     session: SessionDep,
