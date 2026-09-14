@@ -49,7 +49,7 @@ import {
   deleteStudents,
   updateStudents,
 } from "./services/studentApi";
-
+import { getParents } from "./services/parentApi";
 /**
  * ============================================================================
  * FeeEase Central Application Orchestrator (App.tsx)
@@ -112,35 +112,56 @@ export function App() {
   const [isEditStudentRecordModalOpen, setIsEditStudentRecordModalOpen] =
     useState<boolean>(false);
 
+  // useEffect(() => {
+  //   const fetchStudents = async () => {
+  //     try {
+  //       const data = await getStudents();
+  //       setStudentsDatabase(data);
+  //       // Automatically build parents list from PostgreSQL students!
+  //       const uniqueParents: Parent[] = [];
+  //       data.forEach((student: any) => {
+  //         if (
+  //           student.phone &&
+  //           !uniqueParents.some((p) => p.id === student.parentId)
+  //         ) {
+  //           uniqueParents.push({
+  //             id: student.parentId,
+  //             name: student.parentName || "Parent",
+  //             phone: student.phone,
+  //           });
+  //         }
+  //       });
+  //       setParentsDatabase(uniqueParents);
+  //       // Select the first parent and first student if not set
+  //       if (uniqueParents.length > 0) {
+  //         setSelectedParentAccountId(uniqueParents[0].id);
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to fetch students", error);
+  //     }
+  //   };
+  //   fetchStudents();
+  // }, []);
+
   useEffect(() => {
-    const fetchStudents = async () => {
+    const loadDatabase = async () => {
       try {
-        const data = await getStudents();
-        setStudentsDatabase(data);
-        // Automatically build parents list from PostgreSQL students!
-        const uniqueParents: Parent[] = [];
-        data.forEach((student: any) => {
-          if (
-            student.phone &&
-            !uniqueParents.some((p) => p.id === student.parentId)
-          ) {
-            uniqueParents.push({
-              id: student.parentId,
-              name: student.parentName || "Parent",
-              phone: student.phone,
-            });
-          }
-        });
-        setParentsDatabase(uniqueParents);
-        // Select the first parent and first student if not set
-        if (uniqueParents.length > 0) {
-          setSelectedParentAccountId(uniqueParents[0].id);
+        // Fetch real parents and real students from PostgreSQL together!
+        const [parentsData, studentsData] = await Promise.all([
+          getParents(),
+          getStudents(),
+        ]);
+        setParentsDatabase(parentsData);
+        setStudentsDatabase(studentsData);
+
+        if (parentsData.length > 0) {
+          setSelectedParentAccountId(parentsData[0].id);
         }
       } catch (error) {
-        console.error("Failed to fetch students", error);
+        console.error("Failed to load data from database", error);
       }
     };
-    fetchStudents();
+    loadDatabase();
   }, []);
 
   // ==========================================================================
