@@ -49,7 +49,7 @@ import {
   deleteStudents,
   updateStudents,
 } from "./services/studentApi";
-import { getParents } from "./services/parentApi";
+import { createParent, getParents } from "./services/parentApi";
 /**
  * ============================================================================
  * FeeEase Central Application Orchestrator (App.tsx)
@@ -112,37 +112,6 @@ export function App() {
   const [isEditStudentRecordModalOpen, setIsEditStudentRecordModalOpen] =
     useState<boolean>(false);
 
-  // useEffect(() => {
-  //   const fetchStudents = async () => {
-  //     try {
-  //       const data = await getStudents();
-  //       setStudentsDatabase(data);
-  //       // Automatically build parents list from PostgreSQL students!
-  //       const uniqueParents: Parent[] = [];
-  //       data.forEach((student: any) => {
-  //         if (
-  //           student.phone &&
-  //           !uniqueParents.some((p) => p.id === student.parentId)
-  //         ) {
-  //           uniqueParents.push({
-  //             id: student.parentId,
-  //             name: student.parentName || "Parent",
-  //             phone: student.phone,
-  //           });
-  //         }
-  //       });
-  //       setParentsDatabase(uniqueParents);
-  //       // Select the first parent and first student if not set
-  //       if (uniqueParents.length > 0) {
-  //         setSelectedParentAccountId(uniqueParents[0].id);
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to fetch students", error);
-  //     }
-  //   };
-  //   fetchStudents();
-  // }, []);
-
   useEffect(() => {
     const loadDatabase = async () => {
       try {
@@ -192,67 +161,34 @@ export function App() {
    * LOGIC FOR: AdminAddStudentForm.tsx (Admin Tab: students)
    */
   async function handleEnrollStudentAccount(enrollmentData: NewStudentData) {
-    const existingGuardian = parentsDatabase.find(
-      (guardian) => guardian.phone === enrollmentData.phone,
-    );
-    const guardianId = enrollmentData.phone
-      ? enrollmentData.phone
-      : `p-${Date.now()}`;
-
-    if (!existingGuardian) {
-      const newGuardianRecord: Parent = {
-        id: guardianId,
+    try {
+      const savedParent = await createParent({
         name: enrollmentData.parentName,
         phone: enrollmentData.phone,
-      };
-      setParentsDatabase((previousGuardians) => [
-        ...previousGuardians,
-        newGuardianRecord,
+      });
+
+      enrollmentData.parentId = Number(savedParent.id);
+      await createStudents(enrollmentData);
+
+      const [parentsFromDb, studentsFromDb] = await Promise.all([
+        getParents(),
+        getStudents(),
       ]);
+
+      setParentsDatabase(parentsFromDb);
+      setStudentsDatabase(studentsFromDb);
+
+      if (savedParent) {
+        setSelectedParentAccountId(savedParent.id);
+      }
+
+      alert(
+        `Successfully enrolled student ${enrollmentData.studentName} into Class ${enrollmentData.grade}!`,
+      );
+    } catch (error) {
+      console.error("Failed to enroll student:", error);
+      alert("Error enrolling student. Check backend connection");
     }
-
-    const newStudentId = `s-${Date.now()}`;
-    const transportRate = enrollmentData.hasTransport
-      ? (enrollmentData.transportFee ?? 1000)
-      : 0;
-    const newStudentRecord: Student = {
-      id: newStudentId,
-      name: enrollmentData.studentName,
-      gradeName: enrollmentData.grade,
-      parentId: guardianId,
-      hasTransport: enrollmentData.hasTransport,
-      transportFee: enrollmentData.hasTransport ? transportRate : undefined,
-    };
-
-    const baseMonthlyFee = enrollmentData.tuitionFee + transportRate;
-    const initialObligation: FeeObligation = {
-      id: `fee-${Date.now()}`,
-      studentId: newStudentId,
-      feeAmount: baseMonthlyFee,
-      month: months[new Date().getMonth()] || "January",
-      academicYear: new Date().getFullYear(),
-      feeType: enrollmentData.hasTransport ? "tuition+transport" : "tuition",
-      feeStatus: "pending",
-    };
-
-    setStudentsDatabase((previousStudents) => [
-      ...previousStudents,
-      newStudentRecord,
-    ]);
-    setFeeObligationsDatabase((previousObligations) => [
-      ...previousObligations,
-      initialObligation,
-    ]);
-
-    if (!selectedParentAccountId) setSelectedParentAccountId(guardianId);
-    if (!selectedStudentProfileId) setSelectedStudentProfileId(newStudentId);
-
-    alert(
-      `Successfully enrolled student ${enrollmentData.studentName} into Class ${enrollmentData.grade}!`,
-    );
-    await createStudents(enrollmentData);
-    const freshStudents = await getStudents();
-    setStudentsDatabase(freshStudents);
   }
 
   /**
