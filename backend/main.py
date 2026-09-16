@@ -88,6 +88,14 @@ class FeeUpdate(SQLModel):
     fee_status: Literal["paid", "pending"] | None = None
 
 
+# Assign fees class
+class AssignFeesPayload(SQLModel):
+    target_class: str
+    target_month: str
+    assign_fees: int
+    academic_year: int
+
+
 @app.get("/")
 def read_root():
     return {"message": "Clean start successful!"}
@@ -283,3 +291,27 @@ def delete_fees(fees_id: int, session: SessionDep):
     session.delete(feeobligation)
     session.commit()
     return {"Ok": True}
+
+
+# ---------- ASSIGN FEES ENDPOINTS ----------
+@app.post("/api/fees/assign")
+def assign_fees(payload: AssignFeesPayload, session: SessionDep):
+    students = session.exec(
+        select(StudentBlueprint).where(StudentBlueprint.grade == payload.target_class)
+    ).all()
+    if not students:
+        raise HTTPException(status_code=404, detail="No students found in this class")
+    for x in students:
+        fee = FeeObligation(
+            student_id=x.id,
+            fee_amount=payload.assign_fees,
+            month=payload.target_month,
+            academic_year=payload.academic_year,
+            fee_type="tuition+transport" if x.has_transport else "tuition",
+            fee_status="pending",
+        )
+        if x.has_transport:
+            fee.fee_amount += x.transport_fee
+        session.add(fee)
+    session.commit()
+    return {"message": "Fees assigned successfully", "count": len(students)}
