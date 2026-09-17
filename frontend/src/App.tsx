@@ -7,7 +7,6 @@ import type {
   FeeObligation,
   Payment,
   NewStudentData,
-  FeeType,
 } from "./types";
 import {
   initialParents,
@@ -50,6 +49,7 @@ import {
   updateStudents,
 } from "./services/studentApi";
 import { createParent, getParents } from "./services/parentApi";
+import { getFees, assignBulkFees } from "./services/feeApi";
 /**
  * ============================================================================
  * FeeEase Central Application Orchestrator (App.tsx)
@@ -115,13 +115,15 @@ export function App() {
   useEffect(() => {
     const loadDatabase = async () => {
       try {
-        // Fetch real parents and real students from PostgreSQL together!
-        const [parentsData, studentsData] = await Promise.all([
+        // Fetch real parents, students, and fees from PostgreSQL together!
+        const [parentsData, studentsData, feesData] = await Promise.all([
           getParents(),
           getStudents(),
+          getFees(),
         ]);
         setParentsDatabase(parentsData);
         setStudentsDatabase(studentsData);
+        setFeeObligationsDatabase(feesData);
 
         if (parentsData.length > 0) {
           setSelectedParentAccountId(parentsData[0].id);
@@ -275,50 +277,32 @@ export function App() {
   /**
    * LOGIC FOR: AdminAssignFeesForm.tsx (Admin Tab: fees)
    */
-  function handleBatchGenerateClassFees(
+  async function handleBatchGenerateClassFees(
     targetGradeClass: string,
     targetAcademicMonth: string,
     feeAmount: number,
     academicYear: number,
   ) {
-    const classEnrolledStudents = studentsDatabase.filter(
-      (student) => student.gradeName === targetGradeClass,
-    );
+    try {
+      const result = await assignBulkFees({
+        targetClass: targetGradeClass,
+        targetMonth: targetAcademicMonth,
+        assignFees: feeAmount,
+        academicYear: academicYear,
+      });
 
-    if (classEnrolledStudents.length === 0) {
+      // Refresh fees from the database so UI stays in sync
+      const updatedFees = await getFees();
+      setFeeObligationsDatabase(updatedFees);
+
       alert(
-        `No students currently enrolled in Class ${targetGradeClass} to assign fees.`,
+        `Successfully generated ${result.count} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth} ${academicYear}).`,
       );
-      return;
+    } catch (error) {
+      alert(
+        error instanceof Error ? error.message : "Failed to assign fees",
+      );
     }
-
-    const generatedObligations: FeeObligation[] = classEnrolledStudents.map(
-      (student) => {
-        const isBusUser = Boolean(student.hasTransport);
-        const transportCharge = isBusUser ? (student.transportFee ?? 1000) : 0;
-        const studentTotalFee = feeAmount + transportCharge;
-        const feeType: FeeType = isBusUser ? "tuition+transport" : "tuition";
-
-        return {
-          id: `fee-${student.id}-${Date.now()}`,
-          studentId: student.id,
-          feeAmount: studentTotalFee,
-          month: targetAcademicMonth,
-          academicYear,
-          feeType: feeType,
-          feeStatus: "pending",
-        };
-      },
-    );
-
-    setFeeObligationsDatabase((previousObligations) => [
-      ...previousObligations,
-      ...generatedObligations,
-    ]);
-
-    alert(
-      `Successfully generated ${generatedObligations.length} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth} ${academicYear}).`,
-    );
   }
 
   /**
