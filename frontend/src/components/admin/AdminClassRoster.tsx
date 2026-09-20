@@ -1,7 +1,17 @@
 import { useState } from "react";
 import type { Student, Parent, FeeObligation, Payment } from "../../types";
 import { getStudentFinancialSummary } from "../../utils/feeCalculator";
-import { EyeIcon, EyeOffIcon, EditIcon, TrashIcon, UsersIcon, UserIcon, BusIcon } from "../common/Icons";
+import {
+  EyeIcon,
+  EyeOffIcon,
+  EditIcon,
+  TrashIcon,
+  UsersIcon,
+  UserIcon,
+  BusIcon,
+  SearchIcon,
+  CheckCircleIcon,
+} from "../common/Icons";
 
 export type SortCriteria = "name-asc" | "name-desc" | "fees-high" | "fees-low";
 
@@ -28,12 +38,18 @@ export function AdminClassRoster({
   onEditStudent,
   onDeleteStudent,
 }: AdminClassRosterProps) {
-  const [isStudentsListVisible, setIsStudentsListVisible] = useState(false);
+  const [isStudentsListVisible, setIsStudentsListVisible] = useState(true);
   const [sortCriteria, setSortCriteria] = useState<SortCriteria>("name-asc");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const classStudents = (students || []).filter(
     (student) => student.gradeName === selectedGrade
   );
+
+  const classTotalPending = classStudents.reduce((sum, s) => {
+    const { netBalance } = getStudentFinancialSummary(s.id, feeObligations, payments);
+    return sum + netBalance;
+  }, 0);
 
   const sortedStudents = [...classStudents].sort((studentA, studentB) => {
     if (sortCriteria === "name-asc") {
@@ -54,6 +70,16 @@ export function AdminClassRoster({
     }
 
     return 0;
+  });
+
+  const displayedStudents = sortedStudents.filter((student) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const guardian = (parents || []).find((p) => p.id === student.parentId);
+    return (
+      student.name.toLowerCase().includes(query) ||
+      (guardian && (guardian.name.toLowerCase().includes(query) || guardian.phone.includes(query)))
+    );
   });
 
   return (
@@ -111,6 +137,80 @@ export function AdminClassRoster({
         </div>
       </div>
 
+      {/* Class Cohort Quick Stats & Search Bar */}
+      {isStudentsListVisible && classStudents.length > 0 && (
+        <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0.45rem 0.75rem",
+            background: "var(--input-bg)",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--card-border)",
+            fontSize: "0.8rem",
+          }}>
+            <span style={{ color: "var(--text-secondary)" }}>
+              Cohort Total: <strong>{classStudents.length} Students</strong>
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+              Total Pending:{" "}
+              <strong className={classTotalPending === 0 ? "text-emerald" : "text-amber"}>
+                ₹{classTotalPending.toLocaleString("en-IN")}
+              </strong>
+            </span>
+          </div>
+
+          <div style={{ position: "relative" }}>
+            <SearchIcon style={{
+              position: "absolute",
+              left: "0.75rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: "15px",
+              height: "15px",
+              color: "var(--text-muted)",
+              pointerEvents: "none",
+            }} />
+            <input
+              type="text"
+              className="text-input"
+              style={{
+                paddingLeft: "2.1rem",
+                paddingRight: searchQuery ? "2rem" : "0.75rem",
+                height: "36px",
+                fontSize: "0.82rem",
+                borderRadius: "var(--radius-sm)",
+              }}
+              placeholder={`Search in Class ${selectedGrade} by student or parent name...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{
+                  position: "absolute",
+                  right: "0.6rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                }}
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {!isStudentsListVisible ? (
         <div className="roster-collapsed-placeholder text-center">
           <p className="empty-subtext">
@@ -122,9 +222,20 @@ export function AdminClassRoster({
           <p>No students enrolled in Class {selectedGrade} yet.</p>
           <p className="empty-subtext">Use the enrollment form on the left to register students.</p>
         </div>
+      ) : displayedStudents.length === 0 ? (
+        <div className="empty-history text-center mt-3">
+          <p>No students match "{searchQuery}" in Class {selectedGrade}.</p>
+          <button
+            type="button"
+            className="role-btn mini-btn mt-2"
+            onClick={() => setSearchQuery("")}
+          >
+            Clear Search Filter
+          </button>
+        </div>
       ) : (
         <div className="history-list scrollable-feed mt-3">
-          {sortedStudents.map((student) => {
+          {displayedStudents.map((student) => {
             const guardian = (parents || []).find((p) => p.id === student.parentId);
             const { netBalance } = getStudentFinancialSummary(
               student.id,
@@ -157,14 +268,28 @@ export function AdminClassRoster({
                   <div className="roster-id-fee-box">
                     <span className="roster-student-id">ID: {student.id}</span>
                     <div className="pending-fee-badge-box">
-                      <span className="stat-label">PENDING:</span>
-                      <strong
-                        className={`pending-amount ${
-                          netBalance === 0 ? "text-emerald" : "text-amber"
-                        }`}
-                      >
-                        ₹{netBalance.toLocaleString("en-IN")}
-                      </strong>
+                      {netBalance === 0 ? (
+                        <span
+                          className="status-badge paid"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            padding: "0.15rem 0.45rem",
+                            fontSize: "0.72rem",
+                          }}
+                        >
+                          <CheckCircleIcon style={{ width: "12px", height: "12px" }} />
+                          <span>Cleared</span>
+                        </span>
+                      ) : (
+                        <>
+                          <span className="stat-label">PENDING:</span>
+                          <strong className="pending-amount text-amber">
+                            ₹{netBalance.toLocaleString("en-IN")}
+                          </strong>
+                        </>
+                      )}
                     </div>
                   </div>
 

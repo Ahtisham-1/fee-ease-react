@@ -3,7 +3,7 @@
 FeeEase is a full-stack school management and fee collection platform featuring automated FIFO fee knockout calculation, dynamic transport pricing, and role-based views for school administrators and parents.
 
 ---
-
+ 
 ## 🏛️ Monorepo Architecture
 
 ```text

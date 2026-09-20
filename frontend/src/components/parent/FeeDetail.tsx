@@ -70,6 +70,49 @@ export function FeeDetail({
         </div>
       </div>
 
+      {/* Real-time Settlement Status Ribbon */}
+      {netBalance === 0 && sequentialKnockoutSchedule.length > 0 && (
+        <div style={{
+          background: "var(--success-bg)",
+          border: "1px solid var(--success-border)",
+          color: "var(--success-text)",
+          padding: "0.55rem 0.85rem",
+          borderRadius: "var(--radius-sm)",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          fontSize: "0.82rem",
+          fontWeight: 600,
+          margin: "0.75rem 0",
+        }}>
+          <CheckCircleIcon style={{ width: "16px", height: "16px", flexShrink: 0 }} />
+          <span>All assigned fee obligations for {student.name} are fully settled!</span>
+        </div>
+      )}
+
+      {netBalance > 0 && (
+        <div style={{
+          background: "var(--warning-bg)",
+          border: "1px solid var(--warning-border)",
+          color: "var(--warning-text)",
+          padding: "0.55rem 0.85rem",
+          borderRadius: "var(--radius-sm)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "0.5rem",
+          fontSize: "0.82rem",
+          fontWeight: 600,
+          margin: "0.75rem 0",
+        }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+            <AlertCircleIcon style={{ width: "16px", height: "16px", flexShrink: 0 }} />
+            <span>Outstanding dues requiring payment:</span>
+          </span>
+          <strong style={{ fontSize: "0.9rem" }}>₹{netBalance.toLocaleString("en-IN")}</strong>
+        </div>
+      )}
+
       {/* Monthly Fee Schedule Feed */}
       <div className="history-list scrollable-feed">
         {sequentialKnockoutSchedule.length === 0 ? (
