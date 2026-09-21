@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
-
-# from pydantic import BaseModel
+import datetime
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Relationship, create_engine, SQLModel, Field, Session, select
 from typing import Annotated, Literal
@@ -37,6 +37,7 @@ class ParentBlueprint(SQLModel, table=True):
     students: list["StudentBlueprint"] = Relationship(back_populates="parent")
 
 
+# For Parent Update
 class ParentUpdate(SQLModel):
     name: str
     phone: str
@@ -94,6 +95,16 @@ class AssignFeesPayload(SQLModel):
     target_month: str
     assign_fees: int
     academic_year: int
+
+
+# Payment Model
+class Payment(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    amount: int
+    date_time: str
+    fee_id: int | None = Field(default=None, foreign_key="feeobligation.id")
+    student_id: int | None = Field(default=None, foreign_key="studentblueprint.id")
+    status: str
 
 
 @app.get("/")
@@ -315,3 +326,19 @@ def assign_fees(payload: AssignFeesPayload, session: SessionDep):
         session.add(fee)
     session.commit()
     return {"message": "Fees assigned successfully", "count": len(students)}
+
+
+# Payment Endpoints
+@app.post("/api/payments")
+def assign_payments(payment: Payment, session: SessionDep):
+    payment_db = session.get(FeeObligation, payment.fee_id)
+    if not payment_db:
+        raise HTTPException(status_code=404, detail="Fee record not found")
+    elif payment_db.fee_status == "paid":
+        raise HTTPException(status_code=404, detail="Fee has already paid")
+    payment_db.fee_status = "paid"
+    session.add(payment_db)
+    session.add(payment)
+    session.commit()
+    session.refresh(payment)
+    return payment
