@@ -342,3 +342,22 @@ def assign_payments(payment: Payment, session: SessionDep):
     session.commit()
     session.refresh(payment)
     return payment
+
+
+@app.get("/api/payments", response_model=list[Payment])
+def read_all_payments(
+    session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100
+):
+    payment = session.exec(select(Payment)).all()
+    return payment
+
+
+@app.get("/api/students/{student_id}/payments", response_model=list[Payment])
+def read_student_payments(student_id: int, session: SessionDep):
+    student = session.get(StudentBlueprint, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student Payment detail not found")
+    payments = session.exec(
+        select(Payment).where(Payment.student_id == student_id)
+    ).all()
+    return payments
