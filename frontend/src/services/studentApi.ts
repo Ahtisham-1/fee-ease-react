@@ -10,8 +10,7 @@ interface BackendStudent {
   tuition_fee: number;
   has_transport: boolean;
   transport_fee: number;
-}
-
+} 
 // 1. GET all students from PostgreSQL
 export async function getStudents() {
   const response = await fetch("http://localhost:8000/api/students");

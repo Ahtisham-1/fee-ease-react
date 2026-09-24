@@ -9,7 +9,7 @@ interface BackendParent {
 export interface NewParentData {
   name: string;
   phone: string;
-}
+} 
 
 export async function getParents(): Promise<Parent[]> {
   const response = await fetch("http://localhost:8000/api/parents");

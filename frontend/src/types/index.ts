@@ -53,6 +53,7 @@ export interface NewStudentData {
   transportFee?: number;
 }
 
+
 export interface AssignFeesPayload {
   targetClass: string;
   targetMonth: string;

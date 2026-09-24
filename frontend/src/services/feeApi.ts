@@ -9,7 +9,7 @@ interface BackendFee {
   fee_type: string;
   fee_status: string;
 }
-
+ 
 export async function getFees(): Promise<FeeObligation[]> {
   const response = await fetch("http://localhost:8000/api/fees");
   if (!response.ok) {
