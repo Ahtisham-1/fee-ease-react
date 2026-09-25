@@ -50,6 +50,7 @@ import {
 } from "./services/studentApi";
 import { createParent, getParents } from "./services/parentApi";
 import { getFees, assignBulkFees } from "./services/feeApi";
+import { getPayments, sendPayment } from "./services/paymentApi";
 /**
  * ============================================================================
  * FeeEase Central Application Orchestrator (App.tsx)
@@ -116,14 +117,17 @@ export function App() {
     const loadDatabase = async () => {
       try {
         // Fetch real parents, students, and fees from PostgreSQL together!
-        const [parentsData, studentsData, feesData] = await Promise.all([
-          getParents(),
-          getStudents(),
-          getFees(),
-        ]);
+        const [parentsData, studentsData, feesData, paymentsData] =
+          await Promise.all([
+            getParents(),
+            getStudents(),
+            getFees(),
+            getPayments(),
+          ]);
         setParentsDatabase(parentsData);
         setStudentsDatabase(studentsData);
         setFeeObligationsDatabase(feesData);
+        setPaymentsDatabase(paymentsData);
 
         if (parentsData.length > 0) {
           setSelectedParentAccountId(parentsData[0].id);
@@ -142,21 +146,34 @@ export function App() {
   /**
    * LOGIC FOR: PayFeesForm.tsx (Parent Portal)
    */
-  function handleProcessPayment(paymentAmount: number) {
+  async function handleProcessPayment(paymentAmount: number) {
     if (!selectedStudentProfileId || paymentAmount <= 0) return;
+    try {
+      const pendingFees = feeObligationsDatabase.find(
+        (f) =>
+          f.studentId === selectedStudentProfileId && f.feeStatus === "pending",
+      );
+      if (!pendingFees) {
+        alert("No pending fee found for this student!");
+        return;
+      } 
+      await sendPayment({
+        amount: paymentAmount,
+        fee_id: Number(pendingFees.id),
+        student_id: Number(selectedStudentProfileId),
+        date_time: new Date().toISOString(),
+        status: "SUCCESS",
+      });
 
-    const newPaymentReceipt: Payment = {
-      id: `rcpt-${Date.now()}`,
-      amount: paymentAmount,
-      dateTime: new Date().toLocaleString(),
-      belongsTo: selectedStudentProfileId,
-      status: "SUCCESS",
-    };
-
-    setPaymentsDatabase((previousPayments) => [
-      newPaymentReceipt,
-      ...previousPayments,
-    ]);
+      const [feesData, paymentsData] = await Promise.all([
+        getFees(),
+        getPayments(),
+      ]);
+      setFeeObligationsDatabase(feesData);
+      setPaymentsDatabase(paymentsData);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   /**
@@ -299,9 +316,7 @@ export function App() {
         `Successfully generated ${result.count} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth} ${academicYear}).`,
       );
     } catch (error) {
-      alert(
-        error instanceof Error ? error.message : "Failed to assign fees",
-      );
+      alert(error instanceof Error ? error.message : "Failed to assign fees");
     }
   }
 

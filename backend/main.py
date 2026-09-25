@@ -189,10 +189,17 @@ def delete_student(student_id: int, session: SessionDep):
 # ------------ PARENT ENDPOINTS -----------
 @app.post("/api/parents", response_model=ParentBlueprint)
 def create_parent(parent: ParentBlueprint, session: SessionDep):
-    session.add(parent)
-    session.commit()
-    session.refresh(parent)
-    return parent
+
+    existing_parent = session.exec(
+        select(ParentBlueprint).where(ParentBlueprint.phone == parent.phone)
+    ).first()
+    if existing_parent:
+        return existing_parent
+    else:
+        session.add(parent)
+        session.commit()
+        session.refresh(parent)
+        return parent
 
 
 @app.get("/api/parents", response_model=list[ParentBlueprint])
