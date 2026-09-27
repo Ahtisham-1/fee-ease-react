@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field, Relationship
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from app.models.parent import ParentBlueprint
@@ -16,8 +16,8 @@ class StudentBlueprint(SQLModel, table=True):
     tuition_fee: int
     has_transport: bool = False
     transport_fee: int = 0
-    parent: ParentBlueprint | None = Relationship(back_populates="students")
-    feeobligation: list["FeeObligation"] | None = Relationship(back_populates="student")
+    parent: Optional["ParentBlueprint"] = Relationship(back_populates="students")
+    feeobligation: list["FeeObligation"] = Relationship(back_populates="student")
 
 
 # For student update

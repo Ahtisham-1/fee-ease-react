@@ -1,11 +1,18 @@
+from dotenv import load_dotenv
 from sqlmodel import create_engine, SQLModel, Session
 from fastapi import Depends
 from typing import Annotated
+import os
+
 
 # The PostgreSQL connection String
-DATABASE_URL = "postgresql://postgres:password@localhost:5432/feeease_db"
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 
 # Creating the Engine
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set in .env file")
 engine = create_engine(DATABASE_URL, echo=True)
 
 

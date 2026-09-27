@@ -1,6 +1,5 @@
-from __future__ import annotations
 from sqlmodel import SQLModel, Field, Relationship
-from typing import Literal, TYPE_CHECKING
+from typing import Literal, TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from app.models.student import StudentBlueprint
@@ -15,7 +14,7 @@ class FeeObligation(SQLModel, table=True):
     academic_year: int
     fee_type: str
     fee_status: str = "pending"
-    student: StudentBlueprint | None = Relationship(back_populates="feeobligation")
+    student: Optional["StudentBlueprint"] = Relationship(back_populates="feeobligation")
 
 
 # Fee Obligation update
