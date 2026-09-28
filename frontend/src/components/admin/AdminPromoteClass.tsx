@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Student } from "../../types";
+import { useModalBehavior } from "../../hooks/useModalBehavior";
 import {
   TrendingUpIcon,
   SearchIcon,
@@ -62,6 +63,8 @@ export function AdminPromoteClass({
   function handleCancelPromotion() {
     setIsConfirmModalOpen(false);
   }
+
+  useModalBehavior(isConfirmModalOpen, handleCancelPromotion);
 
   function handleProceedPromotion() {
     onPromoteSubmit(selectedIDs);

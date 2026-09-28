@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Student, Parent, FeeObligation, Payment } from "../../types";
 import { getStudentFinancialSummary } from "../../utils/feeCalculator";
+import { formatRupees } from "../../utils/format";
 import {
   EyeIcon,
   EyeOffIcon,
@@ -11,6 +12,7 @@ import {
   BusIcon,
   SearchIcon,
   CheckCircleIcon,
+  XIcon,
 } from "../common/Icons";
 
 export type SortCriteria = "name-asc" | "name-desc" | "fees-high" | "fees-low";
@@ -42,14 +44,25 @@ export function AdminClassRoster({
   const [sortCriteria, setSortCriteria] = useState<SortCriteria>("name-asc");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const classStudents = (students || []).filter(
+  const classStudents = students.filter(
     (student) => student.gradeName === selectedGrade
   );
 
-  const classTotalPending = classStudents.reduce((sum, s) => {
-    const { netBalance } = getStudentFinancialSummary(s.id, feeObligations, payments);
-    return sum + netBalance;
-  }, 0);
+  // Precompute each student's pending balance ONCE per render instead of
+  // recomputing it inside the sort comparator and again for every row.
+  const netBalanceById = new Map<string, number>(
+    classStudents.map((student) => [
+      student.id,
+      getStudentFinancialSummary(student.id, feeObligations, payments).netBalance,
+    ])
+  );
+
+  const parentsById = new Map(parents.map((parent) => [parent.id, parent]));
+
+  const classTotalPending = classStudents.reduce(
+    (sum, student) => sum + (netBalanceById.get(student.id) ?? 0),
+    0
+  );
 
   const sortedStudents = [...classStudents].sort((studentA, studentB) => {
     if (sortCriteria === "name-asc") {
@@ -59,26 +72,24 @@ export function AdminClassRoster({
       return studentB.name.localeCompare(studentA.name);
     }
 
-    const financeA = getStudentFinancialSummary(studentA.id, feeObligations, payments);
-    const financeB = getStudentFinancialSummary(studentB.id, feeObligations, payments);
+    const balanceA = netBalanceById.get(studentA.id) ?? 0;
+    const balanceB = netBalanceById.get(studentB.id) ?? 0;
 
     if (sortCriteria === "fees-high") {
-      return financeB.netBalance - financeA.netBalance;
+      return balanceB - balanceA;
     }
-    if (sortCriteria === "fees-low") {
-      return financeA.netBalance - financeB.netBalance;
-    }
-
-    return 0;
+    return balanceA - balanceB;
   });
 
   const displayedStudents = sortedStudents.filter((student) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
-    const guardian = (parents || []).find((p) => p.id === student.parentId);
+    const guardian = parentsById.get(student.parentId);
     return (
       student.name.toLowerCase().includes(query) ||
-      (guardian && (guardian.name.toLowerCase().includes(query) || guardian.phone.includes(query)))
+      (guardian !== undefined &&
+        (guardian.name.toLowerCase().includes(query) ||
+          guardian.phone.includes(query)))
     );
   });
 
@@ -139,49 +150,24 @@ export function AdminClassRoster({
 
       {/* Class Cohort Quick Stats & Search Bar */}
       {isStudentsListVisible && classStudents.length > 0 && (
-        <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "0.45rem 0.75rem",
-            background: "var(--input-bg)",
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--card-border)",
-            fontSize: "0.8rem",
-          }}>
-            <span style={{ color: "var(--text-secondary)" }}>
+        <div className="roster-toolbar">
+          <div className="cohort-stats-bar">
+            <span className="cohort-stat">
               Cohort Total: <strong>{classStudents.length} Students</strong>
             </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+            <span className="cohort-stat">
               Total Pending:{" "}
               <strong className={classTotalPending === 0 ? "text-emerald" : "text-amber"}>
-                ₹{classTotalPending.toLocaleString("en-IN")}
+                {formatRupees(classTotalPending)}
               </strong>
             </span>
           </div>
 
-          <div style={{ position: "relative" }}>
-            <SearchIcon style={{
-              position: "absolute",
-              left: "0.75rem",
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: "15px",
-              height: "15px",
-              color: "var(--text-muted)",
-              pointerEvents: "none",
-            }} />
+          <div className="search-box-wrapper">
+            <SearchIcon className="search-svg-icon" />
             <input
               type="text"
-              className="text-input"
-              style={{
-                paddingLeft: "2.1rem",
-                paddingRight: searchQuery ? "2rem" : "0.75rem",
-                height: "36px",
-                fontSize: "0.82rem",
-                borderRadius: "var(--radius-sm)",
-              }}
+              className="text-input roster-search-input"
               placeholder={`Search in Class ${selectedGrade} by student or parent name...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -189,22 +175,12 @@ export function AdminClassRoster({
             {searchQuery && (
               <button
                 type="button"
+                className="roster-search-clear"
                 onClick={() => setSearchQuery("")}
-                style={{
-                  position: "absolute",
-                  right: "0.6rem",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                }}
+                aria-label="Clear search"
                 title="Clear search"
               >
-                ✕
+                <XIcon style={{ width: "13px", height: "13px" }} />
               </button>
             )}
           </div>
@@ -236,12 +212,8 @@ export function AdminClassRoster({
       ) : (
         <div className="history-list scrollable-feed mt-3">
           {displayedStudents.map((student) => {
-            const guardian = (parents || []).find((p) => p.id === student.parentId);
-            const { netBalance } = getStudentFinancialSummary(
-              student.id,
-              feeObligations,
-              payments
-            );
+            const guardian = parentsById.get(student.parentId);
+            const netBalance = netBalanceById.get(student.id) ?? 0;
 
             return (
               <div key={student.id} className="history-item roster-blueprint-card">
@@ -253,12 +225,12 @@ export function AdminClassRoster({
                   <span className="parent-subtext">
                     Parent: {guardian ? guardian.name : "N/A"} ({guardian ? guardian.phone : ""})
                   </span>
-                  <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", marginTop: "0.2rem" }}>
+                  <div className="roster-tags-row">
                     <span className="grade-tag">Class {student.gradeName}</span>
                     {student.hasTransport && (
-                      <span className="badge-pill" style={{ background: "var(--amber-light)", color: "var(--warning-text)", border: "1px solid var(--warning-border)", fontSize: "0.68rem", padding: "0.15rem 0.45rem", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                      <span className="bus-badge">
                         <BusIcon style={{ width: "12px", height: "12px" }} />
-                        <span>Bus (+₹{(student.transportFee ?? 1000).toLocaleString("en-IN")})</span>
+                        <span>Bus (+{formatRupees(student.transportFee ?? 1000)})</span>
                       </span>
                     )}
                   </div>
@@ -269,16 +241,7 @@ export function AdminClassRoster({
                     <span className="roster-student-id">ID: {student.id}</span>
                     <div className="pending-fee-badge-box">
                       {netBalance === 0 ? (
-                        <span
-                          className="status-badge paid"
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "3px",
-                            padding: "0.15rem 0.45rem",
-                            fontSize: "0.72rem",
-                          }}
-                        >
+                        <span className="status-badge paid status-badge-sm">
                           <CheckCircleIcon style={{ width: "12px", height: "12px" }} />
                           <span>Cleared</span>
                         </span>
@@ -286,7 +249,7 @@ export function AdminClassRoster({
                         <>
                           <span className="stat-label">PENDING:</span>
                           <strong className="pending-amount text-amber">
-                            ₹{netBalance.toLocaleString("en-IN")}
+                            {formatRupees(netBalance)}
                           </strong>
                         </>
                       )}

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { Student, FeeObligation } from "../../types";
+import { useModalBehavior } from "../../hooks/useModalBehavior";
+import { formatRupees } from "../../utils/format";
 import { CalendarIcon, CheckCircleIcon, XIcon, PlusIcon, ShieldIcon } from "../common/Icons";
 
 export interface AdminAssignFeesFormProps {
@@ -38,25 +40,23 @@ export function AdminAssignFeesForm({
   const transportCount = classStudents.filter((s) => Boolean(s.hasTransport)).length;
   const standardCount = classStudents.length - transportCount;
   const parsedFee = Number(feeInputString) || 0;
-  const totalBatchAmount = classStudents.reduce(
-    (sum, s) => sum + (parsedFee + (s.hasTransport ? (s.transportFee ?? 1000) : 0)),
+
+  // Sum of each bus student's ACTUAL individual transport fee (no hardcoded rate).
+  const transportExtraTotal = classStudents.reduce(
+    (sum, s) => sum + (s.hasTransport ? (s.transportFee ?? 0) : 0),
     0
   );
+  const totalBatchAmount = parsedFee * classStudents.length + transportExtraTotal;
 
-  function isMonthAssignedToClass(monthName: string, gradeName: string): boolean {
-    const classStudentIds = students
-      .filter((s) => s.gradeName === gradeName)
-      .map((s) => s.id);
-
-    return feeObligations.some(
-      (bill) =>
-        bill.month === monthName &&
-        bill.academicYear === currentAcademicYear &&
-        classStudentIds.includes(bill.studentId)
-    );
+  // Months of the current session already billed for this class — one scan.
+  const classStudentIds = new Set(classStudents.map((s) => s.id));
+  const assignedMonthsForClass = new Set<string>();
+  for (const bill of feeObligations) {
+    if (bill.academicYear === currentAcademicYear && classStudentIds.has(bill.studentId)) {
+      assignedMonthsForClass.add(bill.month);
+    }
   }
-
-  const isCurrentSelectionAssigned = isMonthAssignedToClass(selectMonth, selectGrade);
+  const isCurrentSelectionAssigned = assignedMonthsForClass.has(selectMonth);
 
   function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,6 +87,8 @@ export function AdminAssignFeesForm({
   function handleCancelGeneration() {
     setIsConfirmModalOpen(false);
   }
+
+  useModalBehavior(isConfirmModalOpen, handleCancelGeneration);
 
   function handleProceedGeneration() {
     const validFee = Number(feeInputString);
@@ -134,7 +136,7 @@ export function AdminAssignFeesForm({
               onChange={(e) => setSelectMonth(e.target.value)}
             >
               {pickMonth.map((month) => {
-                const alreadyAssigned = isMonthAssignedToClass(month, selectGrade);
+                const alreadyAssigned = assignedMonthsForClass.has(month);
                 return (
                   <option
                     value={month}
@@ -226,16 +228,16 @@ export function AdminAssignFeesForm({
                   Class {selectGrade} — {selectMonth} {currentAcademicYear}
                 </strong>
                 <span className="confirmation-amount">
-                  ₹{totalBatchAmount.toLocaleString("en-IN")} Total Batch
+                  {formatRupees(totalBatchAmount)} Total Batch
                 </span>
                 <span className="timestamp">
-                  Cohort: {classStudents.length} Students ({standardCount} Standard @ ₹{parsedFee.toLocaleString("en-IN")}{transportCount > 0 ? ` + ${transportCount} Bus Transport @ ₹${(parsedFee + 1000).toLocaleString("en-IN")}` : ""})
+                  Cohort: {classStudents.length} Students ({standardCount} Standard @ {formatRupees(parsedFee)}{transportCount > 0 ? ` + ${transportCount} Bus Transport (+${formatRupees(transportExtraTotal)})` : ""})
                 </span>
               </div>
 
               <p className="security-notice">
                 <ShieldIcon className="security-icon" />
-                <span>Automatically applies +₹1,000 transport fee for students enrolled in bus service.</span>
+                <span>Each bus-enrolled student's individual transport fee is added on top of the base tuition.</span>
               </p>
             </div>
 

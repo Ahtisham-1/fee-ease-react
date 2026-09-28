@@ -1,4 +1,5 @@
 import type { Payment } from "../../types";
+import { formatRupees } from "../../utils/format";
 import { TrendingUpIcon, CalendarIcon } from "../common/Icons";
 
 export interface AdminCollectionsSummaryProps {
@@ -6,41 +7,26 @@ export interface AdminCollectionsSummaryProps {
 }
 
 export function AdminCollectionsSummary({ payments }: AdminCollectionsSummaryProps) {
-  const successfulPayments = payments.filter((p) => p.status === "SUCCESS");
   const now = new Date();
 
-  // 1. Daily Revenue (Today)
-  const todayRevenue = successfulPayments
-    .filter((p) => {
-      const pDate = new Date(p.dateTime);
-      return (
-        !isNaN(pDate.getTime()) &&
-        pDate.getDate() === now.getDate() &&
-        pDate.getMonth() === now.getMonth() &&
-        pDate.getFullYear() === now.getFullYear()
-      );
-    })
-    .reduce((sum, p) => sum + p.amount, 0);
+  // Single pass: successful payments bucketed into today / this month / this year.
+  let todayRevenue = 0;
+  let thisMonthRevenue = 0;
+  let thisYearRevenue = 0;
 
-  // 2. Monthly Revenue (This Month)
-  const thisMonthRevenue = successfulPayments
-    .filter((p) => {
-      const pDate = new Date(p.dateTime);
-      return (
-        !isNaN(pDate.getTime()) &&
-        pDate.getMonth() === now.getMonth() &&
-        pDate.getFullYear() === now.getFullYear()
-      );
-    })
-    .reduce((sum, p) => sum + p.amount, 0);
+  for (const payment of payments) {
+    if (payment.status !== "SUCCESS") continue;
+    const paidAt = new Date(payment.dateTime);
+    if (isNaN(paidAt.getTime()) || paidAt.getFullYear() !== now.getFullYear()) continue;
 
-  // 3. Yearly Revenue (This Year)
-  const thisYearRevenue = successfulPayments
-    .filter((p) => {
-      const pDate = new Date(p.dateTime);
-      return !isNaN(pDate.getTime()) && pDate.getFullYear() === now.getFullYear();
-    })
-    .reduce((sum, p) => sum + p.amount, 0);
+    thisYearRevenue += payment.amount;
+    if (paidAt.getMonth() === now.getMonth()) {
+      thisMonthRevenue += payment.amount;
+      if (paidAt.getDate() === now.getDate()) {
+        todayRevenue += payment.amount;
+      }
+    }
+  }
 
   return (
     <div className="card collections-summary-card" role="region" aria-label="Collections Overview">
@@ -57,7 +43,7 @@ export function AdminCollectionsSummary({ payments }: AdminCollectionsSummaryPro
             <span className="live-pulse-dot" title="Live Today"></span>
           </div>
           <strong className="stat-value text-emerald">
-            ₹{todayRevenue.toLocaleString("en-IN")}
+            {formatRupees(todayRevenue)}
           </strong>
           <span className="stat-subtext">24-Hour Settlement</span>
         </div>
@@ -69,10 +55,10 @@ export function AdminCollectionsSummary({ payments }: AdminCollectionsSummaryPro
             <CalendarIcon className="stat-header-icon" />
           </div>
           <strong className="stat-value text-emerald">
-            ₹{thisMonthRevenue.toLocaleString("en-IN")}
+            {formatRupees(thisMonthRevenue)}
           </strong>
           <span className="stat-subtext">
-            {now.toLocaleString("default", { month: "long" })} {now.getFullYear()}
+            {now.toLocaleString(undefined, { month: "long" })} {now.getFullYear()}
           </span>
         </div>
 
@@ -83,7 +69,7 @@ export function AdminCollectionsSummary({ payments }: AdminCollectionsSummaryPro
             <TrendingUpIcon className="stat-header-icon" />
           </div>
           <strong className="stat-value text-emerald">
-            ₹{thisYearRevenue.toLocaleString("en-IN")}
+            {formatRupees(thisYearRevenue)}
           </strong>
           <span className="stat-subtext">
             Academic Session {now.getFullYear()}

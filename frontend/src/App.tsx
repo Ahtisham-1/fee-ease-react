@@ -10,7 +10,6 @@ import type {
 } from "./types";
 import {
   initialParents,
-  initialStudents,
   initialFeeObligations,
   gradeArray,
   months,
@@ -48,8 +47,8 @@ import {
   deleteStudents,
   updateStudents,
 } from "./services/studentApi";
-import { createParent, getParents } from "./services/parentApi";
-import { getFees, assignBulkFees } from "./services/feeApi";
+import { createParent, getParents, updateParent } from "./services/parentApi";
+import { getFees, assignBulkFees, deleteFee } from "./services/feeApi";
 import { getPayments, sendPayment } from "./services/paymentApi";
 /**
  * ============================================================================
@@ -86,13 +85,19 @@ export function App() {
   const [paymentsDatabase, setPaymentsDatabase] = useState<Payment[]>([]);
 
   // --------------------------------------------------------------------------
+  // SCHOOL DATA LOADING STATE (first backend fetch)
+  // --------------------------------------------------------------------------
+  const [isLoadingSchoolData, setIsLoadingSchoolData] = useState<boolean>(true);
+  const [dataLoadError, setDataLoadError] = useState<string | null>(null);
+
+  // --------------------------------------------------------------------------
   // PARENT PORTAL ACTIVE CONTEXT SELECTION STATE
   // Connected to: ParentStudentSelector.tsx, FeeDetail.tsx, PayFeesForm.tsx, PaymentHistory.tsx
   // --------------------------------------------------------------------------
   const [selectedParentAccountId, setSelectedParentAccountId] =
     useState<string>(initialParents[0]?.id || "");
   const [selectedStudentProfileId, setSelectedStudentProfileId] =
-    useState<string>(initialStudents[0]?.id || "");
+    useState<string>("");
 
   // --------------------------------------------------------------------------
   // ADMIN PORTAL FILTER & ASSIGNMENT STATE
@@ -114,9 +119,11 @@ export function App() {
     useState<boolean>(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadDatabase = async () => {
       try {
-        // Fetch real parents, students, and fees from PostgreSQL together!
+        // Fetch real parents, students, fees, and payments from PostgreSQL together!
         const [parentsData, studentsData, feesData, paymentsData] =
           await Promise.all([
             getParents(),
@@ -124,6 +131,8 @@ export function App() {
             getFees(),
             getPayments(),
           ]);
+        if (cancelled) return;
+
         setParentsDatabase(parentsData);
         setStudentsDatabase(studentsData);
         setFeeObligationsDatabase(feesData);
@@ -131,12 +140,31 @@ export function App() {
 
         if (parentsData.length > 0) {
           setSelectedParentAccountId(parentsData[0].id);
+          // Keep the student selector in sync with the selected parent so the
+          // portal never renders a select whose value matches no option.
+          const firstChild = studentsData.find(
+            (student) => student.parentId === parentsData[0].id,
+          );
+          setSelectedStudentProfileId(firstChild ? firstChild.id : "");
         }
       } catch (error) {
         console.error("Failed to load data from database", error);
+        if (!cancelled) {
+          setDataLoadError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load school records.",
+          );
+        }
+      } finally {
+        if (!cancelled) setIsLoadingSchoolData(false);
       }
     };
+
     loadDatabase();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ==========================================================================
@@ -145,35 +173,42 @@ export function App() {
 
   /**
    * LOGIC FOR: PayFeesForm.tsx (Parent Portal)
+   * Throws with a user-readable message so the form can surface the exact
+   * failure inside its confirmation modal instead of failing silently.
    */
   async function handleProcessPayment(paymentAmount: number) {
-    if (!selectedStudentProfileId || paymentAmount <= 0) return;
-    try {
-      const pendingFees = feeObligationsDatabase.find(
-        (f) =>
-          f.studentId === selectedStudentProfileId && f.feeStatus === "pending",
-      );
-      if (!pendingFees) {
-        alert("No pending fee found for this student!");
-        return;
-      } 
-      await sendPayment({
-        amount: paymentAmount,
-        fee_id: Number(pendingFees.id),
-        student_id: Number(selectedStudentProfileId),
-        date_time: new Date().toISOString(),
-        status: "SUCCESS",
-      });
-
-      const [feesData, paymentsData] = await Promise.all([
-        getFees(),
-        getPayments(),
-      ]);
-      setFeeObligationsDatabase(feesData);
-      setPaymentsDatabase(paymentsData);
-    } catch (error) {
-      console.error(error);
+    if (!selectedStudentProfileId) {
+      throw new Error("No student is selected for this payment.");
     }
+    if (paymentAmount <= 0) {
+      throw new Error("Please enter a valid positive payment amount.");
+    }
+
+    const pendingFee = feeObligationsDatabase.find(
+      (f) =>
+        f.studentId === selectedStudentProfileId && f.feeStatus === "pending",
+    );
+    if (!pendingFee) {
+      throw new Error(
+        "No pending fee record is available to attach this payment to.",
+      );
+    }
+
+    await sendPayment({
+      amount: paymentAmount,
+      fee_id: Number(pendingFee.id),
+      student_id: Number(selectedStudentProfileId),
+      date_time: new Date().toISOString(),
+      status: "SUCCESS",
+    });
+
+    // Refresh fees + payments so the ledger reflects the server's truth.
+    const [feesData, paymentsData] = await Promise.all([
+      getFees(),
+      getPayments(),
+    ]);
+    setFeeObligationsDatabase(feesData);
+    setPaymentsDatabase(paymentsData);
   }
 
   /**
@@ -186,8 +221,10 @@ export function App() {
         phone: enrollmentData.phone,
       });
 
-      enrollmentData.parentId = Number(savedParent.id);
-      await createStudents(enrollmentData);
+      const savedStudent = await createStudents({
+        ...enrollmentData,
+        parentId: Number(savedParent.id),
+      });
 
       const [parentsFromDb, studentsFromDb] = await Promise.all([
         getParents(),
@@ -197,8 +234,10 @@ export function App() {
       setParentsDatabase(parentsFromDb);
       setStudentsDatabase(studentsFromDb);
 
-      if (savedParent) {
-        setSelectedParentAccountId(savedParent.id);
+      // Jump the parent portal straight onto the newly enrolled family.
+      setSelectedParentAccountId(savedParent.id);
+      if (savedStudent?.id != null) {
+        setSelectedStudentProfileId(String(savedStudent.id));
       }
 
       alert(
@@ -206,7 +245,11 @@ export function App() {
       );
     } catch (error) {
       console.error("Failed to enroll student:", error);
-      alert("Error enrolling student. Check backend connection");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Error enrolling student. Check backend connection",
+      );
     }
   }
 
@@ -220,6 +263,8 @@ export function App() {
 
   /**
    * LOGIC FOR: AdminClassRoster.tsx (Delete Student Action)
+   * Fee obligations are removed first: the server's student DELETE does not
+   * cascade, and leftover fee rows referencing the student would fail the delete.
    */
   async function handleDeleteStudent(studentId: string) {
     const studentToDelete = studentsDatabase.find((s) => s.id === studentId);
@@ -230,22 +275,45 @@ export function App() {
     );
     if (!isConfirmed) return;
 
-    await deleteStudents(studentId);
+    try {
+      const studentFees = feeObligationsDatabase.filter(
+        (fee) => fee.studentId === studentId,
+      );
+      await Promise.all(studentFees.map((fee) => deleteFee(fee.id)));
+      await deleteStudents(studentId);
 
-    setStudentsDatabase((prev) => prev.filter((s) => s.id !== studentId));
-    setFeeObligationsDatabase((prev) =>
-      prev.filter((f) => f.studentId !== studentId),
-    );
+      setStudentsDatabase((prev) => prev.filter((s) => s.id !== studentId));
+      setFeeObligationsDatabase((prev) =>
+        prev.filter((f) => f.studentId !== studentId),
+      );
 
-    if (selectedStudentProfileId === studentId) {
-      setSelectedStudentProfileId("");
+      if (selectedStudentProfileId === studentId) {
+        setSelectedStudentProfileId("");
+      }
+
+      alert(
+        `Successfully removed ${studentToDelete.name} from school records.`,
+      );
+    } catch (error) {
+      console.error("Failed to delete student:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove the student. Please try again.",
+      );
+      // Some fee rows may have been deleted before the failure — re-sync.
+      try {
+        setFeeObligationsDatabase(await getFees());
+      } catch {
+        /* keep the current local state */
+      }
     }
-
-    alert(`Successfully removed ${studentToDelete.name} from school records.`);
   }
 
   /**
    * LOGIC FOR: AdminEditStudentModal.tsx (Global Modal)
+   * Persists both the student PATCH and the guardian PATCH (name/phone) so
+   * changes survive a refresh instead of only living in local state.
    */
   async function handleSaveStudentProfileChanges(
     studentId: string,
@@ -255,39 +323,70 @@ export function App() {
     hasTransport: boolean = false,
     transportFee: number = 1000,
   ) {
-    await updateStudents(studentId, {
-      studentName: updatedStudentName,
-      parentName: updatedParentName,
-      phone: updatedPhoneNumber,
-      hasTransport: hasTransport,
-      transportFee: transportFee,
-    } as any);
+    try {
+      await updateStudents(studentId, {
+        studentName: updatedStudentName,
+        phone: updatedPhoneNumber,
+        hasTransport,
+        transportFee: hasTransport ? transportFee : 0,
+      });
 
-    setStudentsDatabase((previousStudents) =>
-      previousStudents.map((student) =>
-        student.id === studentId
-          ? {
-              ...student,
-              name: updatedStudentName,
-              hasTransport,
-              transportFee: hasTransport ? transportFee : undefined,
-            }
-          : student,
-      ),
-    );
+      if (studentTargetForEdit?.parentId) {
+        const guardian = parentsDatabase.find(
+          (entry) => entry.id === studentTargetForEdit.parentId,
+        );
+        if (guardian) {
+          await updateParent(guardian.id, {
+            name: updatedParentName,
+            phone: updatedPhoneNumber,
+          });
+        }
+      }
 
-    if (studentTargetForEdit?.parentId) {
-      setParentsDatabase((previousGuardians) =>
-        previousGuardians.map((guardian) =>
-          guardian.id === studentTargetForEdit.parentId
+      setStudentsDatabase((previousStudents) =>
+        previousStudents.map((student) =>
+          student.id === studentId
             ? {
-                ...guardian,
-                name: updatedParentName,
-                phone: updatedPhoneNumber,
+                ...student,
+                name: updatedStudentName,
+                hasTransport,
+                transportFee: hasTransport ? transportFee : undefined,
               }
-            : guardian,
+            : student,
         ),
       );
+
+      if (studentTargetForEdit?.parentId) {
+        setParentsDatabase((previousGuardians) =>
+          previousGuardians.map((guardian) =>
+            guardian.id === studentTargetForEdit.parentId
+              ? {
+                  ...guardian,
+                  name: updatedParentName,
+                  phone: updatedPhoneNumber,
+                }
+              : guardian,
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Failed to save student profile:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to save changes. Check the backend connection.",
+      );
+      // Re-sync from the server so the UI never shows unsaved data.
+      try {
+        const [parentsFromDb, studentsFromDb] = await Promise.all([
+          getParents(),
+          getStudents(),
+        ]);
+        setParentsDatabase(parentsFromDb);
+        setStudentsDatabase(studentsFromDb);
+      } catch {
+        /* keep the current local state */
+      }
     }
   }
 
@@ -316,44 +415,69 @@ export function App() {
         `Successfully generated ${result.count} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth} ${academicYear}).`,
       );
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to assign fees");
+      alert(
+        error instanceof Error ? error.message : "Failed to assign fees",
+      );
     }
   }
 
   /**
    * LOGIC FOR: AdminPromoteClass.tsx (Admin Tab: promotion)
+   * Persists each promotion via PATCH so grade changes survive a refresh.
    */
-  function handleExecuteAnnualPromotion(studentIdsToPromote: string[]) {
+  async function handleExecuteAnnualPromotion(studentIdsToPromote: string[]) {
+    if (studentIdsToPromote.length === 0) return;
+
     const currentGradeIndex = gradeArray.indexOf(selectedGradeForFilter);
     const nextGradeLevel =
       currentGradeIndex < gradeArray.length - 1
         ? gradeArray[currentGradeIndex + 1]
         : "Graduated";
 
-    setStudentsDatabase((previousStudents) =>
-      previousStudents.map((student) => {
-        if (studentIdsToPromote.includes(student.id)) {
-          return { ...student, gradeName: nextGradeLevel };
-        }
-        return student;
-      }),
+    const results = await Promise.allSettled(
+      studentIdsToPromote.map((studentId) =>
+        updateStudents(studentId, { grade: nextGradeLevel }),
+      ),
     );
 
-    alert(
-      `Promoted ${studentIdsToPromote.length} students from Class ${selectedGradeForFilter} to Class ${nextGradeLevel}!`,
+    const promotedIds = studentIdsToPromote.filter(
+      (_, index) => results[index].status === "fulfilled",
     );
+    const failedCount = studentIdsToPromote.length - promotedIds.length;
+
+    if (promotedIds.length > 0) {
+      setStudentsDatabase((previousStudents) =>
+        previousStudents.map((student) =>
+          promotedIds.includes(student.id)
+            ? { ...student, gradeName: nextGradeLevel }
+            : student,
+        ),
+      );
+    }
+
+    if (failedCount === 0) {
+      alert(
+        `Promoted ${promotedIds.length} students from Class ${selectedGradeForFilter} to Class ${nextGradeLevel}!`,
+      );
+    } else {
+      console.error(
+        `${failedCount} promotion(s) failed to save`,
+        results.filter((r) => r.status === "rejected"),
+      );
+      alert(
+        `Promoted ${promotedIds.length} students, but ${failedCount} could not be saved. Check the backend connection and try again.`,
+      );
+    }
   }
 
   // --------------------------------------------------------------------------
   // DERIVED SELECTORS
   // --------------------------------------------------------------------------
-  const activeGuardianProfile = parentsDatabase.find(
-    (guardian) =>
-      guardian.id ===
-      (studentTargetForEdit
-        ? studentTargetForEdit.parentId
-        : selectedParentAccountId),
-  );
+  const editStudentGuardian = studentTargetForEdit
+    ? parentsDatabase.find(
+        (guardian) => guardian.id === studentTargetForEdit.parentId,
+      )
+    : undefined;
 
   const activeSelectedStudent = studentsDatabase.find(
     (student) => student.id === selectedStudentProfileId,
@@ -371,164 +495,180 @@ export function App() {
       <Header role={activeUserRole} onRoleChange={setActiveUserRole} />
 
       <main className="main-content">
-        {/* =================================================================== */}
-        {/* PARENT PORTAL VIEW                                                  */}
-        {/* =================================================================== */}
-        {activeUserRole === "parent" && (
-          <div className="parent-grid">
-            <div className="column-left">
-              <ParentStudentSelector
-                parents={parentsDatabase}
-                students={studentsDatabase}
-                selectedParentId={selectedParentAccountId}
-                selectedStudentId={selectedStudentProfileId}
-                onSelectParent={setSelectedParentAccountId}
-                onSelectStudent={setSelectedStudentProfileId}
-              />
-
-              {activeSelectedStudent && (
-                <FeeDetail
-                  student={activeSelectedStudent}
-                  feeObligations={feeObligationsDatabase}
-                  payments={paymentsDatabase}
-                />
-              )}
-            </div>
-
-            <div className="column-right">
-              {activeSelectedStudent && (
-                <>
-                  <PayFeesForm
-                    student={activeSelectedStudent}
-                    netPendingBalance={activeStudentFinancials.netBalance}
-                    onPayFee={handleProcessPayment}
-                  />
-
-                  <PaymentHistory
-                    payments={paymentsDatabase.filter(
-                      (receipt) =>
-                        receipt.belongsTo === selectedStudentProfileId,
-                    )}
-                  />
-                </>
-              )}
-            </div>
+        {dataLoadError && (
+          <div className="error-banner load-error-banner" role="alert">
+            <strong>Could not load school records:</strong> {dataLoadError} —
+            check the backend connection and refresh the page.
           </div>
         )}
 
-        {/* =================================================================== */}
-        {/* ADMIN PORTAL VIEW WITH SUB-NAVIGATION BAR                           */}
-        {/* =================================================================== */}
-        {activeUserRole === "admin" && (
-          <div className="portal-layout admin-portal">
-            {/* Admin Sub-Navigation Control Bar */}
-            <nav className="admin-nav-bar" aria-label="Admin Sub Navigation">
-              <button
-                type="button"
-                className={`admin-tab-btn ${activeAdminTab === "overview" ? "active" : ""}`}
-                onClick={() => setActiveAdminTab("overview")}
-              >
-                <TrendingUpIcon className="nav-btn-icon" />
-                <span>Overview & Audit</span>
-              </button>
-
-              <button
-                type="button"
-                className={`admin-tab-btn ${activeAdminTab === "students" ? "active" : ""}`}
-                onClick={() => setActiveAdminTab("students")}
-              >
-                <UsersIcon className="nav-btn-icon" />
-                <span>Class Roster & Enrollment</span>
-              </button>
-
-              <button
-                type="button"
-                className={`admin-tab-btn ${activeAdminTab === "fees" ? "active" : ""}`}
-                onClick={() => setActiveAdminTab("fees")}
-              >
-                <CalendarIcon className="nav-btn-icon" />
-                <span>Generate Class Fees</span>
-              </button>
-
-              <button
-                type="button"
-                className={`admin-tab-btn ${activeAdminTab === "promotion" ? "active" : ""}`}
-                onClick={() => setActiveAdminTab("promotion")}
-              >
-                <ArrowRightIcon className="nav-btn-icon" />
-                <span>Class Promotion</span>
-              </button>
-            </nav>
-
-            {/* TAB 1: Collections Overview + Audit History (SIDE BY SIDE) */}
-            {activeAdminTab === "overview" && (
-              <div className="admin-overview-grid">
-                <AdminCollectionsSummary payments={paymentsDatabase} />
-                <AdminPaymentHistory
-                  payments={paymentsDatabase}
-                  students={studentsDatabase}
-                />
-              </div>
-            )}
-
-            {/* TAB 2: Class Roster & Enrollment (SIDE BY SIDE 50/50 GRID) */}
-            {activeAdminTab === "students" && (
-              <div className="admin-overview-grid">
-                {/* Left Column: Enrollment Form */}
-                <AdminAddStudentForm
-                  classGrade={gradeArray}
-                  onAddStudent={handleEnrollStudentAccount}
-                  onClassChange={setSelectedGradeForFilter}
-                />
-
-                {/* Right Column: Classroom Student Roster Table */}
-                <AdminClassRoster
-                  students={studentsDatabase}
-                  parents={parentsDatabase}
-                  feeObligations={feeObligationsDatabase}
-                  payments={paymentsDatabase}
-                  selectedGrade={selectedGradeForFilter}
-                  classGrade={gradeArray}
-                  onSelectGrade={setSelectedGradeForFilter}
-                  onEditStudent={handleInitiateStudentEdit}
-                  onDeleteStudent={handleDeleteStudent}
-                />
-              </div>
-            )}
-
-            {/* TAB 3: Batch Generate Class Fees */}
-            {activeAdminTab === "fees" && (
-              <AdminAssignFeesForm
-                assignFees={standardTuitionFeeInput}
-                pickClass={gradeArray}
-                pickMonth={months}
-                feeObligations={feeObligationsDatabase}
-                students={studentsDatabase}
-                onInputChange={setStandardTuitionFeeInput}
-                onSubmitFeesForm={handleBatchGenerateClassFees}
-              />
-            )}
-
-            {/* TAB 4: Annual Class Promotion Tool */}
-            {activeAdminTab === "promotion" && (
-              <AdminPromoteClass
-                gradeClass={gradeArray}
-                gradeStudents={studentsDatabase.filter(
-                  (student) => student.gradeName === selectedGradeForFilter,
-                )}
-                selectedGrade={selectedGradeForFilter}
-                onDropdownChange={setSelectedGradeForFilter}
-                onPromoteSubmit={handleExecuteAnnualPromotion}
-              />
-            )}
+        {isLoadingSchoolData ? (
+          <div className="app-loading" role="status" aria-live="polite">
+            <span className="spinner-lg" aria-hidden="true" />
+            <p className="empty-message">Loading school records…</p>
           </div>
+        ) : (
+          <>
+            {/* =================================================================== */}
+            {/* PARENT PORTAL VIEW                                                  */}
+            {/* =================================================================== */}
+            {activeUserRole === "parent" && (
+              <div className="parent-grid">
+                <div className="column-left">
+                  <ParentStudentSelector
+                    parents={parentsDatabase}
+                    students={studentsDatabase}
+                    selectedParentId={selectedParentAccountId}
+                    selectedStudentId={selectedStudentProfileId}
+                    onSelectParent={setSelectedParentAccountId}
+                    onSelectStudent={setSelectedStudentProfileId}
+                  />
+
+                  {activeSelectedStudent && (
+                    <FeeDetail
+                      student={activeSelectedStudent}
+                      feeObligations={feeObligationsDatabase}
+                      payments={paymentsDatabase}
+                    />
+                  )}
+                </div>
+
+                <div className="column-right">
+                  {activeSelectedStudent && (
+                    <>
+                      <PayFeesForm
+                        student={activeSelectedStudent}
+                        netPendingBalance={activeStudentFinancials.netBalance}
+                        onPayFee={handleProcessPayment}
+                      />
+
+                      <PaymentHistory
+                        payments={paymentsDatabase.filter(
+                          (receipt) =>
+                            receipt.belongsTo === selectedStudentProfileId,
+                        )}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* =================================================================== */}
+            {/* ADMIN PORTAL VIEW WITH SUB-NAVIGATION BAR                           */}
+            {/* =================================================================== */}
+            {activeUserRole === "admin" && (
+              <div className="portal-layout admin-portal">
+                {/* Admin Sub-Navigation Control Bar */}
+                <nav className="admin-nav-bar" aria-label="Admin Sub Navigation">
+                  <button
+                    type="button"
+                    className={`admin-tab-btn ${activeAdminTab === "overview" ? "active" : ""}`}
+                    onClick={() => setActiveAdminTab("overview")}
+                  >
+                    <TrendingUpIcon className="nav-btn-icon" />
+                    <span>Overview & Audit</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`admin-tab-btn ${activeAdminTab === "students" ? "active" : ""}`}
+                    onClick={() => setActiveAdminTab("students")}
+                  >
+                    <UsersIcon className="nav-btn-icon" />
+                    <span>Class Roster & Enrollment</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`admin-tab-btn ${activeAdminTab === "fees" ? "active" : ""}`}
+                    onClick={() => setActiveAdminTab("fees")}
+                  >
+                    <CalendarIcon className="nav-btn-icon" />
+                    <span>Generate Class Fees</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`admin-tab-btn ${activeAdminTab === "promotion" ? "active" : ""}`}
+                    onClick={() => setActiveAdminTab("promotion")}
+                  >
+                    <ArrowRightIcon className="nav-btn-icon" />
+                    <span>Class Promotion</span>
+                  </button>
+                </nav>
+
+                {/* TAB 1: Collections Overview + Audit History (SIDE BY SIDE) */}
+                {activeAdminTab === "overview" && (
+                  <div className="admin-overview-grid">
+                    <AdminCollectionsSummary payments={paymentsDatabase} />
+                    <AdminPaymentHistory
+                      payments={paymentsDatabase}
+                      students={studentsDatabase}
+                    />
+                  </div>
+                )}
+
+                {/* TAB 2: Class Roster & Enrollment (SIDE BY SIDE 50/50 GRID) */}
+                {activeAdminTab === "students" && (
+                  <div className="admin-overview-grid">
+                    {/* Left Column: Enrollment Form */}
+                    <AdminAddStudentForm
+                      classGrade={gradeArray}
+                      onAddStudent={handleEnrollStudentAccount}
+                      onClassChange={setSelectedGradeForFilter}
+                    />
+
+                    {/* Right Column: Classroom Student Roster Table */}
+                    <AdminClassRoster
+                      students={studentsDatabase}
+                      parents={parentsDatabase}
+                      feeObligations={feeObligationsDatabase}
+                      payments={paymentsDatabase}
+                      selectedGrade={selectedGradeForFilter}
+                      classGrade={gradeArray}
+                      onSelectGrade={setSelectedGradeForFilter}
+                      onEditStudent={handleInitiateStudentEdit}
+                      onDeleteStudent={handleDeleteStudent}
+                    />
+                  </div>
+                )}
+
+                {/* TAB 3: Batch Generate Class Fees */}
+                {activeAdminTab === "fees" && (
+                  <AdminAssignFeesForm
+                    assignFees={standardTuitionFeeInput}
+                    pickClass={gradeArray}
+                    pickMonth={months}
+                    feeObligations={feeObligationsDatabase}
+                    students={studentsDatabase}
+                    onInputChange={setStandardTuitionFeeInput}
+                    onSubmitFeesForm={handleBatchGenerateClassFees}
+                  />
+                )}
+
+                {/* TAB 4: Annual Class Promotion Tool */}
+                {activeAdminTab === "promotion" && (
+                  <AdminPromoteClass
+                    gradeClass={gradeArray}
+                    gradeStudents={studentsDatabase.filter(
+                      (student) => student.gradeName === selectedGradeForFilter,
+                    )}
+                    selectedGrade={selectedGradeForFilter}
+                    onDropdownChange={setSelectedGradeForFilter}
+                    onPromoteSubmit={handleExecuteAnnualPromotion}
+                  />
+                )}
+              </div>
+            )}
+          </>
         )}
       </main>
 
       {/* Global Student & Guardian Record Edit Modal */}
       <AdminEditStudentModal
         student={studentTargetForEdit}
-        parent={activeGuardianProfile}
+        parent={editStudentGuardian}
         isOpen={isEditStudentRecordModalOpen}
         onClose={() => setIsEditStudentRecordModalOpen(false)}
         onSave={handleSaveStudentProfileChanges}

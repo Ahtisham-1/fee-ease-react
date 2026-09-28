@@ -1,11 +1,13 @@
 import { useState } from "react";
 import type { Student } from "../../types";
+import { useModalBehavior } from "../../hooks/useModalBehavior";
 import { WalletIcon, XIcon, ShieldIcon, CheckIcon } from "../common/Icons";
 
 export interface PayFeesFormProps {
   student: Student | undefined;
   netPendingBalance: number;
-  onPayFee: (amount: number) => void;
+  /** Async handler: resolves on success, throws with a readable message on failure. */
+  onPayFee: (amount: number) => Promise<void>;
 }
 
 export function PayFeesForm({
@@ -16,6 +18,8 @@ export function PayFeesForm({
   const [paymentAmountInput, setPaymentAmountInput] = useState<string>("");
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [validationErrorMessage, setValidationErrorMessage] = useState<string | null>(null);
+  const [submissionErrorMessage, setSubmissionErrorMessage] = useState<string | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const numericAmount = Number(paymentAmountInput) || 0;
   const remainingAfterPayment = Math.max(0, netPendingBalance - numericAmount);
@@ -23,6 +27,7 @@ export function PayFeesForm({
   function handleInitiatePayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setValidationErrorMessage(null);
+    setSubmissionErrorMessage(null);
 
     const validAmount = Number(paymentAmountInput);
 
@@ -47,14 +52,32 @@ export function PayFeesForm({
   }
 
   function handleCancelPayment() {
+    if (isProcessingPayment) return;
     setIsConfirmationModalOpen(false);
   }
 
-  function handleConfirmAndProceedPayment() {
+  useModalBehavior(isConfirmationModalOpen, handleCancelPayment);
+
+  async function handleConfirmAndProceedPayment() {
+    if (isProcessingPayment) return;
+
     const validAmount = Number(paymentAmountInput);
-    onPayFee(validAmount);
-    setPaymentAmountInput("");
-    setIsConfirmationModalOpen(false);
+    setIsProcessingPayment(true);
+    setSubmissionErrorMessage(null);
+
+    try {
+      await onPayFee(validAmount);
+      setPaymentAmountInput("");
+      setIsConfirmationModalOpen(false);
+    } catch (error) {
+      setSubmissionErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "The payment could not be completed. Please try again.",
+      );
+    } finally {
+      setIsProcessingPayment(false);
+    }
   }
 
   const isFormDisabled = !student || netPendingBalance <= 0;
@@ -157,6 +180,12 @@ export function PayFeesForm({
                 </span>
               </div>
 
+              {submissionErrorMessage && (
+                <div className="error-banner" role="alert">
+                  {submissionErrorMessage}
+                </div>
+              )}
+
               <p className="security-notice">
                 <ShieldIcon className="security-icon" />
                 <span>Encrypted Banking Gateway • Instant Ledger Settlement</span>
@@ -168,6 +197,7 @@ export function PayFeesForm({
                 type="button"
                 className="role-btn cancel-btn"
                 onClick={handleCancelPayment}
+                disabled={isProcessingPayment}
               >
                 <XIcon className="btn-icon" />
                 <span>Cancel</span>
@@ -177,9 +207,19 @@ export function PayFeesForm({
                 type="button"
                 className="pay-btn confirm-proceed-btn"
                 onClick={handleConfirmAndProceedPayment}
+                disabled={isProcessingPayment}
               >
-                <CheckIcon className="btn-icon" />
-                <span>Proceed & Pay</span>
+                {isProcessingPayment ? (
+                  <>
+                    <span className="btn-spinner" aria-hidden="true" />
+                    <span>Processing…</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon className="btn-icon" />
+                    <span>Proceed & Pay</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

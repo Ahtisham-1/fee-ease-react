@@ -1,4 +1,5 @@
 import type { Payment } from "../../types";
+import { formatRupees, formatTimestamp } from "../../utils/format";
 import { ReceiptIcon, CheckCircleIcon, AlertCircleIcon } from "../common/Icons";
 
 export interface PaymentHistoryProps {
@@ -6,6 +7,11 @@ export interface PaymentHistoryProps {
 }
 
 export function PaymentHistory({ payments }: PaymentHistoryProps) {
+  // Newest receipts first
+  const sortedPayments = [...payments].sort(
+    (a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime(),
+  );
+
   return (
     <div className="card payment-history-card" role="region" aria-label="Transaction Receipts">
       <div className="card-title text-center">
@@ -14,12 +20,12 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
       </div>
 
       <div className="history-list scrollable-feed">
-        {payments.length === 0 ? (
+        {sortedPayments.length === 0 ? (
           <p className="empty-history text-center">
             No transaction records found for this student.
           </p>
         ) : (
-          payments.map((receipt) => {
+          sortedPayments.map((receipt) => {
             const isSuccess = receipt.status === "SUCCESS";
 
             return (
@@ -32,7 +38,7 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                     <ReceiptIcon className="item-icon-inline" />
                     <span>Receipt: {receipt.id}</span>
                   </span>
-                  <span className="timestamp">{receipt.dateTime}</span>
+                  <span className="timestamp">{formatTimestamp(receipt.dateTime)}</span>
 
                   {!isSuccess && (
                     <span className="failure-note">
@@ -47,7 +53,7 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                       isSuccess ? "text-success" : "text-danger strikethrough"
                     }`}
                   >
-                    ₹{receipt.amount.toLocaleString("en-IN")}
+                    {formatRupees(receipt.amount)}
                   </span>
 
                   <span

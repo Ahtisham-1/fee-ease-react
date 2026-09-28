@@ -53,6 +53,23 @@ export interface NewStudentData {
   transportFee?: number;
 }
 
+/** Partial student fields accepted by PATCH /api/students/{id}. */
+export interface UpdateStudentData {
+  studentName?: string;
+  parentId?: number;
+  phone?: string;
+  grade?: string;
+  tuitionFee?: number;
+  hasTransport?: boolean;
+  transportFee?: number;
+}
+
+/** Fields accepted by PATCH /api/parents/{id}. */
+export interface UpdateParentData {
+  name: string;
+  phone: string;
+}
+
 
 export interface AssignFeesPayload {
   targetClass: string;

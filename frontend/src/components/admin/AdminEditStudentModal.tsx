@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Student, Parent } from "../../types";
+import { useModalBehavior } from "../../hooks/useModalBehavior";
 import { EditIcon, CheckIcon, XIcon, BusIcon } from "../common/Icons";
 
 export interface AdminEditStudentModalProps {
@@ -62,7 +63,7 @@ function AdminEditStudentForm({
   return (
     <>
       <div className="modal-header">
-        <h3 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <h3 id="edit-modal-title" className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <EditIcon className="title-icon" />
           <span>EDIT STUDENT & TRANSPORT SETTINGS</span>
         </h3>
@@ -171,6 +172,8 @@ export function AdminEditStudentModal({
   onClose,
   onSave,
 }: AdminEditStudentModalProps) {
+  useModalBehavior(isOpen, onClose);
+
   if (!isOpen || !student) {
     return null;
   }

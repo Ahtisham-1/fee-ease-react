@@ -49,6 +49,11 @@ export function AdminAddStudentForm({
       setValidationError("Please enter the parent's contact phone number.");
       return;
     }
+    const phoneDigitCount = phoneNumber.replace(/\D/g, "").length;
+    if (phoneDigitCount < 7 || phoneDigitCount > 15) {
+      setValidationError("Please enter a valid phone number (7–15 digits).");
+      return;
+    }
     if (isNaN(parsedTuition) || parsedTuition <= 0) {
       setValidationError("Please enter a valid positive base tuition fee amount.");
       return;

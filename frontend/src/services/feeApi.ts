@@ -1,4 +1,5 @@
 import type { FeeObligation, AssignFeesPayload } from "../types";
+import { expectArray, requestJson } from "./apiClient";
 
 interface BackendFee {
   id: number;
@@ -9,14 +10,10 @@ interface BackendFee {
   fee_type: string;
   fee_status: string;
 }
- 
+
 export async function getFees(): Promise<FeeObligation[]> {
-  const response = await fetch("http://localhost:8000/api/fees");
-  if (!response.ok) {
-    throw new Error("Failed to fetch fees from the database");
-  }
-  const rawFees: BackendFee[] = await response.json();
-  return rawFees.map((f) => ({
+  const rawFees = await requestJson<BackendFee[]>("/api/fees");
+  return expectArray<BackendFee>(rawFees, "fees").map((f) => ({
     id: String(f.id),
     studentId: String(f.student_id),
     feeAmount: f.fee_amount,
@@ -30,21 +27,20 @@ export async function getFees(): Promise<FeeObligation[]> {
 export async function assignBulkFees(
   payload: AssignFeesPayload,
 ): Promise<{ message: string; count: number }> {
-  const response = await fetch("http://localhost:8000/api/fees/assign", {
+  return requestJson<{ message: string; count: number }>("/api/fees/assign", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+    body: {
       target_class: payload.targetClass,
       target_month: payload.targetMonth,
       assign_fees: payload.assignFees,
       academic_year: payload.academicYear,
-    }),
+    },
   });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to assign fees");
-  }
-  return response.json();
+}
+
+/** Removes a single fee obligation via the existing DELETE /api/fees/{id} route. */
+export async function deleteFee(feeId: string): Promise<void> {
+  await requestJson<{ Ok: boolean }>(`/api/fees/${feeId}`, {
+    method: "DELETE",
+  });
 }

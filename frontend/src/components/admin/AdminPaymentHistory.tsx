@@ -1,4 +1,5 @@
 import type { Payment, Student } from "../../types";
+import { formatRupees, formatTimestamp } from "../../utils/format";
 import { ReceiptIcon, CheckCircleIcon, AlertCircleIcon, UserIcon } from "../common/Icons";
 
 export interface AdminPaymentHistoryProps {
@@ -10,6 +11,14 @@ export function AdminPaymentHistory({
   payments,
   students,
 }: AdminPaymentHistoryProps) {
+  // Index students once instead of scanning the array for every receipt.
+  const studentsById = new Map(students.map((student) => [student.id, student]));
+
+  // Newest receipts first
+  const sortedPayments = [...payments].sort(
+    (a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime(),
+  );
+
   return (
     <div className="card admin-history-card" role="region" aria-label="School Audit Log">
       <div className="card-title text-center">
@@ -18,13 +27,13 @@ export function AdminPaymentHistory({
       </div>
 
       <div className="history-list scrollable-feed">
-        {payments.length === 0 ? (
+        {sortedPayments.length === 0 ? (
           <p className="empty-history text-center">
             No payments have been received school-wide yet.
           </p>
         ) : (
-          payments.map((receipt) => {
-            const student = students.find((s) => s.id === receipt.belongsTo);
+          sortedPayments.map((receipt) => {
+            const student = studentsById.get(receipt.belongsTo);
             const isSuccess = receipt.status === "SUCCESS";
 
             return (
@@ -45,7 +54,7 @@ export function AdminPaymentHistory({
                     )}
                   </span>
                   <span className="timestamp">
-                    Receipt: {receipt.id} • {receipt.dateTime}
+                    Receipt: {receipt.id} • {formatTimestamp(receipt.dateTime)}
                   </span>
                 </div>
 
@@ -55,7 +64,7 @@ export function AdminPaymentHistory({
                       isSuccess ? "text-success" : "text-danger strikethrough"
                     }`}
                   >
-                    ₹{receipt.amount.toLocaleString("en-IN")}
+                    {formatRupees(receipt.amount)}
                   </span>
 
                   <span

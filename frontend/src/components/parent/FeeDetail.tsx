@@ -3,6 +3,7 @@ import {
   getStudentFinancialSummary,
   calculateSequentialFeeKnockout,
 } from "../../utils/feeCalculator";
+import { formatRupees } from "../../utils/format";
 import { CreditCardIcon, CheckCircleIcon, AlertCircleIcon, CalendarIcon } from "../common/Icons";
 
 export interface FeeDetailProps {
@@ -48,13 +49,13 @@ export function FeeDetail({
       <div className="summary-stats">
         <div className="stat-box">
           <span className="stat-label">TOTAL ASSIGNED</span>
-          <strong className="stat-value">₹{totalAssigned.toLocaleString("en-IN")}</strong>
+          <strong className="stat-value">{formatRupees(totalAssigned)}</strong>
         </div>
 
         <div className="stat-box">
           <span className="stat-label">TOTAL PAID</span>
           <strong className="stat-value text-success">
-            ₹{totalPaid.toLocaleString("en-IN")}
+            {formatRupees(totalPaid)}
           </strong>
         </div>
 
@@ -65,51 +66,26 @@ export function FeeDetail({
               netBalance === 0 ? "text-success" : "text-amber"
             }`}
           >
-            ₹{netBalance.toLocaleString("en-IN")}
+            {formatRupees(netBalance)}
           </strong>
         </div>
       </div>
 
       {/* Real-time Settlement Status Ribbon */}
       {netBalance === 0 && sequentialKnockoutSchedule.length > 0 && (
-        <div style={{
-          background: "var(--success-bg)",
-          border: "1px solid var(--success-border)",
-          color: "var(--success-text)",
-          padding: "0.55rem 0.85rem",
-          borderRadius: "var(--radius-sm)",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          fontSize: "0.82rem",
-          fontWeight: 600,
-          margin: "0.75rem 0",
-        }}>
-          <CheckCircleIcon style={{ width: "16px", height: "16px", flexShrink: 0 }} />
+        <div className="status-banner success">
+          <CheckCircleIcon className="status-banner-icon" />
           <span>All assigned fee obligations for {student.name} are fully settled!</span>
         </div>
       )}
 
       {netBalance > 0 && (
-        <div style={{
-          background: "var(--warning-bg)",
-          border: "1px solid var(--warning-border)",
-          color: "var(--warning-text)",
-          padding: "0.55rem 0.85rem",
-          borderRadius: "var(--radius-sm)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "0.5rem",
-          fontSize: "0.82rem",
-          fontWeight: 600,
-          margin: "0.75rem 0",
-        }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
-            <AlertCircleIcon style={{ width: "16px", height: "16px", flexShrink: 0 }} />
+        <div className="status-banner warning">
+          <span className="status-banner-group">
+            <AlertCircleIcon className="status-banner-icon" />
             <span>Outstanding dues requiring payment:</span>
           </span>
-          <strong style={{ fontSize: "0.9rem" }}>₹{netBalance.toLocaleString("en-IN")}</strong>
+          <strong className="status-banner-amount">{formatRupees(netBalance)}</strong>
         </div>
       )}
 
@@ -141,13 +117,13 @@ export function FeeDetail({
                 <div className="history-finance">
                   <div className="monthly-financial-pill">
                     <span className="amount-text">
-                      ₹{obligation.feeAmount.toLocaleString("en-IN")}
+                      {formatRupees(obligation.feeAmount)}
                     </span>
 
                     {/* Real-time Monthly Net Balance Feedback */}
                     {isPartiallyPaid && (
                       <span className="monthly-sub-status text-amber">
-                        Paid: ₹{obligation.paidAmount.toLocaleString("en-IN")} • Due: ₹{obligation.remainingDue.toLocaleString("en-IN")}
+                        Paid: {formatRupees(obligation.paidAmount)} • Due: {formatRupees(obligation.remainingDue)}
                       </span>
                     )}
                   </div>
@@ -165,7 +141,7 @@ export function FeeDetail({
                     ) : isPartiallyPaid ? (
                       <>
                         <AlertCircleIcon className="badge-icon" />
-                        <span>Due: ₹{obligation.remainingDue.toLocaleString("en-IN")}</span>
+                        <span>Due: {formatRupees(obligation.remainingDue)}</span>
                       </>
                     ) : (
                       <>
