@@ -3,7 +3,7 @@ from sqlmodel import select
 from typing import Annotated
 from app.database import SessionDep
 from app.models.payment import Payment
-from app.models.fee import FeeObligation , FeeUpdate
+from app.models.fee import FeeObligation, FeeUpdate
 from app.models.student import StudentBlueprint
 
 router = APIRouter(prefix="/api/payments", tags=["Payments"])
@@ -16,14 +16,29 @@ def assign_payments(payment: Payment, session: SessionDep):
     if not payment_db:
         raise HTTPException(status_code=404, detail="Fee record not found")
     elif payment_db.fee_status == "paid":
-        raise HTTPException(status_code=404, detail="Fee has already paid")
-    payment_db.fee_status = "paid"
+        raise HTTPException(status_code=409, detail="Fee has already paid")
+    if payment.amount <= 0:
+        raise HTTPException(400, detail="The payment amount cannot be zero")
+    existing_payments = session.exec(
+        select(Payment).where(Payment.fee_id == payment.fee_id)
+    ).all()
+    already_paid = sum(p.amount for p in existing_payments)
+    remaining_due = payment_db.fee_amount - already_paid
+    if payment.amount > remaining_due:
+        raise HTTPException(
+            400,
+            detail=f"payment of {payment.amount} exceeds remaining balance of {remaining_due}",
+        )
+    if (already_paid + payment.amount) >= payment_db.fee_amount:
+        payment_db.fee_status = "paid"
+    else:
+        payment_db.fee_status = "pending"
     session.add(payment_db)
     session.add(payment)
     session.commit()
     session.refresh(payment)
     return payment
- 
+
 
 @router.get("/", response_model=list[Payment])
 def read_all_payments(

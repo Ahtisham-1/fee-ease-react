@@ -71,6 +71,12 @@ def assign_fees(payload: AssignFeesPayload, session: SessionDep):
     if not students:
         raise HTTPException(status_code=404, detail="No students found in this class")
     for x in students:
+        for existing_fees in x.feeobligation:
+            if (
+                existing_fees.month == payload.target_month
+                and existing_fees.academic_year == payload.academic_year
+            ):
+                raise HTTPException(409, detail="Fees already assigned for this class")
         fee = FeeObligation(
             student_id=x.id,
             fee_amount=payload.assign_fees,
@@ -82,5 +88,6 @@ def assign_fees(payload: AssignFeesPayload, session: SessionDep):
         if x.has_transport:
             fee.fee_amount += x.transport_fee
         session.add(fee)
+
     session.commit()
     return {"message": "Fees assigned successfully", "count": len(students)}

@@ -47,6 +47,10 @@ def delete_parent(parent_id: int, session: SessionDep):
     parent = session.get(ParentBlueprint, parent_id)
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found to be deleted")
+    if parent.students:
+        raise HTTPException(
+            status_code=409, detail="Cannot delete parent. Remove their students first."
+        )
     session.delete(parent)
     session.commit()
     return {"Ok": True}
