@@ -1,11 +1,23 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_db_and_tables
 from app.routes import parents, students, fees, payments
 
 
 app = FastAPI()
- 
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "details": "An internal server error occurred. Please try again later."
+        },
+    )
+
+
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
