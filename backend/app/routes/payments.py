@@ -35,9 +35,13 @@ def assign_payments(payment: Payment, session: SessionDep):
         payment_db.fee_status = "pending"
     session.add(payment_db)
     session.add(payment)
-    session.commit()
-    session.refresh(payment)
-    return payment
+    try:
+     session.commit()
+     session.refresh(payment)
+     return payment
+    except Exception:
+        session.rollback()
+        raise HTTPException(500, detail="Failed to pay fees due to database errors")
 
 
 @router.get("/", response_model=list[Payment])

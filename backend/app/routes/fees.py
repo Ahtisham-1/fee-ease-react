@@ -88,6 +88,11 @@ def assign_fees(payload: AssignFeesPayload, session: SessionDep):
         if x.has_transport:
             fee.fee_amount += x.transport_fee
         session.add(fee)
-
-    session.commit()
-    return {"message": "Fees assigned successfully", "count": len(students)}
+    try:
+        session.commit()
+        return {"message": "Fees assigned successfully", "count": len(students)}
+    except Exception:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, detail="Failed to assign fees due to a database error."
+        )
