@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_db_and_tables
-from app.routes import parents, students, fees, payments
+from app.routes import parents, students, fees, payments, auth
 
 
 app = FastAPI()
@@ -47,3 +47,4 @@ app.include_router(parents.router)
 app.include_router(students.router)
 app.include_router(fees.router)
 app.include_router(payments.router)
+app.include_router(auth.router)
