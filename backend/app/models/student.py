@@ -17,7 +17,7 @@ class StudentBlueprint(SQLModel, table=True):
     has_transport: bool = False
     transport_fee: int = 0
     parent: Optional["ParentBlueprint"] = Relationship(back_populates="students")
-    feeobligation: list["FeeObligation"] = Relationship(back_populates="student")
+    feeobligation: list["FeeObligation"] = Relationship(back_populates="student") 
 
 
 # For student update

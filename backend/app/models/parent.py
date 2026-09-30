@@ -13,7 +13,7 @@ class ParentBlueprint(SQLModel, table=True):
     phone: str
     students: list["StudentBlueprint"] = Relationship(back_populates="parent")
 
-
+ 
 # For Parent Update
 class ParentUpdate(SQLModel):
     name: str

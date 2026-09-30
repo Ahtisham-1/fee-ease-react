@@ -7,4 +7,4 @@ class Payment(SQLModel, table=True):
     date_time: str
     fee_id: int | None = Field(default=None, foreign_key="feeobligation.id")
     student_id: int | None = Field(default=None, foreign_key="studentblueprint.id")
-    status: str
+    status: str 

@@ -15,7 +15,7 @@ class FeeObligation(SQLModel, table=True):
     fee_type: str
     fee_status: str = "pending"
     student: Optional["StudentBlueprint"] = Relationship(back_populates="feeobligation")
-
+ 
 
 # Fee Obligation update
 class FeeUpdate(SQLModel):

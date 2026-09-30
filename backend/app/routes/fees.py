@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlmodel import select
 from typing import Annotated
 from app.database import SessionDep
 from app.models.fee import FeeObligation, AssignFeesPayload
 from app.models.student import StudentBlueprint
+from app.security import get_current_user, CurrentUser
 
-router = APIRouter(prefix="/api/fees", tags=["Fees"])
+router = APIRouter(
+    prefix="/api/fees", tags=["Fees"], dependencies=[Depends(get_current_user)]
+)
 
 
 # -------- FEE OBLIGATION END POINTS ----------

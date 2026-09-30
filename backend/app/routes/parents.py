@@ -1,11 +1,13 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlmodel import select
 from typing import Annotated
 from app.database import SessionDep
 from app.models.parent import ParentBlueprint, ParentUpdate
+from app.security import get_current_user, CurrentUser
 
-
-router = APIRouter(prefix="/api/parents", tags=["Parents"])
+router = APIRouter(
+    prefix="/api/parents", tags=["Parents"], dependencies=[Depends(get_current_user)]
+)
 
 
 # ------------ PARENT ENDPOINTS -----------

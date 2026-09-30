@@ -1,12 +1,15 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlmodel import select
 from typing import Annotated
 from app.database import SessionDep
 from app.models.payment import Payment
 from app.models.fee import FeeObligation, FeeUpdate
 from app.models.student import StudentBlueprint
+from app.security import get_current_user, CurrentUser
 
-router = APIRouter(prefix="/api/payments", tags=["Payments"])
+router = APIRouter(
+    prefix="/api/payments", tags=["Payments"], dependencies=[Depends(get_current_user)]
+)
 
 
 # Payment Endpoints
@@ -36,9 +39,9 @@ def assign_payments(payment: Payment, session: SessionDep):
     session.add(payment_db)
     session.add(payment)
     try:
-     session.commit()
-     session.refresh(payment)
-     return payment
+        session.commit()
+        session.refresh(payment)
+        return payment
     except Exception:
         session.rollback()
         raise HTTPException(500, detail="Failed to pay fees due to database errors")
