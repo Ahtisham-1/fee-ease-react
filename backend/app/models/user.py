@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import TYPE_CHECKING, Optional, Literal
 
- 
+
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     email: str = Field(unique=True, index=True)
@@ -22,3 +22,8 @@ class UserResponse(SQLModel):
     email: str
     role: str
     parent_id: int | None = None
+
+
+class Token(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
