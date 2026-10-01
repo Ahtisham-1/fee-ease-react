@@ -62,3 +62,20 @@ def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def require_admin(current_user: CurrentUser) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to do this!",
+        )
+    return current_user
+
+
+def require_parent(current_parent: CurrentUser) -> User:
+    if current_parent.role != "parent":
+        raise HTTPException(
+            status_code=403, detail="You need to be an parent for this feature to run"
+        )
+    return current_parent

@@ -5,7 +5,7 @@ from app.database import SessionDep
 from app.models.payment import Payment
 from app.models.fee import FeeObligation, FeeUpdate
 from app.models.student import StudentBlueprint
-from app.security import get_current_user, CurrentUser
+from app.security import get_current_user, CurrentUser, requite_parent
 
 router = APIRouter(
     prefix="/api/payments", tags=["Payments"], dependencies=[Depends(get_current_user)]

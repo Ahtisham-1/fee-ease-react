@@ -4,7 +4,7 @@ from typing import Annotated
 from app.database import SessionDep
 from app.models.fee import FeeObligation, AssignFeesPayload
 from app.models.student import StudentBlueprint
-from app.security import get_current_user, CurrentUser
+from app.security import get_current_user,require_admin
 
 router = APIRouter(
     prefix="/api/fees", tags=["Fees"], dependencies=[Depends(get_current_user)]
@@ -12,7 +12,7 @@ router = APIRouter(
 
 
 # -------- FEE OBLIGATION END POINTS ----------
-@router.post("/", response_model=FeeObligation)
+@router.post("/", response_model=FeeObligation, dependencies=[Depends(require_admin)])
 def create_fees(createfeeobligation: FeeObligation, session: SessionDep):
     session.add(createfeeobligation)
     session.commit()
@@ -38,7 +38,9 @@ def read_one_fees(fees_id: int, session: SessionDep) -> FeeObligation:
     return feeobligation
 
 
-@router.patch("/{fees_id}", response_model=FeeObligation)
+@router.patch(
+    "/{fees_id}", response_model=FeeObligation, dependencies=[Depends(require_admin)]
+)
 def update_fees(fees_id: int, feeobligation: FeeObligation, session: SessionDep):
     fee_db = session.get(FeeObligation, fees_id)
     if not fee_db:
@@ -53,7 +55,7 @@ def update_fees(fees_id: int, feeobligation: FeeObligation, session: SessionDep)
     return fee_db
 
 
-@router.delete("/{fees_id}")
+@router.delete("/{fees_id}", dependencies=[Depends(require_admin)])
 def delete_fees(fees_id: int, session: SessionDep):
     feeobligation = session.get(FeeObligation, fees_id)
     if not feeobligation:
@@ -66,7 +68,7 @@ def delete_fees(fees_id: int, session: SessionDep):
 
 
 # ---------- ASSIGN FEES ENDPOINTS ----------
-@router.post("/assign")
+@router.post("/assign", dependencies=[Depends(require_admin)])
 def assign_fees(payload: AssignFeesPayload, session: SessionDep):
     students = session.exec(
         select(StudentBlueprint).where(StudentBlueprint.grade == payload.target_class)

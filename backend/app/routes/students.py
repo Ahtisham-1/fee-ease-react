@@ -5,7 +5,7 @@ from app.database import SessionDep
 from app.models.student import StudentBlueprint, StudentUpdate
 from app.models.fee import FeeObligation
 from app.security import CurrentUser
-from app.security import get_current_user, CurrentUser
+from app.security import get_current_user, CurrentUser,require_admin
 
 router = APIRouter(
     prefix="/api/students", tags=["Students"], dependencies=[Depends(get_current_user)]
@@ -23,7 +23,7 @@ def read_students(
     return students
 
 
-@router.post("/", response_model=StudentBlueprint)
+@router.post("/", response_model=StudentBlueprint,dependencies=[Depends(require_admin)])
 def create_student(student: StudentBlueprint, session: SessionDep):
     # Put it in the cart
     session.add(student)
@@ -43,7 +43,11 @@ def read_one_student(student_id: int, session: SessionDep) -> StudentBlueprint:
     return student
 
 
-@router.patch("/{student_id}", response_model=StudentBlueprint)
+@router.patch(
+    "/{student_id}",
+    response_model=StudentBlueprint,
+    dependencies=[Depends(require_admin)],
+)
 def update_student(student_id: int, student: StudentUpdate, session: SessionDep):
     student_db = session.get(StudentBlueprint, student_id)
     if not student_db:
@@ -56,7 +60,7 @@ def update_student(student_id: int, student: StudentUpdate, session: SessionDep)
     return student_db
 
 
-@router.delete("/{student_id}")
+@router.delete("/{student_id}", dependencies=[Depends(require_admin)])
 def delete_student(student_id: int, session: SessionDep):
     student = session.get(StudentBlueprint, student_id)
     if not student:

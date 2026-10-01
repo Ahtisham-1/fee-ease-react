@@ -3,10 +3,10 @@ from sqlmodel import select
 from typing import Annotated
 from app.database import SessionDep
 from app.models.parent import ParentBlueprint, ParentUpdate
-from app.security import get_current_user, CurrentUser
+from app.security import get_current_user, CurrentUser, require_admin
 
 router = APIRouter(
-    prefix="/api/parents", tags=["Parents"], dependencies=[Depends(get_current_user)]
+    prefix="/api/parents", tags=["Parents"], dependencies=[Depends(require_admin)]
 )
 
 
