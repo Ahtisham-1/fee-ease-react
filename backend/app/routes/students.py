@@ -5,7 +5,7 @@ from app.database import SessionDep
 from app.models.student import StudentBlueprint, StudentUpdate
 from app.models.fee import FeeObligation
 from app.security import CurrentUser
-from app.security import get_current_user, CurrentUser,require_admin
+from app.security import get_current_user, CurrentUser, require_admin
 
 router = APIRouter(
     prefix="/api/students", tags=["Students"], dependencies=[Depends(get_current_user)]
@@ -14,16 +14,25 @@ router = APIRouter(
 
 # ------------- Student Endpoints------------
 @router.get("/", response_model=list[StudentBlueprint])
-def read_students(
-    session: SessionDep,
-    offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 100,
-):
-    students = session.exec(select(StudentBlueprint)).all()
-    return students
+def read_students(session: SessionDep, current_user: CurrentUser):
+    if current_user.role == "admin":
+        students = session.exec(select(StudentBlueprint)).all()
+        return students
+    elif current_user.role == "parent":
+        if not current_user.parent_id:
+            return []
+        one_student = session.exec(
+            select(StudentBlueprint).where(
+                StudentBlueprint.parent_id == current_user.parent_id
+            )
+        ).all()
+        return one_student
+    return []
 
 
-@router.post("/", response_model=StudentBlueprint,dependencies=[Depends(require_admin)])
+@router.post(
+    "/", response_model=StudentBlueprint, dependencies=[Depends(require_admin)]
+)
 def create_student(student: StudentBlueprint, session: SessionDep):
     # Put it in the cart
     session.add(student)
