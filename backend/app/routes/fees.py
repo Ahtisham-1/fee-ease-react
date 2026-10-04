@@ -4,7 +4,7 @@ from typing import Annotated
 from app.database import SessionDep
 from app.models.fee import FeeObligation, AssignFeesPayload
 from app.models.student import StudentBlueprint
-from app.security import get_current_user,require_admin
+from app.security import get_current_user, require_admin, CurrentUser
 
 router = APIRouter(
     prefix="/api/fees", tags=["Fees"], dependencies=[Depends(get_current_user)]
@@ -23,11 +23,24 @@ def create_fees(createfeeobligation: FeeObligation, session: SessionDep):
 @router.get("/", response_model=list[FeeObligation])
 def read_all_fees(
     session: SessionDep,
+    current_user: CurrentUser,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 100,
 ):
-    feeobligation = session.exec(select(FeeObligation)).all()
-    return feeobligation
+    if current_user.role == "admin":
+        feeobligation = session.exec(select(FeeObligation)).all()
+        return feeobligation
+    elif current_user.role == "parent":
+        if not current_user.parent_id:
+            return []
+        student_fees = session.exec(
+            select(FeeObligation)
+            .join(StudentBlueprint)
+            .where(StudentBlueprint.parent_id == current_user.parent_id)
+        ).all()
+        return student_fees
+    return []
+
 
 
 @router.get("/{fees_id}", response_model=FeeObligation)
