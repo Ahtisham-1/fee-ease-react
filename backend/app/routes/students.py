@@ -45,10 +45,18 @@ def create_student(student: StudentBlueprint, session: SessionDep):
 
 
 @router.get("/{student_id}", response_model=StudentBlueprint)
-def read_one_student(student_id: int, session: SessionDep) -> StudentBlueprint:
+def read_one_student(
+    student_id: int, session: SessionDep, current_user: CurrentUser
+) -> StudentBlueprint:
     student = session.get(StudentBlueprint, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    if current_user.role == "admin":
+        return student
+    if current_user.role == "parent" and current_user.parent_id != student.parent_id:
+        raise HTTPException(
+            status_code=403, detail="You cannot access another students detials"
+        )
     return student
 
 
