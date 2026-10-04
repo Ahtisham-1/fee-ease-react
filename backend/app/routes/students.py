@@ -88,11 +88,14 @@ def delete_student(student_id: int, session: SessionDep):
 
 
 @router.get("/student/{student_id}", response_model=list[FeeObligation])
-def read_student_fees(student_id: int, session: SessionDep):
+def read_student_fees(student_id: int, session: SessionDep, current_user: CurrentUser):
     student = session.get(StudentBlueprint, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student Fee detail not found")
-
+    if current_user.role == "parent" and current_user.parent_id != student.parent_id:
+        raise HTTPException(
+            status_code=403, detail="Forbidden you cannot read this data"
+        )
     fees = session.exec(
         select(FeeObligation).where(FeeObligation.student_id == student_id)
     ).all()
