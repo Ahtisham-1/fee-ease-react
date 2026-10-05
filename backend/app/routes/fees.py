@@ -42,12 +42,18 @@ def read_all_fees(
     return []
 
 
-
 @router.get("/{fees_id}", response_model=FeeObligation)
-def read_one_fees(fees_id: int, session: SessionDep) -> FeeObligation:
+def read_one_fees(
+    fees_id: int, session: SessionDep, current_user: CurrentUser
+) -> FeeObligation:
     feeobligation = session.get(FeeObligation, fees_id)
     if not feeobligation:
         raise HTTPException(status_code=404, detail="Fees detail not found")
+    student = session.get(StudentBlueprint, feeobligation.student_id)
+    if not student:
+        raise HTTPException(404, detail="Student record not found")
+    if current_user.role == "parent" and current_user.parent_id != student.parent_id:
+        raise HTTPException(status_code=403, detail="Forbidden details")
     return feeobligation
 
 
