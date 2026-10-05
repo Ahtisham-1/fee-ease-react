@@ -49,10 +49,24 @@ def assign_payments(payment: Payment, session: SessionDep):
 
 @router.get("/", response_model=list[Payment])
 def read_all_payments(
-    session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100
+    session: SessionDep,
+    current_user: CurrentUser,
+    offset: int = 0,
+    limit: Annotated[int, Query(le=100)] = 100,
 ):
-    payment = session.exec(select(Payment)).all()
-    return payment
+    if current_user.role == "admin":
+        payment = session.exec(select(Payment)).all()
+        return payment
+    elif current_user.role == "parent":
+        if not current_user.parent_id:
+            return []
+        current_user_payments = session.exec(
+            select(Payment)
+            .join(StudentBlueprint)
+            .where(StudentBlueprint.parent_id == current_user.parent_id)
+        ).all()
+        return current_user_payments
+    return []
 
 
 @router.get("/student/{student_id}", response_model=list[Payment])
