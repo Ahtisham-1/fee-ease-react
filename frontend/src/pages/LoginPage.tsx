@@ -1,104 +1,151 @@
-import React, { useState } from "react";
-import { useAuth } from "../hooks/useAuth";
-import { ApiError } from "../services/apiClient";
+import React, { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { ApiError } from '../services/apiClient';
+import { registerApi } from '../services/authApi';
+
 
 export function LoginPage() {
   const { login } = useAuth();
 
+
+  const [isRegistering, setIsRegistering] = useState(false);
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const [role, setRole] = useState("parent"); // For registration only
+  
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setSuccessMsg("");
+    setIsLoading(true);
 
     try {
-      await login(email, password);
+      if (isRegistering) {
+        // Register Mode
+        await registerApi(email, password, role);
+        setSuccessMsg("Account created! Logging you in...");
+        // Auto-login right after registering
+        await login(email, password);
+      } else {
+        // Login Mode
+        await login(email, password);
+      }
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorMsg(error.message);
       } else {
         setErrorMsg("Something went wrong");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-          FeeEase Login
+    <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <div className="card" style={{ maxWidth: '400px', width: '100%', padding: '2rem' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+          {isRegistering ? "Create Account" : "FeeEase Login"}
         </h2>
-
-        {/* Error Message Box */}
+        
+        {/* Using your custom status banners for errors! */}
         {errorMsg && (
-          <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-sm">
+          <div className="status-banner warning">
             {errorMsg}
           </div>
         )}
+        
+        {successMsg && (
+          <div className="status-banner success">
+            {successMsg}
+          </div>
+        )}
 
-        {/* The Login Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="input-group">
+            <label className="input-label">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded p-2 text-black"
+              className="text-input"
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
+          
+          <div className="input-group">
+            <label className="input-label">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded p-2 text-black"
+              className="text-input"
               required
             />
           </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 cursor-pointer"
-          >
-            Login
+
+          {isRegistering && (
+            <div className="input-group">
+              <label className="input-label">Account Type</label>
+              <select 
+                value={role} 
+                onChange={(e) => setRole(e.target.value)}
+                className="custom-select"
+              >
+                <option value="parent">Parent</option>
+                <option value="admin">Administrator</option>
+              </select>
+            </div>
+          )}
+
+          <button type="submit" disabled={isLoading} style={{ marginTop: '1rem' }}>
+            {isLoading ? "Please wait..." : (isRegistering ? "Register & Login" : "Login")}
           </button>
         </form>
 
-        {/* DEV ONLY: Quick Fill Buttons to save us time during testing */}
-        <div className="mt-8 pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-500 mb-2 text-center">
-            Dev Quick Fill (Testing Only)
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setEmail("admin@feeease.com");
-                setPassword("admin123");
-              }}
-              className="flex-1 bg-gray-200 text-gray-700 text-xs p-1 rounded hover:bg-gray-300 cursor-pointer"
-            >
-              Fill Admin
-            </button>
-            <button
-              onClick={() => {
-                setEmail("parent@feeease.com");
-                setPassword("parent123");
-              }}
-              className="flex-1 bg-gray-200 text-gray-700 text-xs p-1 rounded hover:bg-gray-300 cursor-pointer"
-            >
-              Fill Parent
-            </button>
-          </div>
+        {/* Toggle between Login and Register */}
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <button 
+            type="button" 
+            className="mini-btn"
+            onClick={() => {
+              setIsRegistering(!isRegistering);
+              setErrorMsg("");
+            }}
+          >
+            {isRegistering ? "Already have an account? Log in" : "Need an account? Register"}
+          </button>
         </div>
+
+        {/* DEV ONLY: Quick Fill */}
+        {!isRegistering && (
+          <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--card-border)' }}>
+            <p className="empty-message" style={{ textAlign: 'center', marginBottom: '0.5rem' }}>Dev Quick Fill (Testing Only)</p>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => { setEmail("admin@feeease.com"); setPassword("admin123"); }}
+                className="mini-btn"
+                style={{ flex: 1 }}
+              >
+                Fill Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEmail("parent@feeease.com"); setPassword("parent123"); }}
+                className="mini-btn"
+                style={{ flex: 1 }}
+              >
+                Fill Parent
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

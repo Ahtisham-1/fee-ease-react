@@ -67,16 +67,16 @@ import { getPayments, sendPayment } from "./services/paymentApi";
 export function App() {
   // ---> AUTH BRIDGE HOOK <---
   /**
-   * WHAT: We use our custom hook to check if the user has a valid token.
+   * WHAT: We use our custom hook to check if the user has a valid token and get their real role!
    * WHY: This is the "bouncer" for the entire visual app. If they don't have a token, we don't show the dashboard.
    */
-  const { isLoggedIn, logout } = useAuth();
+  const { isLoggedIn, userRole, logout } = useAuth();
   
   // --------------------------------------------------------------------------
   // GLOBAL APPLICATION NAVIGATION STATE
-  // Connected to: Header.tsx
+  // Instead of a fake manual toggle switch, we lock the UI to their TRUE role!
   // --------------------------------------------------------------------------
-  const [activeUserRole, setActiveUserRole] = useState<Role>("admin");
+  const activeUserRole = userRole as Role;
 
   // --------------------------------------------------------------------------
   // ADMIN SUB-NAVIGATION TAB STATE
@@ -131,9 +131,16 @@ export function App() {
     useState<boolean>(false);
 
   useEffect(() => {
+    // If the user isn't logged in yet, don't try to fetch protected data!
+    if (!isLoggedIn) return;
+
     let cancelled = false;
 
     const loadDatabase = async () => {
+      // Clear any old errors when we try to fetch
+      setDataLoadError(null);
+      setIsLoadingSchoolData(true);
+
       try {
         // Fetch real parents, students, fees, and payments from PostgreSQL together!
         const [parentsData, studentsData, feesData, paymentsData] =
@@ -177,7 +184,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLoggedIn]); // <-- React will automatically re-run this when isLoggedIn changes to true!
 
   // ==========================================================================
   // COMPONENT-SPECIFIC BUSINESS MUTATION HANDLERS
@@ -519,8 +526,8 @@ export function App() {
         </button>
       </div>
 
-      {/* 1. Global Navigation Header */}
-      <Header role={activeUserRole} onRoleChange={setActiveUserRole} />
+      {/* 1. Global Navigation Header (Role is locked, no longer toggleable!) */}
+      <Header role={activeUserRole} />
 
       <main className="main-content">
         {dataLoadError && (

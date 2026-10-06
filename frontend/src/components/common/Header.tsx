@@ -3,13 +3,13 @@ import { SchoolIcon, UsersIcon, ShieldIcon } from "./Icons";
 
 export interface HeaderProps {
   role: Role;
-  onRoleChange: (newRole: Role) => void;
 }
 
 /**
  * Modern Emerald & Gold Navigation Header
+ * Updated to lock the UI to the actual role logged in, rather than allowing a fake manual toggle!
  */
-export function Header({ role, onRoleChange }: HeaderProps) {
+export function Header({ role }: HeaderProps) {
   return (
     <header className="header-bar" role="banner">
       <div className="header-inner">
@@ -26,27 +26,19 @@ export function Header({ role, onRoleChange }: HeaderProps) {
           </span>
         </div>
 
-        {/* Right Corner: Segmented Role Switcher */}
-        <nav className="role-switcher" aria-label="Portal Navigation">
-          <button
-            type="button"
-            className={`role-btn ${role === "parent" ? "active" : ""}`}
-            onClick={() => onRoleChange("parent")}
-            aria-pressed={role === "parent"}
-          >
-            <UsersIcon className="nav-btn-icon" />
-            <span>Parent Portal</span>
-          </button>
-
-          <button
-            type="button"
-            className={`role-btn ${role === "admin" ? "active" : ""}`}
-            onClick={() => onRoleChange("admin")}
-            aria-pressed={role === "admin"}
-          >
-            <ShieldIcon className="nav-btn-icon" />
-            <span>Admin Office</span>
-          </button>
+        {/* Right Corner: Shows the locked role instead of buttons */}
+        <nav className="role-switcher" aria-label="Portal Navigation" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
+          {role === "parent" ? (
+            <>
+              <UsersIcon className="nav-btn-icon" style={{ color: 'var(--emerald-primary)' }} />
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>Parent Portal</span>
+            </>
+          ) : (
+            <>
+              <ShieldIcon className="nav-btn-icon" style={{ color: 'var(--emerald-primary)' }} />
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>Admin Office</span>
+            </>
+          )}
         </nav>
       </div>
     </header>
