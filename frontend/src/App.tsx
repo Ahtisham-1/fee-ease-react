@@ -1,4 +1,9 @@
 import { useState, useEffect } from "react";
+
+// ---> AUTH IMPORTS <---
+import { useAuth } from "./hooks/useAuth";
+import { LoginPage } from "./pages/LoginPage";
+// ----------------------
 import type {
   Role,
   AdminTab,
@@ -60,6 +65,13 @@ import { getPayments, sendPayment } from "./services/paymentApi";
  * orchestrator connecting all Parent and Admin components.
  */
 export function App() {
+  // ---> AUTH BRIDGE HOOK <---
+  /**
+   * WHAT: We use our custom hook to check if the user has a valid token.
+   * WHY: This is the "bouncer" for the entire visual app. If they don't have a token, we don't show the dashboard.
+   */
+  const { isLoggedIn, logout } = useAuth();
+  
   // --------------------------------------------------------------------------
   // GLOBAL APPLICATION NAVIGATION STATE
   // Connected to: Header.tsx
@@ -489,8 +501,24 @@ export function App() {
     paymentsDatabase,
   );
 
+  // ---> THE BOUNCER <---
+  // If they don't have a token (isLoggedIn is false), stop everything and show the Login Page
+  if (!isLoggedIn) {
+    return <LoginPage />;
+  }
+
   return (
     <div className="app-container">
+      {/* Visual Logout Button injected at the very top of the app */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px', backgroundColor: '#f3f4f6' }}>
+        <button 
+          onClick={logout} 
+          className="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600 cursor-pointer"
+        >
+          Sign Out
+        </button>
+      </div>
+
       {/* 1. Global Navigation Header */}
       <Header role={activeUserRole} onRoleChange={setActiveUserRole} />
 
