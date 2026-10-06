@@ -5,9 +5,23 @@
 // ==========================================================================
 
 export const API_BASE: string =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  "http://localhost:8000";
 
 const REQUEST_TIMEOUT_MS = 15000;
+const TOKEN_KEY = "fee_ease_auth_token";
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setAuthToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearAuthToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
 
 export class ApiError extends Error {
   readonly status: number;
@@ -44,16 +58,8 @@ function extractErrorMessage(body: unknown, fallback: string): string {
   return fallback;
 }
 
-/**
- * Request init where `body` is an arbitrary JSON-serializable value instead
- * of the DOM BodyInit union.
- */
 export type JsonRequestInit = Omit<RequestInit, "body"> & { body?: unknown };
 
-/**
- * Performs a JSON request against the backend and returns the parsed body.
- * Throws ApiError with the server's own message whenever the response is not ok.
- */
 export async function requestJson<T>(
   path: string,
   init: JsonRequestInit = {},
@@ -63,15 +69,23 @@ export async function requestJson<T>(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
+  const mergedHeaders = new Headers(headers);
+
+  if (body !== undefined && !mergedHeaders.has("Content-Type")) {
+    mergedHeaders.set("Content-Type", "application/json");
+  }
+
+  const token = getToken();
+  if (token) {
+    mergedHeaders.set("Authorization", `Bearer ${token}`);
+  }
+
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
       ...rest,
       signal: controller.signal,
-      headers: {
-        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-        ...headers,
-      },
+      headers: mergedHeaders,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch (error) {
@@ -98,7 +112,6 @@ export async function requestJson<T>(
   return parsed as T;
 }
 
-/** Guards list endpoints against a non-array payload. */
 export function expectArray<T>(value: unknown, what: string): T[] {
   if (!Array.isArray(value)) {
     throw new ApiError(`Unexpected response while loading ${what}.`, 0);
