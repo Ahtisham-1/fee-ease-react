@@ -104,10 +104,8 @@ export function App() {
 
   // --------------------------------------------------------------------------
   // PARENT PORTAL ACTIVE CONTEXT SELECTION STATE
-  // Connected to: ParentStudentSelector.tsx, FeeDetail.tsx, PayFeesForm.tsx, PaymentHistory.tsx
+  // Connected to: FeeDetail.tsx, PayFeesForm.tsx, PaymentHistory.tsx
   // --------------------------------------------------------------------------
-  const [selectedParentAccountId, setSelectedParentAccountId] =
-    useState<string>(initialParents[0]?.id || "");
   const [selectedStudentProfileId, setSelectedStudentProfileId] =
     useState<string>("");
 
@@ -142,29 +140,47 @@ export function App() {
       setIsLoadingSchoolData(true);
 
       try {
-        // Fetch real parents, students, fees, and payments from PostgreSQL together!
-        const [parentsData, studentsData, feesData, paymentsData] =
-          await Promise.all([
-            getParents(),
-            getStudents(),
-            getFees(),
-            getPayments(),
-          ]);
-        if (cancelled) return;
+        if (activeUserRole === "admin") {
+          // Admin needs all school data to manage roster, fees, and collections
+          const [parentsData, studentsData, feesData, paymentsData] =
+            await Promise.all([
+              getParents(),
+              getStudents(),
+              getFees(),
+              getPayments(),
+            ]);
+          if (cancelled) return;
 
-        setParentsDatabase(parentsData);
-        setStudentsDatabase(studentsData);
-        setFeeObligationsDatabase(feesData);
-        setPaymentsDatabase(paymentsData);
+          setParentsDatabase(parentsData);
+          setStudentsDatabase(studentsData);
+          setFeeObligationsDatabase(feesData);
+          setPaymentsDatabase(paymentsData);
 
-        if (parentsData.length > 0) {
-          setSelectedParentAccountId(parentsData[0].id);
-          // Keep the student selector in sync with the selected parent so the
-          // portal never renders a select whose value matches no option.
-          const firstChild = studentsData.find(
-            (student) => student.parentId === parentsData[0].id,
-          );
-          setSelectedStudentProfileId(firstChild ? firstChild.id : "");
+          if (parentsData.length > 0) {
+            const firstChild = studentsData.find(
+              (student) => student.parentId === parentsData[0].id,
+            );
+            setSelectedStudentProfileId(firstChild ? firstChild.id : "");
+          }
+        } else {
+          // Parent Role: Backend restricts GET /api/parents to admin only (require_admin).
+          // We only fetch students, fees, and payments (which FastAPI filters by current_user.parent_id).
+          const [studentsData, feesData, paymentsData] =
+            await Promise.all([
+              getStudents(),
+              getFees(),
+              getPayments(),
+            ]);
+          if (cancelled) return;
+
+          setStudentsDatabase(studentsData);
+          setFeeObligationsDatabase(feesData);
+          setPaymentsDatabase(paymentsData);
+
+          // Auto-select the first enrolled child for this parent
+          if (studentsData.length > 0) {
+            setSelectedStudentProfileId(studentsData[0].id);
+          }
         }
       } catch (error) {
         console.error("Failed to load data from database", error);
@@ -184,7 +200,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [isLoggedIn]); // <-- React will automatically re-run this when isLoggedIn changes to true!
+  }, [isLoggedIn, activeUserRole]);
 
   // ==========================================================================
   // COMPONENT-SPECIFIC BUSINESS MUTATION HANDLERS
@@ -253,8 +269,6 @@ export function App() {
       setParentsDatabase(parentsFromDb);
       setStudentsDatabase(studentsFromDb);
 
-      // Jump the parent portal straight onto the newly enrolled family.
-      setSelectedParentAccountId(savedParent.id);
       if (savedStudent?.id != null) {
         setSelectedStudentProfileId(String(savedStudent.id));
       }
@@ -551,11 +565,8 @@ export function App() {
               <div className="parent-grid">
                 <div className="column-left">
                   <ParentStudentSelector
-                    parents={parentsDatabase}
                     students={studentsDatabase}
-                    selectedParentId={selectedParentAccountId}
                     selectedStudentId={selectedStudentProfileId}
-                    onSelectParent={setSelectedParentAccountId}
                     onSelectStudent={setSelectedStudentProfileId}
                   />
 

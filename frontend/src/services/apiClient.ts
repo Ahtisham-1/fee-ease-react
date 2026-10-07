@@ -1,8 +1,6 @@
-// ==========================================================================
 // Shared HTTP client for all backend services.
 // Single source of truth for the API base URL, JSON parsing, timeouts and
 // error extraction (FastAPI returns { detail: "..." } on failures).
-// ==========================================================================
 
 export const API_BASE: string =
   (import.meta.env.VITE_API_URL as string | undefined) ??
