@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
-from sqlmodel import select
+from sqlmodel import select, col
 from typing import Annotated
 from app.database import SessionDep
 from app.models.parent import ParentBlueprint, ParentUpdate
@@ -29,10 +29,19 @@ def create_parent(parent: ParentBlueprint, session: SessionDep):
 @router.get("/", response_model=list[ParentBlueprint])
 def read_all_parents(
     session: SessionDep,
-    offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 100,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=100),
+    search: str | None = Query(default=None),
 ):
-    parents = session.exec(select(ParentBlueprint)).all()
+    statement = select(ParentBlueprint)
+    if search:
+        statement = statement.where(
+            col(ParentBlueprint.name).ilike(f"%{search}%")
+            | col(ParentBlueprint.phone).ilike(f"%{search}%")
+        )
+    offset = (page - 1) * limit
+    statement = statement.offset(offset).limit(limit)
+    parents = session.exec(statement).all()
     return parents
 
 

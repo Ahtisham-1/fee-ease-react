@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
-from sqlmodel import select
+from sqlmodel import select, col
 from typing import Annotated
 from app.database import SessionDep
 from app.models.student import StudentBlueprint, StudentUpdate
@@ -14,9 +14,22 @@ router = APIRouter(
 
 # ------------- Student Endpoints------------
 @router.get("/", response_model=list[StudentBlueprint])
-def read_students(session: SessionDep, current_user: CurrentUser):
+def read_students(
+    session: SessionDep,
+    current_user: CurrentUser,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=100),
+    search: str | None = Query(default=None),
+):
     if current_user.role == "admin":
-        students = session.exec(select(StudentBlueprint)).all()
+        statement = select(StudentBlueprint)
+        if search:
+            statement = statement.where(
+                col(StudentBlueprint.student_name).ilike(f"%{search}%")
+            )
+        offset = (page - 1) * limit
+        statement = statement.offset(offset).limit(limit)
+        students = session.exec(statement).all()
         return students
     elif current_user.role == "parent":
         if not current_user.parent_id:

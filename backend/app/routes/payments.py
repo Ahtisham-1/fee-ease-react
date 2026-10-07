@@ -60,11 +60,13 @@ def assign_payments(payment: Payment, session: SessionDep, current_user: Current
 def read_all_payments(
     session: SessionDep,
     current_user: CurrentUser,
-    offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 100,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=100),
 ):
     if current_user.role == "admin":
-        payment = session.exec(select(Payment)).all()
+        offset = (page - 1) * limit
+        statement = select(Payment).offset(offset).limit(limit)
+        payment = session.exec(statement).all()
         return payment
     elif current_user.role == "parent":
         if not current_user.parent_id:

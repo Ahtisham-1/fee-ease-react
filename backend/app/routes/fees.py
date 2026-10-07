@@ -24,11 +24,13 @@ def create_fees(createfeeobligation: FeeObligation, session: SessionDep):
 def read_all_fees(
     session: SessionDep,
     current_user: CurrentUser,
-    offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 100,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=100),
 ):
     if current_user.role == "admin":
-        feeobligation = session.exec(select(FeeObligation)).all()
+        offset = (page - 1) * limit
+        statement = select(FeeObligation).offset(offset).limit(limit)
+        feeobligation = session.exec(statement).all()
         return feeobligation
     elif current_user.role == "parent":
         if not current_user.parent_id:
