@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Student, Parent, FeeObligation, Payment } from "../../types";
 import { getStudentFinancialSummary } from "../../utils/feeCalculator";
 import { formatRupees } from "../../utils/format";
@@ -43,6 +43,13 @@ export function AdminClassRoster({
   const [isStudentsListVisible, setIsStudentsListVisible] = useState(true);
   const [sortCriteria, setSortCriteria] = useState<SortCriteria>("name-asc");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 5;
+
+  // Whenever grade or search query changes, reset back to page 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedGrade, searchQuery]);
 
   const classStudents = students.filter(
     (student) => student.gradeName === selectedGrade
@@ -92,6 +99,10 @@ export function AdminClassRoster({
           guardian.phone.includes(query)))
     );
   });
+
+  const totalPages = Math.ceil(displayedStudents.length / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedStudents = displayedStudents.slice(startIndex, startIndex + pageSize);
 
   return (
     <div className="card roster-card" role="region" aria-label="Classroom Student Roster">
@@ -211,7 +222,7 @@ export function AdminClassRoster({
         </div>
       ) : (
         <div className="history-list scrollable-feed mt-3">
-          {displayedStudents.map((student) => {
+          {paginatedStudents.map((student) => {
             const guardian = parentsById.get(student.parentId);
             const netBalance = netBalanceById.get(student.id) ?? 0;
 
@@ -281,6 +292,48 @@ export function AdminClassRoster({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {isStudentsListVisible && displayedStudents.length > pageSize && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "1rem",
+            paddingTop: "0.75rem",
+            borderTop: "1px solid var(--card-border)",
+          }}
+        >
+          <button
+            type="button"
+            className="role-btn mini-btn"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+          >
+            ◀ Previous
+          </button>
+
+          <span
+            style={{
+              fontSize: "0.85rem",
+              color: "var(--text-secondary)",
+              fontWeight: 600,
+            }}
+          >
+            Page {currentPage} of {totalPages} ({displayedStudents.length} Students)
+          </span>
+
+          <button
+            type="button"
+            className="role-btn mini-btn"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+          >
+            Next ▶
+          </button>
         </div>
       )}
     </div>

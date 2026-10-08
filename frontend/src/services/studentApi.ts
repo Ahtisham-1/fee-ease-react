@@ -26,9 +26,25 @@ function mapStudent(s: BackendStudent) {
   };
 }
 
-// 1. GET all students from PostgreSQL
-export async function getStudents() {
-  const rawStudents = await requestJson<BackendStudent[]>("/api/students");
+/**
+ * WHAT: Fetches students from FastAPI with optional pagination and search filters.
+ * WHY: We need the frontend to send `?page=1&limit=50&search=...` query parameters to the backend.
+ * HOW: It converts optional query parameters into a URLSearchParams string and appends them to `/api/students`.
+ */
+export async function getStudents(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  const query = new URLSearchParams();
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.limit) query.append("limit", String(params.limit));
+  if (params?.search) query.append("search", params.search);
+
+  const queryString = query.toString();
+  const url = queryString ? `/api/students?${queryString}` : "/api/students";
+
+  const rawStudents = await requestJson<BackendStudent[]>(url);
   return expectArray<BackendStudent>(rawStudents, "students").map(mapStudent);
 }
 
