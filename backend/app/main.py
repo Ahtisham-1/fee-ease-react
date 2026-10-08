@@ -21,6 +21,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://fee-ease-react-green.vercel.app",
 ]
 
 app.add_middleware(

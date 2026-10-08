@@ -54,7 +54,7 @@ export function AdminClassRoster({
   const classStudents = students.filter(
     (student) => student.gradeName === selectedGrade
   );
-
+ 
   // Precompute each student's pending balance ONCE per render instead of
   // recomputing it inside the sort comparator and again for every row.
   const netBalanceById = new Map<string, number>(
