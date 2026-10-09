@@ -9,6 +9,7 @@ from datetime import datetime, timezone, timedelta
 import os
 import jwt
 from dotenv import load_dotenv
+import secrets
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "")
@@ -79,3 +80,13 @@ def require_parent(current_parent: CurrentUser) -> User:
             status_code=403, detail="You need to be an parent for this feature to run"
         )
     return current_parent
+
+
+# OTP Generator function
+def generate_otp() -> str:
+    num = secrets.randbelow(1_000_000)
+    otp = f"{num:06d}"
+    return otp
+
+
+
