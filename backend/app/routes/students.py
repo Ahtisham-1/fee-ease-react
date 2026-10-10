@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
-from sqlmodel import select, col
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import col, select
+
 from app.database import SessionDep
-from app.models.student import StudentBlueprint, StudentUpdate
 from app.models.fee import FeeObligation
-from app.security import CurrentUser
-from app.security import get_current_user, CurrentUser, require_admin
+from app.models.student import StudentBlueprint, StudentUpdate
+from app.security import CurrentUser, get_current_user, require_admin
 
 router = APIRouter(
     prefix="/api/students", tags=["Students"], dependencies=[Depends(get_current_user)]

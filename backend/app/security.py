@@ -1,15 +1,17 @@
-import bcrypt
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-from typing import Annotated
-from sqlmodel import select
-from app.database import SessionDep
-from app.models.user import User
-from datetime import datetime, timezone, timedelta
 import os
+import secrets
+from datetime import datetime, timedelta, timezone
+from typing import Annotated
+
+import bcrypt
 import jwt
 from dotenv import load_dotenv
-import secrets
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from sqlmodel import select
+
+from app.database import SessionDep
+from app.models.user import User
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "")
@@ -87,6 +89,3 @@ def generate_otp() -> str:
     num = secrets.randbelow(1_000_000)
     otp = f"{num:06d}"
     return otp
-
-
-

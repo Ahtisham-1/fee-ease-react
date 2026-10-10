@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import create_db_and_tables
-from app.routes import parents, students, fees, payments, auth
+from fastapi.responses import JSONResponse
 
+from app.database import create_db_and_tables
+from app.routes import auth, fees, parents, payments, students
 
 app = FastAPI()
 

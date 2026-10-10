@@ -1,9 +1,10 @@
-from sqlmodel import SQLModel, Field, Relationship
 from typing import TYPE_CHECKING, Optional
 
+from sqlmodel import Field, Relationship, SQLModel
+
 if TYPE_CHECKING:
-    from app.models.parent import ParentBlueprint
     from app.models.fee import FeeObligation
+    from app.models.parent import ParentBlueprint
 
 
 # Student blueprint

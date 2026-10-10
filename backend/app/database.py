@@ -1,9 +1,9 @@
-from dotenv import load_dotenv
-from sqlmodel import create_engine, SQLModel, Session
-from fastapi import Depends
-from typing import Annotated
 import os
+from typing import Annotated
 
+from dotenv import load_dotenv
+from fastapi import Depends
+from sqlmodel import Session, SQLModel, create_engine
 
 # The PostgreSQL connection String
 load_dotenv()
