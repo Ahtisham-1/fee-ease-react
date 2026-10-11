@@ -42,3 +42,40 @@ export async function registerApi(email: string, password: string, role: string 
     throw new ApiError(errorData.detail || "Registration failed. Email might already exist.", response.status);
   }
 }
+
+/**
+ * 1. Request an OTP to be emailed to the user
+ */
+export async function requestOtpApi(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE}/api/auth/request_otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(errorData.detail || "Failed to send OTP", response.status);
+  }
+
+  return response.json();
+}
+
+/**
+ * 2. Submit the 6-digit code to verify it
+ */
+export async function verifyOtpApi(email: string, otp_code: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE}/api/auth/verify_otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp_code }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(errorData.detail || "Invalid or expired OTP", response.status);
+  }
+
+  return response.json();
+}
+

@@ -2,7 +2,9 @@ import os
 import smtplib
 from email.message import EmailMessage
 
-from app.security import generate_otp
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SENDER_EMAIL = os.getenv("SMTP_EMAIL")
 SENDER_PASSWORD = os.getenv("SMTP_PASSWORD")

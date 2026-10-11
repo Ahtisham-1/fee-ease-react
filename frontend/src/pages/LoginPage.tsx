@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../services/apiClient';
-import { registerApi } from '../services/authApi';
+import { registerApi, requestOtpApi, verifyOtpApi } from '../services/authApi';
 
 
 export function LoginPage() {
   const { login } = useAuth();
 
-
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("parent"); // For registration only
+  const [otpCode, setOtpCode] = useState("");
   
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -26,13 +27,20 @@ export function LoginPage() {
 
     try {
       if (isRegistering) {
-        // Register Mode
-        await registerApi(email, password, role);
-        setSuccessMsg("Account created! Logging you in...");
-        // Auto-login right after registering
-        await login(email, password);
+        if (!isVerifyingOtp) {
+          // STEP 1: Register account + send verification OTP
+          await registerApi(email, password, role);
+          await requestOtpApi(email);
+          setIsVerifyingOtp(true);
+          setSuccessMsg(`Account created! A 6-digit verification code was sent to ${email}`);
+        } else {
+          // STEP 2: Verify OTP code + Auto-login
+          await verifyOtpApi(email, otpCode);
+          setSuccessMsg("Email verified! Logging you in...");
+          await login(email, password);
+        }
       } else {
-        // Login Mode
+        // Standard Login Mode
         await login(email, password);
       }
     } catch (error) {
@@ -46,14 +54,32 @@ export function LoginPage() {
     }
   };
 
+  const handleResendOtp = async () => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    setIsLoading(true);
+    try {
+      await requestOtpApi(email);
+      setSuccessMsg(`A new code was sent to ${email}`);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMsg(error.message);
+      } else {
+        setErrorMsg("Failed to resend OTP");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
       <div className="card" style={{ maxWidth: '400px', width: '100%', padding: '2rem' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-          {isRegistering ? "Create Account" : "FeeEase Login"}
+          {!isRegistering ? "FeeEase Login" : (!isVerifyingOtp ? "Create Account" : "Verify Your Email")}
         </h2>
         
-        {/* Using your custom status banners for errors! */}
+        {/* Status banners for errors and successes */}
         {errorMsg && (
           <div className="status-banner warning">
             {errorMsg}
@@ -67,6 +93,8 @@ export function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          
+          {/* Email input (locked when verifying OTP) */}
           <div className="input-group">
             <label className="input-label">Email Address</label>
             <input
@@ -75,21 +103,26 @@ export function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="text-input"
               required
+              disabled={isVerifyingOtp}
             />
           </div>
           
-          <div className="input-group">
-            <label className="input-label">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="text-input"
-              required
-            />
-          </div>
+          {/* Password input (hidden when verifying OTP) */}
+          {!isVerifyingOtp && (
+            <div className="input-group">
+              <label className="input-label">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="text-input"
+                required
+              />
+            </div>
+          )}
 
-          {isRegistering && (
+          {/* Account Role (only during initial registration) */}
+          {isRegistering && !isVerifyingOtp && (
             <div className="input-group">
               <label className="input-label">Account Type</label>
               <select 
@@ -103,26 +136,72 @@ export function LoginPage() {
             </div>
           )}
 
+          {/* 6-Digit OTP Code Input */}
+          {isRegistering && isVerifyingOtp && (
+            <div className="input-group">
+              <label className="input-label">6-Digit Verification Code</label>
+              <input
+                type="text"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                placeholder="e.g. 123456"
+                className="text-input"
+                style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: '4px' }}
+                required
+                autoFocus
+              />
+            </div>
+          )}
+
+          {/* Action Button */}
           <button type="submit" disabled={isLoading} style={{ marginTop: '1rem' }}>
-            {isLoading ? "Please wait..." : (isRegistering ? "Register & Login" : "Login")}
+            {isLoading ? "Please wait..." : (
+              !isRegistering ? "Login" :
+              !isVerifyingOtp ? "Register & Send Verification Code" : "Verify & Enter FeeEase"
+            )}
           </button>
+
+          {/* Resend and Back controls during OTP verification */}
+          {isRegistering && isVerifyingOtp && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+              <button 
+                type="button" 
+                className="mini-btn" 
+                onClick={handleResendOtp}
+                disabled={isLoading}
+              >
+                Resend Code
+              </button>
+              <button 
+                type="button" 
+                className="mini-btn" 
+                onClick={() => { setIsVerifyingOtp(false); setOtpCode(""); }}
+              >
+                Edit Email
+              </button>
+            </div>
+          )}
         </form>
 
         {/* Toggle between Login and Register */}
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <button 
-            type="button" 
-            className="mini-btn"
-            onClick={() => {
-              setIsRegistering(!isRegistering);
-              setErrorMsg("");
-            }}
-          >
-            {isRegistering ? "Already have an account? Log in" : "Need an account? Register"}
-          </button>
-        </div>
+        {!isVerifyingOtp && (
+          <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+            <button 
+              type="button" 
+              className="mini-btn"
+              onClick={() => {
+                setIsRegistering(!isRegistering);
+                setErrorMsg("");
+                setSuccessMsg("");
+              }}
+            >
+              {isRegistering ? "Already have an account? Log in" : "Need an account? Register"}
+            </button>
+          </div>
+        )}
 
-        {/* DEV ONLY: Quick Fill */}
+        {/* DEV ONLY: Quick Fill (Login Mode) */}
         {!isRegistering && (
           <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--card-border)' }}>
             <p className="empty-message" style={{ textAlign: 'center', marginBottom: '0.5rem' }}>Dev Quick Fill (Testing Only)</p>
@@ -146,6 +225,7 @@ export function LoginPage() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
