@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.database import create_db_and_tables
 from app.routes import auth, fees, parents, payments, students
+from app.models.pending_registration import PendingRegistration
 
 app = FastAPI()
 

@@ -8,6 +8,7 @@ from sqlmodel import Session, col, select
 from app.database import SessionDep, get_session
 from app.email_service import send_otp_email
 from app.models.otp import OTP, OTPSendRequest, OTPVerifyRequest
+from app.models.pending_registration import PendingRegistration
 from app.models.user import Token, User, UserRegister, UserResponse
 from app.security import (
     create_access_token,
@@ -19,31 +20,76 @@ from app.security import (
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post(
+    "/register",
+)
 def register_user(payload: UserRegister, session: SessionDep):
+    now = datetime.now(timezone.utc)
+    # Reject emails that already have registered accounts
     existing_user = session.exec(
         select(User).where(User.email == payload.email)
     ).first()
     if existing_user:
         raise HTTPException(status_code=409, detail="Email already registered")
-    hashed_pw = hash_password(payload.password)
 
-    new_user = User(
+    # Check for an existing pending registration.
+    pending = session.exec(
+        select(PendingRegistration).where(PendingRegistration.email == payload.email)
+    ).first()
+    if pending:
+        expiry = pending.expires_at
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+        if expiry > now:
+            raise HTTPException(
+                status_code=409,
+                detail="Registration already pending. Please try again later",
+            )
+        # Expired registration: remove it so a fresh attempt can begin.
+        session.delete(pending)
+
+        # Invalidate older OTPs for this email.
+        previous_otps = session.exec(
+            select(OTP).where(OTP.email == payload.email)
+        ).all()
+        for previous_otp in previous_otps:
+            if not previous_otp.is_used:
+                previous_otp.is_used = True
+
+    pending_registration = PendingRegistration(
         email=payload.email,
-        hashed_password=hashed_pw,
+        hashed_password=hash_password(payload.password),
         role=payload.role,
-        parent_id=payload.parent_id,
+        created_at=now,
+        expires_at=now + timedelta(minutes=15),
     )
-    session.add(new_user)
+    code = generate_otp()
+    new_otp = OTP(
+        email=payload.email, otp_code=code, expires_at=now + timedelta(minutes=5)
+    )
+    session.add(pending_registration)
+    session.add(new_otp)
+
     try:
         session.commit()
-        session.refresh(new_user)
-        return new_user
     except Exception:
         session.rollback()
+        raise HTTPException(status_code=500, detail="Could not start registration")
+    try:
+        send_otp_email(recipient_email=payload.email, otp=code)
+    except Exception:
+        session.delete(new_otp)
+        session.delete(pending_registration)
+
+        try:
+            session.commit()
+        except Exception:
+            session.rollback()
         raise HTTPException(
-            status_code=500, detail="Failed to create account due to a database error."
+            status_code=502,
+            detail="Could not send verification email. Please try  again",
         )
+    return {"message": "verification code sent. Complete OTP verification to register"}
 
 
 @router.post("/login", response_model=Token)
@@ -107,10 +153,3 @@ def verify_otp(request: OTPVerifyRequest, session: Session = Depends(get_session
     db_otp.is_used = True
     session.commit()
     return {"message": "OTP verified correctly"}
-    # 1. Fetch the latest OTP record for this email from the database
-    # 2. Check: Did we find any OTP record at all? (If not, raise error)
-    # 3. Check: Is it already used? (If yes, raise error)
-    # 4. Check: Has it expired? (If current time > expires_at, raise error)
-    # 5. Check: Are attempts >= 3? (If yes, block them with an error)
-    # 6. Check: Is the code wrong? (If wrong, increment attempts, save to DB, and raise error)
-    # 7. Success: Mark is_used = True, save to DB, and return success message!
