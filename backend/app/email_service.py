@@ -12,7 +12,6 @@ SENDER_PASSWORD = os.getenv("SMTP_PASSWORD")
 
 def send_otp_email(recipient_email: str, otp: str):
     msg = EmailMessage()
-
     msg["Subject"] = "Your FeeEase Verification Code"
     msg["From"] = SENDER_EMAIL
     msg["To"] = recipient_email
