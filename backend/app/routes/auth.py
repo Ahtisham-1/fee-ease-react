@@ -59,7 +59,7 @@ def register_user(payload: UserRegister, session: SessionDep):
     pending_registration = PendingRegistration(
         email=payload.email,
         hashed_password=hash_password(payload.password),
-        role=payload.role,
+        role="parent",
         created_at=now,
         expires_at=now + timedelta(minutes=15),
     )
@@ -107,22 +107,6 @@ def login_user(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.post("/request_otp")
-def request_otp(request: OTPSendRequest, session: Session = Depends(get_session)):
-    code = generate_otp()
-
-    new_otp = OTP(
-        email=request.email,
-        otp_code=code,
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
-    )
-    session.add(new_otp)
-    session.commit()
-
-    send_otp_email(recipient_email=request.email, otp=code)
-    return {"message": "OTP sent successfully"}
-
-
 @router.post("/verify_otp")
 def verify_otp(request: OTPVerifyRequest, session: Session = Depends(get_session)):
     db_otp = session.exec(
@@ -150,6 +134,22 @@ def verify_otp(request: OTPVerifyRequest, session: Session = Depends(get_session
         db_otp.attempts += 1
         session.commit()
         raise HTTPException(400, detail="Invalid")
-    db_otp.is_used = True
-    session.commit()
+    pending_user = session.exec(
+        select(PendingRegistration).where(PendingRegistration.email == request.email)
+    ).first()
+    if not pending_user:
+        raise HTTPException(status_code=404, detail="No user found for this otp")
+    verified_user = User(
+        email=pending_user.email,
+        hashed_password=pending_user.hashed_password,
+        role=pending_user.role,
+    )
+    try:
+        session.add(verified_user)
+        db_otp.is_used = True
+        session.delete(pending_user)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise HTTPException(500, detail="Internal Error!")
     return {"message": "OTP verified correctly"}
