@@ -70,7 +70,7 @@ export function App() {
    * WHAT: We use our custom hook to check if the user has a valid token and get their real role!
    * WHY: This is the "bouncer" for the entire visual app. If they don't have a token, we don't show the dashboard.
    */
-  const { isLoggedIn, userRole, logout } = useAuth();
+  const { isLoggedIn, userRole, login, logout } = useAuth();
   
   // --------------------------------------------------------------------------
   // GLOBAL APPLICATION NAVIGATION STATE
@@ -525,7 +525,7 @@ export function App() {
   // ---> THE BOUNCER <---
   // If they don't have a token (isLoggedIn is false), stop everything and show the Login Page
   if (!isLoggedIn) {
-    return <LoginPage />;
+    return <LoginPage onLogin={login} />;
   }
 
   return (

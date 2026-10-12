@@ -47,7 +47,7 @@ def register_user(payload: UserRegister, session: SessionDep):
             )
         # Expired registration: remove it so a fresh attempt can begin.
         session.delete(pending)
-
+        
         # Invalidate older OTPs for this email.
         previous_otps = session.exec(
             select(OTP).where(OTP.email == payload.email)
@@ -61,11 +61,11 @@ def register_user(payload: UserRegister, session: SessionDep):
         hashed_password=hash_password(payload.password),
         role="parent",
         created_at=now,
-        expires_at=now + timedelta(minutes=15),
+        expires_at=now + timedelta(minutes=1),
     )
     code = generate_otp()
     new_otp = OTP(
-        email=payload.email, otp_code=code, expires_at=now + timedelta(minutes=5)
+        email=payload.email, otp_code=code, expires_at=now + timedelta(minutes=1)
     )
     session.add(pending_registration)
     session.add(new_otp)

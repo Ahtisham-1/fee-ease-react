@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../services/apiClient';
-import { registerApi, requestOtpApi, verifyOtpApi } from '../services/authApi';
+import { registerApi, verifyOtpApi } from '../services/authApi';
 
+interface LoginPageProps {
+  onLogin: (email: string, password: string) => Promise<void>;
+}
 
-export function LoginPage() {
-  const { login } = useAuth();
+export function LoginPage({ onLogin }: LoginPageProps) {
 
   const [isRegistering, setIsRegistering] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
@@ -28,20 +29,19 @@ export function LoginPage() {
     try {
       if (isRegistering) {
         if (!isVerifyingOtp) {
-          // STEP 1: Register account + send verification OTP
+          // STEP 1: Registration already creates the pending record and sends the OTP.
           await registerApi(email, password, role);
-          await requestOtpApi(email);
           setIsVerifyingOtp(true);
           setSuccessMsg(`Account created! A 6-digit verification code was sent to ${email}`);
         } else {
           // STEP 2: Verify OTP code + Auto-login
           await verifyOtpApi(email, otpCode);
           setSuccessMsg("Email verified! Logging you in...");
-          await login(email, password);
+          await onLogin(email, password);
         }
       } else {
         // Standard Login Mode
-        await login(email, password);
+        await onLogin(email, password);
       }
     } catch (error) {
       if (error instanceof ApiError) {
@@ -55,21 +55,7 @@ export function LoginPage() {
   };
 
   const handleResendOtp = async () => {
-    setErrorMsg("");
-    setSuccessMsg("");
-    setIsLoading(true);
-    try {
-      await requestOtpApi(email);
-      setSuccessMsg(`A new code was sent to ${email}`);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        setErrorMsg(error.message);
-      } else {
-        setErrorMsg("Failed to resend OTP");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    setErrorMsg("Resending an OTP is not available yet. Please wait for the current code to expire or edit the email address.");
   };
 
   return (
