@@ -35,6 +35,7 @@ import ParentStudentSelector from "./components/parent/ParentStudentSelector";
 import FeeDetail from "./components/parent/FeeDetail";
 import PayFeesForm from "./components/parent/PayFeesForm";
 import PaymentHistory from "./components/parent/PaymentHistory";
+import ConnectToSchool from "./components/parent/ConnectToSchool";
 
 // Admin Portal Suite
 import AdminCollectionsSummary from "./components/admin/AdminCollectionsSummary";
@@ -71,7 +72,7 @@ export function App() {
    * WHY: This is the "bouncer" for the entire visual app. If they don't have a token, we don't show the dashboard.
    */
   const { isLoggedIn, userRole, login, logout } = useAuth();
-  
+
   // --------------------------------------------------------------------------
   // GLOBAL APPLICATION NAVIGATION STATE
   // Instead of a fake manual toggle switch, we lock the UI to their TRUE role!
@@ -165,12 +166,11 @@ export function App() {
         } else {
           // Parent Role: Backend restricts GET /api/parents to admin only (require_admin).
           // We only fetch students, fees, and payments (which FastAPI filters by current_user.parent_id).
-          const [studentsData, feesData, paymentsData] =
-            await Promise.all([
-              getStudents(),
-              getFees(),
-              getPayments(),
-            ]);
+          const [studentsData, feesData, paymentsData] = await Promise.all([
+            getStudents(),
+            getFees(),
+            getPayments(),
+          ]);
           if (cancelled) return;
 
           setStudentsDatabase(studentsData);
@@ -448,9 +448,7 @@ export function App() {
         `Successfully generated ${result.count} fee obligations for Class ${targetGradeClass} (${targetAcademicMonth} ${academicYear}).`,
       );
     } catch (error) {
-      alert(
-        error instanceof Error ? error.message : "Failed to assign fees",
-      );
+      alert(error instanceof Error ? error.message : "Failed to assign fees");
     }
   }
 
@@ -531,9 +529,16 @@ export function App() {
   return (
     <div className="app-container">
       {/* Visual Logout Button injected at the very top of the app */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px', backgroundColor: '#f3f4f6' }}>
-        <button 
-          onClick={logout} 
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          padding: "10px",
+          backgroundColor: "#f3f4f6",
+        }}
+      >
+        <button
+          onClick={logout}
           className="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600 cursor-pointer"
         >
           Sign Out
@@ -564,6 +569,7 @@ export function App() {
             {activeUserRole === "parent" && (
               <div className="parent-grid">
                 <div className="column-left">
+                  <ConnectToSchool />
                   <ParentStudentSelector
                     students={studentsDatabase}
                     selectedStudentId={selectedStudentProfileId}
@@ -606,7 +612,10 @@ export function App() {
             {activeUserRole === "admin" && (
               <div className="portal-layout admin-portal">
                 {/* Admin Sub-Navigation Control Bar */}
-                <nav className="admin-nav-bar" aria-label="Admin Sub Navigation">
+                <nav
+                  className="admin-nav-bar"
+                  aria-label="Admin Sub Navigation"
+                >
                   <button
                     type="button"
                     className={`admin-tab-btn ${activeAdminTab === "overview" ? "active" : ""}`}
