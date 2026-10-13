@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -16,6 +18,7 @@ from app.models.user import User
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
+OTP_SECRET = os.getenv("PHONE_OTP_SECRET")
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY environment variable is not set")
 
@@ -89,3 +92,16 @@ def generate_otp() -> str:
     num = secrets.randbelow(1_000_000)
     otp = f"{num:06d}"
     return otp
+
+
+def protect_otp(otp: str, phone: str) -> str:
+    if not OTP_SECRET:
+        raise RuntimeError("PHONE_OTP_SECRET environment variable is not set")
+    message = f"{phone}:{otp}".encode("utf-8")
+    secret_key = OTP_SECRET.encode("utf-8")
+
+    return hmac.new(
+        secret_key,
+        message,
+        hashlib.sha256,
+    ).hexdigest()

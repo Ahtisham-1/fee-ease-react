@@ -1,6 +1,4 @@
-from typing import TYPE_CHECKING, Literal, Optional
-
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, SQLModel
 
 
 class User(SQLModel, table=True):

@@ -10,6 +10,8 @@ from app.email_service import send_otp_email
 from app.models.otp import OTP, OTPSendRequest, OTPVerifyRequest
 from app.models.pending_registration import PendingRegistration
 from app.models.user import Token, User, UserRegister, UserResponse
+from app.security import CurrentUser
+from app.models.phone_otp import PhoneOTP, PhoneOTPRequest
 from app.security import (
     create_access_token,
     generate_otp,
@@ -89,6 +91,16 @@ def register_user(payload: UserRegister, session: SessionDep):
             detail="Could not send verification email. Please try  again",
         )
     return {"message": "verification code sent. Complete OTP verification to register"}
+
+
+# Phone OTP
+@router.post("/phone/send-otp")
+def send_phone_otp(
+    payload: PhoneOTPRequest, current_user: CurrentUser, session: SessionDep
+):
+    phone_number = payload.phone
+    authenticated_user = current_user.id
+    code = generate_otp()
 
 
 @router.post("/login", response_model=Token)
