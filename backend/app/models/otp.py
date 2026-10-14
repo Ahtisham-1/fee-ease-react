@@ -22,3 +22,4 @@ class OTPSendRequest(SQLModel):
 class OTPVerifyRequest(SQLModel):
     email: str
     otp_code: str
+

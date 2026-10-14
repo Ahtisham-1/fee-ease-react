@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sendPhoneOtpApi, verifyPhoneOtpApi } from "../../services/authApi";
 
 export default function ConnectToSchool() {
   const [phone, setPhone] = useState("");
@@ -6,23 +7,45 @@ export default function ConnectToSchool() {
   const [otpSent, setOtpSent] = useState(false);
   const [message, setMessage] = useState("");
 
-  function handleSendOtp() {
+  async function handleSendOtp() {
     if (!phone.trim()) {
       setMessage("Please enter your phone number.");
       return;
     }
-
+    setMessage("");
+    try {
+      const response = await sendPhoneOtpApi(phone.trim());
+      setOtpSent(true);
+      setMessage(response.message);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not send the verification code",
+      );
+    }
     // TODO: Call the backend to send the OTP.
     setOtpSent(true);
     setMessage("OTP sending will be connected to the backend next.");
   }
 
-  function handleVerifyOtp() {
+  async function handleVerifyOtp() {
     if (!otp.trim()) {
       setMessage("Please enter the OTP.");
       return;
     }
+    setMessage("");
 
+    try {
+      const response = await verifyPhoneOtpApi(phone.trim(), otp.trim());
+      setMessage(response.message);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not verify the phone number",
+      );
+    }
     // TODO: Verify the OTP with the backend.
     setMessage("OTP verification will be connected to the backend next.");
   }
@@ -54,7 +77,7 @@ export default function ConnectToSchool() {
 
           <input
             id="parent-phone"
-            type="tel"
+            type="number"
             autoComplete="tel"
             value={phone}
             onChange={(event) => setPhone(event.target.value)}

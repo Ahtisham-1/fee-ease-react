@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone  # noqa: I001
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,19 +9,25 @@ from app.database import SessionDep, get_session
 from app.email_service import send_otp_email
 from app.models.otp import OTP, OTPSendRequest, OTPVerifyRequest
 from app.models.pending_registration import PendingRegistration
+from app.models.phone_otp import PhoneOTP, PhoneOTPRequest, PhoneOTPVerifyRequest
 from app.models.user import Token, User, UserRegister, UserResponse
-from app.security import CurrentUser
-from app.models.phone_otp import PhoneOTP, PhoneOTPRequest
 from app.security import (
+    CurrentUser,
     create_access_token,
     generate_otp,
     hash_password,
+    protect_otp,
     verify_password,
 )
+import hmac
+from app.models.parent import ParentBlueprint
+from app.models.phone_otp import PhoneOTPRequest
+
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
+# Email OTP
 @router.post(
     "/register",
 )
@@ -60,7 +66,7 @@ def register_user(payload: UserRegister, session: SessionDep):
     pending_registration = PendingRegistration(
         email=payload.email,
         hashed_password=hash_password(payload.password),
-        role=payload.role,
+        role="parent",
         created_at=now,
         expires_at=now + timedelta(minutes=1),
     )
@@ -93,16 +99,6 @@ def register_user(payload: UserRegister, session: SessionDep):
     return {"message": "verification code sent. Complete OTP verification to register"}
 
 
-# Phone OTP
-@router.post("/phone/send-otp")
-def send_phone_otp(
-    payload: PhoneOTPRequest, current_user: CurrentUser, session: SessionDep
-):
-    phone_number = payload.phone
-    authenticated_user = current_user.id
-    code = generate_otp()
-
-
 @router.post("/login", response_model=Token)
 def login_user(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep
@@ -120,27 +116,35 @@ def login_user(
 
 @router.post("/verify_otp")
 def verify_otp(request: OTPVerifyRequest, session: Session = Depends(get_session)):
+
     db_otp = session.exec(
         select(OTP).where(OTP.email == request.email).order_by(col(OTP.id).desc())
     ).first()
+
     if db_otp is None:
         raise HTTPException(status_code=404, detail="No OTP found request a OTP first")
+
     if db_otp.is_used:
         raise HTTPException(
             status_code=400, detail="OTP has been already used request a new one"
         )
+
     current_time = datetime.now(timezone.utc)
     expires_at = db_otp.expires_at
+
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
+
     if current_time >= expires_at:
         raise HTTPException(
             status_code=400, detail="OTP has expired. Please request a new one."
         )
+
     if db_otp.attempts >= 3:
         raise HTTPException(
             status_code=429, detail="Too many failed attempts. This code is now locked."
         )
+
     if db_otp.otp_code != request.otp_code:
         db_otp.attempts += 1
         session.commit()
@@ -148,6 +152,7 @@ def verify_otp(request: OTPVerifyRequest, session: Session = Depends(get_session
     pending_user = session.exec(
         select(PendingRegistration).where(PendingRegistration.email == request.email)
     ).first()
+
     if not pending_user:
         raise HTTPException(status_code=404, detail="No user found for this otp")
     verified_user = User(
@@ -155,12 +160,104 @@ def verify_otp(request: OTPVerifyRequest, session: Session = Depends(get_session
         hashed_password=pending_user.hashed_password,
         role=pending_user.role,
     )
+
     try:
         session.add(verified_user)
         db_otp.is_used = True
         session.delete(pending_user)
         session.commit()
+
     except Exception:
         session.rollback()
         raise HTTPException(500, detail="Internal Error!")
+
     return {"message": "OTP verified correctly"}
+
+
+# Phone OTP
+@router.post("/phone/send-otp")
+def send_phone_otp(
+    payload: PhoneOTPRequest, current_user: CurrentUser, session: SessionDep
+):
+    now = datetime.now(timezone.utc)
+    phone_number = payload.phone.strip()
+    code = generate_otp()
+    otp_hash = protect_otp(code, phone_number)
+    if current_user.id is None:
+        raise HTTPException(
+            status_code=500, detail="Authenticated user has not database ID"
+        )
+    phone_otp = PhoneOTP(
+        user_id=current_user.id,
+        phone=phone_number,
+        otp_hash=otp_hash,
+        expires_at=now + timedelta(minutes=5),
+    )
+    session.add(phone_otp)
+
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Could not create phone verification request",
+        )
+    return {
+        "message": "If the phone number is eligible, a verification code has been sent"
+    }
+
+
+@router.post("/phone/verify-otp")
+def verify_phone_otp(
+    payload: PhoneOTPVerifyRequest, current_user: CurrentUser, session: SessionDep
+):
+    if current_user.id is None:
+        raise HTTPException(500, detail="Authenticated user has no database ID")
+
+    phone_number = payload.phone.strip()
+
+    phone_otp = session.exec(
+        select(PhoneOTP)
+        .where(PhoneOTP.user_id == current_user.id, PhoneOTP.phone == phone_number)
+        .order_by(col(PhoneOTP.id).desc())
+    ).first()
+
+    if phone_otp is None:
+        raise HTTPException(404, detail="No phone verification request found")
+
+    if phone_otp.is_used:
+        raise HTTPException(400, detail="This verification code has already been used")
+    
+    now = datetime.now(timezone.utc)
+    expires_at = phone_otp.expires_at
+    
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if now >= expires_at:
+        raise HTTPException(400, detail="This verification code has expired")
+    if phone_otp.attempts >= 3:
+        raise HTTPException(429, detail="Too many failed attempts. This code is locked")
+    
+    expected_hash = protect_otp(payload.otp_code, phone_number)
+    
+    if not hmac.compare_digest(expected_hash, phone_otp.otp_hash):
+        phone_otp.attempts += 1
+        session.add(phone_otp)
+        session.commit()
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+    parent = session.exec(
+        select(ParentBlueprint).where(ParentBlueprint.phone == phone_number)
+    ).first()
+    if parent is None:
+        raise HTTPException(404, detail="No school recored found for this phone number")
+    current_user.parent_id = parent.id
+    phone_otp.is_used = True
+    session.add(current_user)
+    session.add(phone_otp)
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise HTTPException(500, detail="Could not link parent account")
+    return {"message": "Parent account linked successfully", "Parent_id": parent.id}

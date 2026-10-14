@@ -16,3 +16,7 @@ class PhoneOTP(SQLModel, table=True):
 class PhoneOTPRequest(BaseModel):
     phone: str
 
+
+class PhoneOTPVerifyRequest(BaseModel):
+    phone: str
+    otp_code: str

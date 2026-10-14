@@ -1,12 +1,15 @@
-import { API_BASE, ApiError } from "./apiClient";
+import { API_BASE, ApiError, requestJson } from "./apiClient";
 
 // We define the shape of the data the backend gives us when we log in successfully.
 export interface LoginResponse {
   access_token: string;
   token_type: string;
 }
- 
-export async function loginApi(email: string, password: string): Promise<LoginResponse> {
+
+export async function loginApi(
+  email: string,
+  password: string,
+): Promise<LoginResponse> {
   const formData = new URLSearchParams();
   formData.append("username", email);
   formData.append("password", password);
@@ -14,7 +17,7 @@ export async function loginApi(email: string, password: string): Promise<LoginRe
   const response = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
     body: formData,
-  }); 
+  });
 
   if (!response.ok) {
     throw new ApiError("Invalid email or password", response.status);
@@ -28,7 +31,11 @@ export async function loginApi(email: string, password: string): Promise<LoginRe
  * WHY: Users cannot log in if they don't exist in the database!
  * HOW: It hits the /register route using standard JSON.
  */
-export async function registerApi(email: string, password: string, role: string = "parent"): Promise<void> {
+export async function registerApi(
+  email: string,
+  password: string,
+  role: string = "parent",
+): Promise<void> {
   const response = await fetch(`${API_BASE}/api/auth/register`, {
     method: "POST",
     headers: {
@@ -39,14 +46,19 @@ export async function registerApi(email: string, password: string, role: string 
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new ApiError(errorData.detail || "Registration failed. Email might already exist.", response.status);
+    throw new ApiError(
+      errorData.detail || "Registration failed. Email might already exist.",
+      response.status,
+    );
   }
 }
 
 /**
  * 1. Request an OTP to be emailed to the user
  */
-export async function requestOtpApi(email: string): Promise<{ message: string }> {
+export async function requestOtpApi(
+  email: string,
+): Promise<{ message: string }> {
   const response = await fetch(`${API_BASE}/api/auth/request_otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -55,7 +67,10 @@ export async function requestOtpApi(email: string): Promise<{ message: string }>
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new ApiError(errorData.detail || "Failed to send OTP", response.status);
+    throw new ApiError(
+      errorData.detail || "Failed to send OTP",
+      response.status,
+    );
   }
 
   return response.json();
@@ -64,7 +79,10 @@ export async function requestOtpApi(email: string): Promise<{ message: string }>
 /**
  * 2. Submit the 6-digit code to verify it
  */
-export async function verifyOtpApi(email: string, otp_code: string): Promise<{ message: string }> {
+export async function verifyOtpApi(
+  email: string,
+  otp_code: string,
+): Promise<{ message: string }> {
   const response = await fetch(`${API_BASE}/api/auth/verify_otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -73,9 +91,30 @@ export async function verifyOtpApi(email: string, otp_code: string): Promise<{ m
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new ApiError(errorData.detail || "Invalid or expired OTP", response.status);
+    throw new ApiError(
+      errorData.detail || "Invalid or expired OTP",
+      response.status,
+    );
   }
 
   return response.json();
 }
 
+export async function sendPhoneOtpApi(
+  phone: string,
+): Promise<{ message: string }> {
+  return requestJson<{ message: string }>("/api/auth/phone/send-otp", {
+    method: "POST",
+    body: { phone },
+  });
+}
+
+export async function verifyPhoneOtpApi(
+  phone: string,
+  otp_code: string,
+): Promise<{ message: string }> {
+  return requestJson<{ message: string }>("/api/auth/phone/verify-otp", {
+    method: "POST",
+    body: { phone, otp_code },
+  });
+}

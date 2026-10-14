@@ -1,15 +1,17 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, SQLModel, create_engine, select
-
 from app.database import get_session
 from app.main import app
 from app.models.otp import OTP
+from app.models.parent import ParentBlueprint
 from app.models.pending_registration import PendingRegistration
+from app.models.phone_otp import PhoneOTP
 from app.models.user import User
+from app.security import get_current_user, protect_otp
+from fastapi.testclient import TestClient
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session, SQLModel, create_engine, select
 
 
 @pytest.fixture
@@ -161,3 +163,302 @@ def test_registration_ignores_client_supplied_role(test_context, monkeypatch):
 
         assert pending is not None
         assert pending.role == "parent"
+
+
+def test_phone_otp_links_authenticated_user_to_parent(test_context):
+    client, test_engine = test_context
+    email = "parent@example.com"
+    phone = "89898989"
+    now = datetime.now(timezone.utc)
+
+    with Session(test_engine) as session:
+        parent = ParentBlueprint(name="Parent Example", phone=phone)
+
+        user = User(email=email, hashed_password="test_password_hash", role="parent")
+
+        session.add(parent)
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        session.refresh(parent)
+        if user.id is None:
+            raise AssertionError("Test user was not assigned an ID")
+        if parent.id is None:
+            raise AssertionError("Test parent was not assigned an ID")
+        user_id = user.id
+        parent_id = parent.id
+        otp = PhoneOTP(
+            user_id=user_id,
+            phone=phone,
+            otp_hash=protect_otp("123456", phone),
+            expires_at=now + timedelta(minutes=5),
+        )
+        session.add(otp)
+        session.commit()
+
+    def get_test_current_user():
+        with Session(test_engine) as session:
+            return session.get(User, user_id)
+
+    app.dependency_overrides[get_current_user] = get_test_current_user
+
+    response = client.post(
+        "/api/auth/phone/verify-otp",
+        json={"phone": phone, "otp_code": "123456"},
+    )
+
+    assert response.status_code == 200, response.text
+
+    with Session(test_engine) as session:
+        saved_user = session.get(User, user_id)
+        saved_otp = session.exec(
+            select(PhoneOTP).where(PhoneOTP.user_id == user_id)
+        ).first()
+
+        assert saved_user is not None
+        assert saved_user.parent_id == parent_id
+        assert saved_otp is not None
+        assert saved_otp.is_used is True
+
+
+def test_expired_phone_otp_is_rejected(test_context):
+    client, test_engine = test_context
+    phone = "9876543210"
+    now = datetime.now(timezone.utc)
+
+    with Session(test_engine) as session:
+        user = User(
+            email="expired@example.com",
+            hashed_password="test-password-hash",
+            role="parent",
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        if user.id is None:
+            raise AssertionError("Test user was not assigned an ID")
+        user_id = user.id
+
+        session.add(
+            PhoneOTP(
+                user_id=user_id,
+                phone=phone,
+                otp_hash=protect_otp("123456", phone),
+                expires_at=now - timedelta(minutes=1),
+            )
+        )
+        session.commit()
+
+    def get_test_current_user():
+        with Session(test_engine) as session:
+            return session.get(User, user_id)
+
+    app.dependency_overrides[get_current_user] = get_test_current_user
+
+    response = client.post(
+        "/api/auth/phone/verify-otp",
+        json={"phone": phone, "otp_code": "123456"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "This verification code has expired"
+
+
+def test_used_phone_otp_is_rejected(test_context):
+    client, test_engine = test_context
+    phone = "9876543210"
+    now = datetime.now(timezone.utc)
+
+    with Session(test_engine) as session:
+        user = User(
+            email="used@example.com",
+            hashed_password="test-password-hash",
+            role="parent",
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        if user.id is None:
+            raise AssertionError("Test user was not assigned an ID")
+        user_id = user.id
+
+        session.add(
+            PhoneOTP(
+                user_id=user_id,
+                phone=phone,
+                otp_hash=protect_otp("123456", phone),
+                expires_at=now + timedelta(minutes=5),
+                is_used=True,
+            )
+        )
+        session.commit()
+
+    def get_test_current_user():
+        with Session(test_engine) as session:
+            return session.get(User, user_id)
+
+    app.dependency_overrides[get_current_user] = get_test_current_user
+
+    response = client.post(
+        "/api/auth/phone/verify-otp",
+        json={"phone": phone, "otp_code": "123456"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "This verification code has already been used"
+
+
+def test_locked_phone_otp_is_rejected(test_context):
+    client, test_engine = test_context
+    phone = "9876543210"
+    now = datetime.now(timezone.utc)
+
+    with Session(test_engine) as session:
+        user = User(
+            email="locked@example.com",
+            hashed_password="test-password-hash",
+            role="parent",
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        if user.id is None:
+            raise AssertionError("Test user was not assigned an ID")
+        user_id = user.id
+
+        session.add(
+            PhoneOTP(
+                user_id=user_id,
+                phone=phone,
+                otp_hash=protect_otp("123456", phone),
+                expires_at=now + timedelta(minutes=5),
+                attempts=3,
+            )
+        )
+        session.commit()
+
+    def get_test_current_user():
+        with Session(test_engine) as session:
+            return session.get(User, user_id)
+
+    app.dependency_overrides[get_current_user] = get_test_current_user
+
+    response = client.post(
+        "/api/auth/phone/verify-otp",
+        json={"phone": phone, "otp_code": "123456"},
+    )
+
+    assert response.status_code == 429
+    assert response.json()["detail"] == "Too many failed attempts. This code is locked"
+
+
+def test_phone_without_school_parent_record_cannot_link_user(test_context):
+    client, test_engine = test_context
+    phone = "9876543210"
+    now = datetime.now(timezone.utc)
+
+    with Session(test_engine) as session:
+        user = User(
+            email="unlinked@example.com",
+            hashed_password="test-password-hash",
+            role="parent",
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        if user.id is None:
+            raise AssertionError("Test user was not assigned an ID")
+        user_id = user.id
+
+        session.add(
+            PhoneOTP(
+                user_id=user_id,
+                phone=phone,
+                otp_hash=protect_otp("123456", phone),
+                expires_at=now + timedelta(minutes=5),
+            )
+        )
+        session.commit()
+
+    def get_test_current_user():
+        with Session(test_engine) as session:
+            return session.get(User, user_id)
+
+    app.dependency_overrides[get_current_user] = get_test_current_user
+
+    response = client.post(
+        "/api/auth/phone/verify-otp",
+        json={"phone": phone, "otp_code": "123456"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "No school recored found for this phone number"
+
+    with Session(test_engine) as session:
+        saved_user = session.get(User, user_id)
+        assert saved_user is not None
+        assert saved_user.parent_id is None
+
+
+def test_invalid_phone_otp_does_not_link_user_and_increments_attempts(
+    test_context,
+):
+    client, test_engine = test_context
+    email = "parent@example.com"
+    phone = "9876543210"
+    now = datetime.now(timezone.utc)
+
+    with Session(test_engine) as session:
+        parent = ParentBlueprint(name="Parent Example", phone=phone)
+        user = User(
+            email=email,
+            hashed_password="test-password-hash",
+            role="parent",
+        )
+
+        session.add(parent)
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        if user.id is None:
+            raise AssertionError("Test user was not assigned an ID")
+        user_id = user.id
+
+        otp = PhoneOTP(
+            user_id=user_id,
+            phone=phone,
+            otp_hash=protect_otp("123456", phone),
+            expires_at=now + timedelta(minutes=5),
+        )
+        session.add(otp)
+        session.commit()
+
+    def get_test_current_user():
+        with Session(test_engine) as session:
+            return session.get(User, user_id)
+
+    app.dependency_overrides[get_current_user] = get_test_current_user
+
+    response = client.post(
+        "/api/auth/phone/verify-otp",
+        json={"phone": phone, "otp_code": "000000"},
+    )
+
+    assert response.status_code == 400, response.text
+
+    with Session(test_engine) as session:
+        saved_user = session.get(User, user_id)
+        saved_otp = session.exec(
+            select(PhoneOTP).where(PhoneOTP.user_id == user_id)
+        ).first()
+
+        assert saved_user is not None
+        assert saved_user.parent_id is None
+        assert saved_otp is not None
+        assert saved_otp.attempts == 1
+        assert saved_otp.is_used is False
