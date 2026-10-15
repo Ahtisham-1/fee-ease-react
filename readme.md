@@ -1,32 +1,201 @@
-# 🏫 FeeEase — School Fee Management System (Monorepo)
+# FeeEase Kashmir
 
-FeeEase is a full-stack school management and fee collection platform featuring automated FIFO fee knockout calculation, dynamic transport pricing, and role-based views for school administrators and parents.
+FeeEase is a school fee-management platform for schools in Kashmir. It helps administrators manage students, parents, classes, monthly fee obligations, and payment records. Parents can log in, view their children’s fees, and make payments against outstanding obligations.
 
-## Current Development Status
+The project is being built as a real production-oriented application while backend engineering, security, testing, system design, and deployment are learned and verified step by step.
 
-Feature 11, secure phone OTP parent-account linking, is implemented and covered by backend tests for successful linking, invalid codes, expiry, reuse, lockout, and missing parent records. The frontend connection is also in place.
+## Current status
 
-Real SMS delivery is not connected yet, so this feature is locally verified but not production-complete.
+The single-school MVP includes:
 
----
- 
-## 🏛️ Monorepo Architecture
+- Admin and parent authentication with JWT access tokens.
+- Role-based access control.
+- Student and parent management.
+- Monthly fee obligations, including transport charges.
+- Partial and full payment recording.
+- Parent-scoped student, fee, and payment views.
+- Pagination and search for administrative records.
+- Phone OTP parent-account linking foundations and tested lifecycle behavior.
+- PostgreSQL, Docker, Render, and Vercel deployment.
+
+Current limitations:
+
+- Real SMS delivery for phone OTPs is not connected yet.
+- Payments currently represent simulated success; gateway verification and settlement are planned for Feature 20.
+- Multi-school isolation is planned but not complete.
+- OTP lifetimes, resend rules, rate limits, cleanup, and phone normalization require production hardening.
+
+## Architecture
+
+```
+React + TypeScript frontend
+            │
+            │ HTTP/JSON + Bearer JWT
+            ▼
+FastAPI backend
+            │
+            │ SQLModel / SQLAlchemy
+            ▼
+PostgreSQL database
+```
+
+## Repository layout
+
+```
+fee-ease/
+├── backend/
+│   ├── app/
+│   │   ├── models/       SQLModel database and request models
+│   │   ├── routes/       FastAPI route modules
+│   │   ├── database.py   Engine and request session dependency
+│   │   ├── security.py   Passwords, JWTs, OTP protection, RBAC
+│   │   └── main.py       FastAPI application
+│   ├── tests/            Backend tests
+│   ├── pyproject.toml
+│   └── Dockerfile
+├── frontend/
+│   ├── src/              React and TypeScript application
+│   └── package.json
+├── docker-compose.yml
+└── readme.md
+```
+
+## Backend
+
+The backend is a FastAPI application using SQLModel and PostgreSQL.
+
+### Main models
+
+- `User`: login identity, role, and optional linked parent record.
+- `ParentBlueprint`: school parent or guardian record.
+- `StudentBlueprint`: student record linked to a parent.
+- `FeeObligation`: monthly amount owed by a student.
+- `Payment`: payment linked to a fee and student.
+- `PendingRegistration` and `OTP`: temporary email-registration flow.
+- `PhoneOTP`: phone-linking verification record.
+
+### Main route groups
+
+| Route group | Purpose |
+|---|---|
+| `/api/auth` | Registration, login, email OTP, and phone OTP linking |
+| `/api/parents` | Admin parent management |
+| `/api/students` | Student management and parent-scoped access |
+| `/api/fees` | Fee obligations and bulk fee assignment |
+| `/api/payments` | Payment recording and payment history |
+
+### Authentication and authorization
+
+- Passwords are hashed with bcrypt.
+- Login returns a signed JWT bearer token.
+- Protected routes use the authenticated user from `get_current_user`.
+- Admin-only operations use `require_admin`.
+- Parent records are scoped through the authenticated user’s `parent_id`.
+- Frontend-supplied user IDs and parent IDs are not trusted for identity decisions.
+
+### Local backend setup
+
+Create a backend environment file with values for:
 
 ```text
-fee-ease-react/
-├── frontend/               # React 18 + TypeScript + Tailwind CSS (Vite)
-│   ├── src/
-│   │   ├── components/     # Admin & Parent Portals
-│   │   ├── utils/          # Fee Knockout Engine & Financial Calculators
-│   │   └── types/          # Centralized TypeScript Domain Interfaces
-│   └── package.json
-│
-├── backend/                # FastAPI + Python 3.12+ Microservice
-│   ├── app/
-│   │   ├── schemas/        # Pydantic Domain Validation Models
-│   │   ├── core/           # Database Engine & Config
-│   │   └── main.py         # REST Endpoints & CORS
-│   └── requirements.txt
-│
-└── docker-compose.yml      # PostgreSQL 16 Alpine Database
+DATABASE_URL=your-postgresql-connection-string
+SECRET_KEY=your-jwt-secret
+ALGORITHM=HS256
+PHONE_OTP_SECRET=your-phone-otp-secret
+SMTP_EMAIL=your-sender-email
+SMTP_PASSWORD=your-sender-password
 ```
+
+Start PostgreSQL from the repository root:
+
+```bash
+docker compose up -d db
+```
+
+Install dependencies and start the backend:
+
+```bash
+cd backend
+uv sync
+uv run fastapi dev app/main.py
+```
+
+The local API normally runs at `http://localhost:8000`.
+
+### Backend tests
+
+```bash
+cd backend
+uv run pytest -q
+```
+
+The tests use an isolated in-memory SQLite database.
+
+## Frontend
+
+The frontend is a React and TypeScript application built with Vite. `App.tsx` owns the main authenticated state. Child components receive data through props and send actions upward through callbacks.
+
+### Local frontend setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite server normally runs at `http://localhost:5173`.
+
+Set the backend URL when needed:
+
+```text
+VITE_API_URL=http://localhost:8000
+```
+
+### Frontend checks
+
+```bash
+cd frontend
+npm run build
+npm run lint
+```
+
+## Development workflow
+
+```
+Requirement
+→ existing project pattern
+→ expected success and failure behavior
+→ smallest implementation
+→ focused test or reproduction
+→ explanation
+→ review and next action
+```
+
+For authentication, ownership, and financial features, a successful response is not enough. Tests should also inspect the resulting database state.
+
+## Roadmap
+
+The project roadmap is maintained in Obsidian. Major upcoming areas include:
+
+1. Production hardening for parent linking and OTP delivery.
+2. School-level data isolation.
+3. Controlled administrator onboarding.
+4. Session and authentication hardening.
+5. Fee, payment, deletion, and database integrity.
+6. Testing and release verification.
+7. Operations and pilot controls.
+8. Real payment collection, gateway verification, settlement, refunds, and reconciliation.
+
+Before onboarding multiple schools, tenant isolation must prevent one school from accessing another school’s students, parents, fees, or payment data.
+
+## Deployment
+
+The deployed MVP uses:
+
+- Neon PostgreSQL.
+- Docker.
+- Render for the backend.
+- Vercel for the frontend.
+
+This is an actively developed learning and product project. Feature status should always be read together with the documented limitations.
+

@@ -1,93 +1,96 @@
-# FeeEase Kashmir — React + TypeScript Rebuild
+# FeeEase Frontend
 
-A school fee-management web application tailored for local schools in Kashmir, built using **React 19**, **TypeScript**, and **Vite**. 
+The frontend is the React and TypeScript client for FeeEase Kashmir. It provides separate admin and parent views over the FastAPI backend.
 
----
+## Stack
 
-## 🏔️ The Real-World Problem It Solves
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS integration
+- Custom CSS design system
 
-In Kashmir, parents often have to take a day off work from busy schedules, travel to schools manually, and stand in long queues to pay monthly school fees because there is no simple digital portal. 
-
-**FeeEase Kashmir** is designed as Kashmir's first fee-management web application. It enables parents to view fee breakdowns, monitor pending dues, and pay monthly fees in flexible installments directly from home—saving valuable time and avoiding manual administrative hassle.
-
----
-
-## 🏗️ Architectural Core: "App is the Father" Pattern
-
-This application follows a strict **declarative architecture** centered around the **Single Source of Truth** and **Lifting State Up** principles:
+## Structure
 
 ```
-                            [ App.tsx ] 
-                 (Master State & Data Controller)
-  ┌───────────────┬───────────────────┼───────────────────┬───────────────┐
-  │               │                   │                   │               │
-  ▼               ▼                   ▼                   ▼               ▼
-[Header] [ParentStudentSelector] [FeeDetail]       [PayFeesForm]   [PaymentHistory]
- (Toggle)   (Pick Parent/Kid)  (View Summary)      (Type & Pay)     (View History)
+src/
+├── App.tsx                  Authenticated app state and orchestration
+├── components/
+│   ├── admin/                Admin dashboard components
+│   ├── parent/               Parent portal components
+│   └── common/               Shared layout and icons
+├── hooks/                    Reusable React hooks
+├── pages/                    Login and registration screens
+├── services/                 Backend API clients
+├── types/                    Frontend domain types
+├── utils/                    Fee calculations and formatting
+└── data/                     Shared constants
 ```
 
-1. **`App.tsx` (Central Controller):** Acts as the "father" component. It owns all core application states (`role`, `selectedParent`, `selectedStudent`, `payments`) and master data (`parents`, `students`, `feeObligations`).
-2. **Read-Only Props Down:** Data flows strictly downward to child components via typed TypeScript `interface` props.
-3. **Action Callbacks Up:** Child components communicate user actions back to `App.tsx` via callback functions prefixed with `on...` (e.g., `onSelectParent`, `onSubmitPayment`).
+## Data flow
 
----
+```
+API service
+    ↓
+App state
+    ↓ props
+Child components
+    ↑ callbacks
+App state updates
+```
 
-## 🧩 Component Architecture Breakdown (Parent View)
+The backend remains the source of truth for identity, authorization, ownership, fees, and payment records.
 
-### 1. `Header.tsx`
-- **Role:** Displays top application branding (`Fee Ease Kashmir`) and a temporary dev role toggle (`[Parent] | [Admin]`).
-- **Types:** `type Role = 'parent' | 'admin'`, `interface HeaderProps`.
+## Authentication
 
-### 2. `ParentStudentSelector.tsx`
-- **Role:** Dual controlled `<select>` dropdowns to select a parent and filter their linked children.
-- **Key Feature:** Controlled inputs using `value` and `onChange`. Selecting a parent triggers `handleParentChange` in `App.tsx`, updating parent selection and automatically resetting student selection to that parent's first child.
-- **Types:** `interface Parent`, `interface Student` (uses `gradeName` instead of JSX-reserved `className`), `interface ParentStudentSelectorProps`.
+- Login uses FastAPI’s form-based OAuth2 login format.
+- The JWT is stored in local storage for the current client.
+- `requestJson()` automatically adds the bearer token to authenticated requests.
+- The token role controls whether the admin or parent portal is shown.
+- Registration uses email OTP verification before automatic login.
 
-### 3. `FeeDetail.tsx`
-- **Role:** Financial dashboard displaying `Total Fees`, `Total Paid`, `Net Balance`, and a month-by-month card breakdown.
-- **Key Feature:** **Derived State** — computes totals dynamically using `.reduce()` and `.filter().reduce()` without redundant `useState` calls.
-- **Types:** `type FeeStatus`, `type FeeType`, `interface FeeObligation`, `interface FeeDetailProps`.
+## API services
 
-### 4. `PayFeesForm.tsx`
-- **Role:** Form element containing a number input and submit button to process fee payments.
-- **Key Feature:** Manages local input state (`inputAmount`), uses `e.preventDefault()` on submission, and sends typed amounts to `App.tsx` via `onSubmitPayment(amount)`.
-- **Types:** `interface Payment`, `interface PayFeesFormProps`.
+- `authApi.ts`: login, registration, and OTP operations.
+- `studentApi.ts`: student loading and admin mutations.
+- `parentApi.ts`: parent loading and admin mutations.
+- `feeApi.ts`: fee loading, assignment, and deletion.
+- `paymentApi.ts`: payment loading and payment submission.
+- `apiClient.ts`: base URL, bearer token, timeout, JSON parsing, and errors.
 
-### 5. `PaymentHistory.tsx` *(In Progress)*
-- **Role:** Historical table/list rendering chronological logs of all completed payments for the selected student.
+## Fee behavior
 
----
+The frontend calculates display summaries from successful payments only. The FIFO fee calculation applies successful payment amounts to the oldest fee obligations first and shows each month’s paid amount and remaining balance.
 
-## 🛠️ Tech Stack & Key Concepts
+The backend remains the source of truth for stored fees, payments, ownership, and authorization.
 
-- **Framework:** React 19 + Vite
-- **Type System:** TypeScript (Strict Union Types, Props Interfaces)
-- **Key Patterns:**
-  - **Lifting State Up:** Centralized state in `App.tsx`.
-  - **Derived State:** Computing values (`netBalance`, `filteredStudents`, `filteredFeeObligations`) on the fly during render.
-  - **Controlled Components:** Tying form inputs to state with `value` + `onChange`.
-  - **List Rendering with Keys:** Rendering dynamic lists via `.map()` with unique `key` props.
+## Local setup
 
----
+```bash
+npm install
+npm run dev
+```
 
-## 🚀 Local Development Setup
+Set the backend URL when needed:
 
-1. **Clone the repository:**
-   ```bash
-   git clone git@github.com:Ahtisham-1/fee-ease-react.git
-   ```
+```text
+VITE_API_URL=http://localhost:8000
+```
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+## Checks
 
-3. **Start local development server:**
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run build
+npm run lint
+```
 
-4. **Run TypeScript type check:**
-   ```bash
-   npx tsc --noEmit
-   ```
+## Current limitations
+
+- Phone OTP UI is connected to the backend, but a real SMS provider is not connected yet.
+- Payment submission currently represents the simulated flow; gateway checkout, webhooks, refunds, and settlement are future work.
+- Multiple-school tenant isolation is not implemented yet.
+
+## Development principle
+
+Build one meaningful feature at a time. Trace the existing project pattern, make the smallest focused change, verify it with a test or build, and document what remains unverified.
+
