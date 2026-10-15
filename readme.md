@@ -2,6 +2,12 @@
 
 FeeEase is a full-stack school management and fee collection platform featuring automated FIFO fee knockout calculation, dynamic transport pricing, and role-based views for school administrators and parents.
 
+## Current Development Status
+
+Feature 11, secure phone OTP parent-account linking, is implemented and covered by backend tests for successful linking, invalid codes, expiry, reuse, lockout, and missing parent records. The frontend connection is also in place.
+
+Real SMS delivery is not connected yet, so this feature is locally verified but not production-complete.
+
 ---
  
 ## 🏛️ Monorepo Architecture
