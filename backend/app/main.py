@@ -6,6 +6,7 @@ from app.database import create_db_and_tables
 from app.routes import auth, fees, parents, payments, students
 from app.models.pending_registration import PendingRegistration
 from app.models.phone_otp import PhoneOTP
+from app.models.school import School
 
 app = FastAPI()
 

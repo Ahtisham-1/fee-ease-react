@@ -7,6 +7,7 @@ class User(SQLModel, table=True):
     hashed_password: str
     role: str = Field(default="parent")
     parent_id: int | None = Field(default=None, foreign_key="parentblueprint.id")
+    school_id: int | None = Field(default=None, foreign_key="school.id")
 
 
 class UserRegister(SQLModel):

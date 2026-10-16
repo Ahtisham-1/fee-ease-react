@@ -4,6 +4,8 @@ from sqlmodel import col, select
 from app.database import SessionDep
 from app.models.parent import ParentBlueprint, ParentUpdate
 from app.security import require_admin
+from app.security import CurrentUser
+
 
 router = APIRouter(
     prefix="/api/parents", tags=["Parents"], dependencies=[Depends(require_admin)]
@@ -12,10 +14,17 @@ router = APIRouter(
 
 # ------------ PARENT ENDPOINTS -----------
 @router.post("/", response_model=ParentBlueprint)
-def create_parent(parent: ParentBlueprint, session: SessionDep):
-
+def create_parent(
+    parent: ParentBlueprint, session: SessionDep, current_user: CurrentUser
+):
+    if current_user.school_id is None:
+        raise HTTPException(status_code=403, detail="Admin is not assigned to a school")
+    parent.school_id = current_user.school_id
     existing_parent = session.exec(
-        select(ParentBlueprint).where(ParentBlueprint.phone == parent.phone)
+        select(ParentBlueprint).where(
+            ParentBlueprint.phone == parent.phone,
+            ParentBlueprint.school_id == current_user.school_id,
+        )
     ).first()
     if existing_parent:
         return existing_parent
@@ -29,11 +38,14 @@ def create_parent(parent: ParentBlueprint, session: SessionDep):
 @router.get("/", response_model=list[ParentBlueprint])
 def read_all_parents(
     session: SessionDep,
+    current_user: CurrentUser,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=50, ge=1, le=100),
     search: str | None = Query(default=None),
 ):
-    statement = select(ParentBlueprint)
+    statement = select(ParentBlueprint).where(
+        ParentBlueprint.school_id == current_user.school_id
+    )
     if search:
         statement = statement.where(
             col(ParentBlueprint.name).ilike(f"%{search}%")

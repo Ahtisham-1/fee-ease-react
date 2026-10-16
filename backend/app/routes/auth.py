@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta, timezone  # noqa: I001
+import hmac
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +9,7 @@ from sqlmodel import Session, col, select
 from app.database import SessionDep, get_session
 from app.email_service import send_otp_email
 from app.models.otp import OTP, OTPSendRequest, OTPVerifyRequest
+from app.models.parent import ParentBlueprint
 from app.models.pending_registration import PendingRegistration
 from app.models.phone_otp import PhoneOTP, PhoneOTPRequest, PhoneOTPVerifyRequest
 from app.models.user import Token, User, UserRegister, UserResponse
@@ -19,10 +21,6 @@ from app.security import (
     protect_otp,
     verify_password,
 )
-import hmac
-from app.models.parent import ParentBlueprint
-from app.models.phone_otp import PhoneOTPRequest
-
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -228,19 +226,19 @@ def verify_phone_otp(
 
     if phone_otp.is_used:
         raise HTTPException(400, detail="This verification code has already been used")
-    
+
     now = datetime.now(timezone.utc)
     expires_at = phone_otp.expires_at
-    
+
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     if now >= expires_at:
         raise HTTPException(400, detail="This verification code has expired")
     if phone_otp.attempts >= 3:
         raise HTTPException(429, detail="Too many failed attempts. This code is locked")
-    
+
     expected_hash = protect_otp(payload.otp_code, phone_number)
-    
+
     if not hmac.compare_digest(expected_hash, phone_otp.otp_hash):
         phone_otp.attempts += 1
         session.add(phone_otp)

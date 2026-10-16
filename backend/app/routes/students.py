@@ -47,7 +47,12 @@ def read_students(
 @router.post(
     "/", response_model=StudentBlueprint, dependencies=[Depends(require_admin)]
 )
-def create_student(student: StudentBlueprint, session: SessionDep):
+def create_student(
+    student: StudentBlueprint, session: SessionDep, current_user: CurrentUser
+):
+    if current_user.school_id is None:
+        raise HTTPException(403, detail="Admin not assigned to a school")
+    student.school_id = current_user.school_id
     # Put it in the cart
     session.add(student)
     # Hit "save"
@@ -79,7 +84,12 @@ def read_one_student(
     response_model=StudentBlueprint,
     dependencies=[Depends(require_admin)],
 )
-def update_student(student_id: int, student: StudentUpdate, session: SessionDep):
+def update_student(
+    student_id: int,
+    student: StudentUpdate,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
     student_db = session.get(StudentBlueprint, student_id)
     if not student_db:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -92,7 +102,7 @@ def update_student(student_id: int, student: StudentUpdate, session: SessionDep)
 
 
 @router.delete("/{student_id}", dependencies=[Depends(require_admin)])
-def delete_student(student_id: int, session: SessionDep):
+def delete_student(student_id: int, session: SessionDep, current_user: CurrentUser):
     student = session.get(StudentBlueprint, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Item not found to be deleted")
