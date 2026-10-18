@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, col, select
+import logging
 
 from app.database import SessionDep, get_session
 from app.email_service import send_otp_email
@@ -22,6 +23,7 @@ from app.security import (
     verify_password,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
@@ -83,6 +85,7 @@ def register_user(payload: UserRegister, session: SessionDep):
     try:
         send_otp_email(recipient_email=payload.email, otp=code)
     except Exception:
+        logger.exception("Registration OTP email delivery failed")
         session.delete(new_otp)
         session.delete(pending_registration)
 
@@ -90,9 +93,10 @@ def register_user(payload: UserRegister, session: SessionDep):
             session.commit()
         except Exception:
             session.rollback()
+            
         raise HTTPException(
             status_code=502,
-            detail="Could not send verification email. Please try  again",
+            detail="Could not send verification email. Please try again",
         )
     return {"message": "verification code sent. Complete OTP verification to register"}
 
