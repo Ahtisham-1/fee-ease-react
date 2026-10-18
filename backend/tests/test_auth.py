@@ -12,6 +12,7 @@ from app.security import get_current_user, protect_otp
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
+from app.models.school import School
 
 
 @pytest.fixture
@@ -169,10 +170,13 @@ def test_phone_otp_links_authenticated_user_to_parent(test_context):
     client, test_engine = test_context
     email = "parent@example.com"
     phone = "89898989"
+    school_id = 1
     now = datetime.now(timezone.utc)
 
     with Session(test_engine) as session:
-        parent = ParentBlueprint(name="Parent Example", phone=phone)
+        parent = ParentBlueprint(
+            name="Parent Example", phone=phone, school_id=school_id
+        )
 
         user = User(email=email, hashed_password="test_password_hash", role="parent")
 
@@ -410,10 +414,13 @@ def test_invalid_phone_otp_does_not_link_user_and_increments_attempts(
     client, test_engine = test_context
     email = "parent@example.com"
     phone = "9876543210"
+    school_id = 3
     now = datetime.now(timezone.utc)
 
     with Session(test_engine) as session:
-        parent = ParentBlueprint(name="Parent Example", phone=phone)
+        parent = ParentBlueprint(
+            name="Parent Example", phone=phone, school_id=school_id
+        )
         user = User(
             email=email,
             hashed_password="test-password-hash",

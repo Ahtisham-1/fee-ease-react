@@ -14,7 +14,7 @@ class ParentBlueprint(SQLModel, table=True):
     students: list["StudentBlueprint"] = Relationship(back_populates="parent")
     school_id: int = Field(foreign_key="school.id")
 
-
+ 
 # For Parent Update
 class ParentUpdate(SQLModel):
     name: str
