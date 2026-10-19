@@ -1,17 +1,11 @@
 import json
 import os
-
-# import smtplib
-# from email.message import EmailMessage
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# SENDER_EMAIL = os.getenv("SMTP_EMAIL")
-# SENDER_PASSWORD = os.getenv("SMTP_PASSWORD")
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL")
@@ -57,14 +51,3 @@ def send_otp_email(recipient_email: str, otp: str):
         raise RuntimeError(
             "FeeEase could not reach the Brevo email service."
         ) from error
-
-    # msg = EmailMessage()
-    # msg["Subject"] = "Your FeeEase Verification Code"
-    # msg["From"] = SENDER_EMAIL
-    # msg["To"] = recipient_email
-    # msg.set_content(f"Your OTP Code is {otp}. It expires in 5 minutes")
-    # if not SENDER_EMAIL or not SENDER_PASSWORD:
-    #     raise ValueError("Email credentials are not set in environment variables.")
-    # with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-    #     server.login(SENDER_EMAIL, SENDER_PASSWORD)
-    #     server.send_message(msg)

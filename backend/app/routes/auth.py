@@ -53,10 +53,10 @@ def register_user(payload: UserRegister, session: SessionDep):
                 status_code=409,
                 detail="Registration already pending. Please try again later",
             )
-            
+
         # Expired registration: remove it so a fresh attempt can begin.
         session.delete(pending)
-        
+
         # Invalidate older OTPs for this email.
         previous_otps = session.exec(
             select(OTP).where(OTP.email == payload.email)
@@ -78,7 +78,6 @@ def register_user(payload: UserRegister, session: SessionDep):
     )
     session.add(pending_registration)
     session.add(new_otp)
-
     try:
         session.commit()
     except Exception:
