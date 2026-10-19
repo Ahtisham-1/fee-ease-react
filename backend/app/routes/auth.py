@@ -1,11 +1,11 @@
 import hmac
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, col, select
-import logging
 
 from app.database import SessionDep, get_session
 from app.email_service import send_otp_email
@@ -53,8 +53,10 @@ def register_user(payload: UserRegister, session: SessionDep):
                 status_code=409,
                 detail="Registration already pending. Please try again later",
             )
+            
         # Expired registration: remove it so a fresh attempt can begin.
         session.delete(pending)
+        
         # Invalidate older OTPs for this email.
         previous_otps = session.exec(
             select(OTP).where(OTP.email == payload.email)
@@ -93,7 +95,7 @@ def register_user(payload: UserRegister, session: SessionDep):
             session.commit()
         except Exception:
             session.rollback()
-            
+
         raise HTTPException(
             status_code=502,
             detail="Could not send verification email. Please try again",

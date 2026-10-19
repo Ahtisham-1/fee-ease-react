@@ -25,8 +25,8 @@ export default function ConnectToSchool() {
       );
     }
     // TODO: Call the backend to send the OTP.
-    setOtpSent(true);
-    setMessage("OTP sending will be connected to the backend next.");
+    // setOtpSent(true);
+    // setMessage("OTP sending will be connected to the backend next.");
   }
 
   async function handleVerifyOtp() {
@@ -47,7 +47,7 @@ export default function ConnectToSchool() {
       );
     }
     // TODO: Verify the OTP with the backend.
-    setMessage("OTP verification will be connected to the backend next.");
+    // setMessage("OTP verification will be connected to the backend next.");
   }
 
   return (
