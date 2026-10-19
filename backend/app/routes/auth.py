@@ -22,6 +22,7 @@ from app.security import (
     protect_otp,
     verify_password,
 )
+from app.sms_service import send_otp_sms
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -201,6 +202,7 @@ def send_phone_otp(
 
     try:
         session.commit()
+        send_otp_sms(phone=phone_number, otp=code)
     except Exception:
         session.rollback()
         raise HTTPException(
