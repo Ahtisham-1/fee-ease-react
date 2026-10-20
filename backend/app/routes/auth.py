@@ -186,12 +186,25 @@ def send_phone_otp(
 ):
     now = datetime.now(timezone.utc)
     phone_number = payload.phone.strip()
-    code = generate_otp()
-    otp_hash = protect_otp(code, phone_number)
+
     if current_user.id is None:
         raise HTTPException(
             status_code=500, detail="Authenticated user has not database ID"
         )
+
+    latest_otp = session.exec(
+        select(PhoneOTP)
+        .where(PhoneOTP.user_id == current_user.id, PhoneOTP.phone == phone_number)
+        .order_by(col(PhoneOTP.id).desc())
+    ).first()
+    if latest_otp:
+        expires_at = latest_otp.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if not latest_otp.is_used and now < expires_at:
+            raise HTTPException(
+                status_code=429, detail="Please wait until the current otp expires"
+            )
     old_otps = session.exec(
         select(PhoneOTP).where(
             PhoneOTP.user_id == current_user.id,
@@ -199,8 +212,13 @@ def send_phone_otp(
             PhoneOTP.is_used == False,
         )
     ).all()
+
     for old_otp in old_otps:
         old_otp.is_used = True
+
+    code = generate_otp()
+    otp_hash = protect_otp(code, phone_number)
+
     phone_otp = PhoneOTP(
         user_id=current_user.id,
         phone=phone_number,

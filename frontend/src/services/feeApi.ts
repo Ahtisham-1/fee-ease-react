@@ -12,7 +12,7 @@ interface BackendFee {
 }
 
 export async function getFees(): Promise<FeeObligation[]> {
-  const rawFees = await requestJson<BackendFee[]>("/api/fees");
+  const rawFees = await requestJson<BackendFee[]>("/api/fees/");
   return expectArray<BackendFee>(rawFees, "fees").map((f) => ({
     id: String(f.id),
     studentId: String(f.student_id),

@@ -29,12 +29,12 @@ function mapPayment(p: BackendPayment): Payment {
 }
 
 export async function getPayments(): Promise<Payment[]> {
-  const rawPayments = await requestJson<BackendPayment[]>("/api/payments");
+  const rawPayments = await requestJson<BackendPayment[]>("/api/payments/");
   return expectArray<BackendPayment>(rawPayments, "payments").map(mapPayment);
 }
 
 export async function sendPayment(data: NewPaymentData): Promise<Payment> {
-  const sentPayment = await requestJson<BackendPayment>("/api/payments", {
+  const sentPayment = await requestJson<BackendPayment>("/api/payments/", {
     method: "POST",
     body: data,
   });

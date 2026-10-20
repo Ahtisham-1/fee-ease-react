@@ -42,7 +42,7 @@ export async function getStudents(params?: {
   if (params?.search) query.append("search", params.search);
 
   const queryString = query.toString();
-  const url = queryString ? `/api/students?${queryString}` : "/api/students";
+  const url = queryString ? `/api/students/?${queryString}` : "/api/students/";
 
   const rawStudents = await requestJson<BackendStudent[]>(url);
   return expectArray<BackendStudent>(rawStudents, "students").map(mapStudent);
@@ -50,7 +50,7 @@ export async function getStudents(params?: {
 
 // 2. CREATE a student in PostgreSQL
 export async function createStudents(data: NewStudentData) {
-  return requestJson<BackendStudent>("/api/students", {
+  return requestJson<BackendStudent>("/api/students/", {
     method: "POST",
     body: {
       student_name: data.studentName,

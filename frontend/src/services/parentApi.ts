@@ -17,12 +17,12 @@ function mapParent(p: BackendParent): Parent {
 }
 
 export async function getParents(): Promise<Parent[]> {
-  const rawParents = await requestJson<BackendParent[]>("/api/parents");
+  const rawParents = await requestJson<BackendParent[]>("/api/parents/");
   return expectArray<BackendParent>(rawParents, "parents").map(mapParent);
 }
 
 export async function createParent(data: NewParentData): Promise<Parent> {
-  const saved = await requestJson<BackendParent>("/api/parents", {
+  const saved = await requestJson<BackendParent>("/api/parents/", {
     method: "POST",
     body: { name: data.name, phone: data.phone },
   });
