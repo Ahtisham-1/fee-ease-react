@@ -13,7 +13,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("parent"); // For registration only
   const [otpCode, setOtpCode] = useState("");
   
   const [errorMsg, setErrorMsg] = useState("");
@@ -30,7 +29,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       if (isRegistering) {
         if (!isVerifyingOtp) {
           // STEP 1: Registration already creates the pending record and sends the OTP.
-          await registerApi(email, password, role);
+          await registerApi(email, password);
           setIsVerifyingOtp(true);
           setSuccessMsg(`Account created! A 6-digit verification code was sent to ${email}`);
         } else {
@@ -107,21 +106,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             </div>
           )}
 
-          {/* Account Role (only during initial registration) */}
-          {isRegistering && !isVerifyingOtp && (
-            <div className="input-group">
-              <label className="input-label">Account Type</label>
-              <select 
-                value={role} 
-                onChange={(e) => setRole(e.target.value)}
-                className="custom-select"
-              >
-                <option value="parent">Parent</option>
-                <option value="admin">Administrator</option>
-              </select>
-            </div>
-          )}
-
           {/* 6-Digit OTP Code Input */}
           {isRegistering && isVerifyingOtp && (
             <div className="input-group">
@@ -184,31 +168,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             >
               {isRegistering ? "Already have an account? Log in" : "Need an account? Register"}
             </button>
-          </div>
-        )}
-
-        {/* DEV ONLY: Quick Fill (Login Mode) */}
-        {!isRegistering && (
-          <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--card-border)' }}>
-            <p className="empty-message" style={{ textAlign: 'center', marginBottom: '0.5rem' }}>Dev Quick Fill (Testing Only)</p>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => { setEmail("admin@feeease.com"); setPassword("admin123"); }}
-                className="mini-btn"
-                style={{ flex: 1 }}
-              >
-                Fill Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => { setEmail("parent@feeease.com"); setPassword("parent123"); }}
-                className="mini-btn"
-                style={{ flex: 1 }}
-              >
-                Fill Parent
-              </button>
-            </div>
           </div>
         )}
 
