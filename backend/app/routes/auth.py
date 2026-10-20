@@ -192,6 +192,15 @@ def send_phone_otp(
         raise HTTPException(
             status_code=500, detail="Authenticated user has not database ID"
         )
+    old_otps = session.exec(
+        select(PhoneOTP).where(
+            PhoneOTP.user_id == current_user.id,
+            PhoneOTP.phone == phone_number,
+            PhoneOTP.is_used == False,
+        )
+    ).all()
+    for old_otp in old_otps:
+        old_otp.is_used = True
     phone_otp = PhoneOTP(
         user_id=current_user.id,
         phone=phone_number,
