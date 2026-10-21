@@ -1,8 +1,7 @@
 from datetime import datetime
 
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
-
-from sqlalchemy import DateTime, Column
 
 
 # postgre sql table for otp

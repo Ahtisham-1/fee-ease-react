@@ -229,8 +229,8 @@ def send_phone_otp(
     session.add(phone_otp)
 
     try:
-        session.commit()
         send_otp_sms(phone=phone_number, otp=code)
+        session.commit()
     except Exception:
         session.rollback()
         raise HTTPException(

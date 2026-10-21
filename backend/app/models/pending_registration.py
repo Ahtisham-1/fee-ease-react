@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
-from sqlmodel import Field, SQLModel
+
 from sqlalchemy import Column, DateTime
+from sqlmodel import Field, SQLModel
 
 
 class PendingRegistration(SQLModel, table=True):
