@@ -2,13 +2,17 @@ from datetime import datetime
 
 from sqlmodel import Field, SQLModel
 
+from sqlalchemy import DateTime, Column
+
 
 # postgre sql table for otp
 class OTP(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     email: str = Field(index=True)
     otp_code: str
-    expires_at: datetime
+    expires_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
     is_used: bool = Field(default=False)
     attempts: int = Field(default=0)
 
@@ -22,4 +26,3 @@ class OTPSendRequest(SQLModel):
 class OTPVerifyRequest(SQLModel):
     email: str
     otp_code: str
-
