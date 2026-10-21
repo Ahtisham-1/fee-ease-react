@@ -111,12 +111,21 @@ def protect_otp(otp: str, phone: str) -> str:
 def normalize_phone(phone: str) -> str:
     cleaned_phone = re.sub(r"[^\d+]", "", phone)
 
-    if cleaned_phone.startswith("0"):
-        cleaned_phone = "+91" + cleaned_phone[1:]
+    if cleaned_phone.startswith("+91"):
+        national_number = cleaned_phone[3:]
 
-    elif cleaned_phone.startswith("91") and not cleaned_phone.startswith("+91"):
-        cleaned_phone = "+" + cleaned_phone
+    elif cleaned_phone.startswith("91") and len(cleaned_phone) == 12:
+        national_number = cleaned_phone[2:]
+    elif cleaned_phone.startswith("0") and len(cleaned_phone) == 11:
+        national_number = cleaned_phone[1:]
 
-    elif len(cleaned_phone) == 10:
-        cleaned_phone = "+91" + cleaned_phone
-    return cleaned_phone
+    else:
+        national_number = cleaned_phone
+
+    if len(national_number) != 10:
+        raise ValueError("Invalid phone number")
+    if not national_number.isdigit():
+        raise ValueError("Invalid phone number")
+    if national_number[0] not in "6789":
+        raise ValueError("Invalid phone number")
+    return "+91" + national_number
