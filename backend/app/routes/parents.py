@@ -3,9 +3,7 @@ from sqlmodel import col, select
 
 from app.database import SessionDep
 from app.models.parent import ParentBlueprint, ParentUpdate
-from app.security import require_admin
-from app.security import CurrentUser
-
+from app.security import CurrentUser, normalize_phone, require_admin
 
 router = APIRouter(
     prefix="/api/parents", tags=["Parents"], dependencies=[Depends(require_admin)]
@@ -17,6 +15,7 @@ router = APIRouter(
 def create_parent(
     parent: ParentBlueprint, session: SessionDep, current_user: CurrentUser
 ):
+    parent.phone = normalize_phone(parent.phone)
     if current_user.school_id is None:
         raise HTTPException(status_code=403, detail="Admin is not assigned to a school")
     parent.school_id = current_user.school_id

@@ -21,6 +21,7 @@ from app.security import (
     hash_password,
     protect_otp,
     verify_password,
+    normalize_phone,
 )
 from app.sms_service import send_otp_sms
 
@@ -185,7 +186,7 @@ def send_phone_otp(
     payload: PhoneOTPRequest, current_user: CurrentUser, session: SessionDep
 ):
     now = datetime.now(timezone.utc)
-    phone_number = payload.phone.strip()
+    phone_number = normalize_phone(payload.phone)
 
     if current_user.id is None:
         raise HTTPException(
@@ -248,7 +249,7 @@ def verify_phone_otp(
     if current_user.id is None:
         raise HTTPException(500, detail="Authenticated user has no database ID")
 
-    phone_number = payload.phone.strip()
+    phone_number = normalize_phone(payload.phone)
 
     phone_otp = session.exec(
         select(PhoneOTP)

@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
@@ -105,3 +106,17 @@ def protect_otp(otp: str, phone: str) -> str:
         message,
         hashlib.sha256,
     ).hexdigest()
+
+
+def normalize_phone(phone: str) -> str:
+    cleaned_phone = re.sub(r"[^\d+]", "", phone)
+
+    if cleaned_phone.startswith("0"):
+        cleaned_phone = "+91" + cleaned_phone[1:]
+
+    elif cleaned_phone.startswith("91") and not cleaned_phone.startswith("+91"):
+        cleaned_phone = "+" + cleaned_phone
+
+    elif len(cleaned_phone) == 10:
+        cleaned_phone = "+91" + cleaned_phone
+    return cleaned_phone
