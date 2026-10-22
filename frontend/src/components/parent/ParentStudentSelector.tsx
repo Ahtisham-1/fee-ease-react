@@ -5,6 +5,7 @@ export interface ParentStudentSelectorProps {
   students: Student[];
   selectedStudentId: string;
   onSelectStudent: (studentId: string) => void;
+  onConnectToSchool: () => void;
 }
 
 /**
@@ -18,6 +19,7 @@ export function ParentStudentSelector({
   students,
   selectedStudentId,
   onSelectStudent,
+  onConnectToSchool,
 }: ParentStudentSelectorProps) {
   function handleStudentSelectChange(event: React.ChangeEvent<HTMLSelectElement>) {
     onSelectStudent(event.target.value);
@@ -36,6 +38,9 @@ export function ParentStudentSelector({
         <p className="empty-subtext text-center">
           Please contact the school office to link your parent account to your enrolled children.
         </p>
+        <button type="button" className="connect-school-cta" onClick={onConnectToSchool}>
+          Connect to Your School
+        </button>
       </div>
     );
   }
@@ -74,17 +79,17 @@ export function ParentStudentSelector({
           </div>
         ) : (
           /* Single-child family: clean summary display */
-          <div className="selector-box" style={{ padding: '0.75rem 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="selector-box">
+            <div className="student-summary">
               <div>
-                <span className="box-label" style={{ marginBottom: '0.2rem' }}>STUDENT</span>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {selectedStudent.name}
+                <span className="box-label">STUDENT</span>
+                <div className="student-summary-name">
+                  {selectedStudent.name.toUpperCase()}
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span className="box-label" style={{ marginBottom: '0.2rem' }}>CLASS</span>
-                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--emerald-primary)' }}>
+              <div className="student-summary-class-wrap">
+                <span className="box-label">CLASS</span>
+                <div className="student-summary-class">
                   Class {selectedStudent.gradeName}
                 </div>
               </div>

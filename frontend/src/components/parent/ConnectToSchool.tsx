@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { sendPhoneOtpApi, verifyPhoneOtpApi } from "../../services/authApi";
+import { SchoolIcon } from "../common/Icons";
 
 export default function ConnectToSchool() {
   const [phone, setPhone] = useState("");
@@ -24,9 +25,6 @@ export default function ConnectToSchool() {
           : "Could not send the verification code",
       );
     }
-    // TODO: Call the backend to send the OTP.
-    // setOtpSent(true);
-    // setMessage("OTP sending will be connected to the backend next.");
   }
 
   async function handleVerifyOtp() {
@@ -39,6 +37,7 @@ export default function ConnectToSchool() {
     try {
       const response = await verifyPhoneOtpApi(phone.trim(), otp.trim());
       setMessage(response.message);
+      window.setTimeout(() => window.location.reload(), 500);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -46,22 +45,23 @@ export default function ConnectToSchool() {
           : "Could not verify the phone number",
       );
     }
-    // TODO: Verify the OTP with the backend.
-    // setMessage("OTP verification will be connected to the backend next.");
   }
 
   return (
-    <section className="mx-auto w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-gray-900">
-        Connect to Your School
-      </h2>
+    <section className="card connect-school-card" aria-label="Connect to school">
+      <div className="card-title connect-school-title">
+        <SchoolIcon className="title-icon" />
+        <span>CONNECT TO YOUR SCHOOL</span>
+      </div>
 
-      <p className="mt-2 text-sm text-gray-600">
+      <h2 className="connect-school-heading">Verify your phone number</h2>
+
+      <p className="connect-school-description">
         Verify your registered phone number to find your school records.
       </p>
 
       <form
-        className="mt-5 space-y-4"
+        className="connect-school-form"
         onSubmit={(event) => {
           event.preventDefault();
           handleSendOtp();
@@ -70,19 +70,19 @@ export default function ConnectToSchool() {
         <div>
           <label
             htmlFor="parent-phone"
-            className="mb-1 block text-sm font-medium text-gray-700"
+            className="input-label"
           >
             Phone number
           </label>
 
           <input
             id="parent-phone"
-            type="number"
+            type="tel"
             autoComplete="tel"
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
             placeholder="Enter your registered phone number"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="text-input"
             required
           />
         </div>
@@ -99,7 +99,7 @@ export default function ConnectToSchool() {
             <div>
               <label
                 htmlFor="parent-otp"
-                className="mb-1 block text-sm font-medium text-gray-700"
+                className="input-label"
               >
                 Verification code
               </label>
@@ -115,7 +115,7 @@ export default function ConnectToSchool() {
                 }
                 placeholder="Enter 6-digit OTP"
                 maxLength={6}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="text-input otp-input"
                 required
               />
             </div>
@@ -123,7 +123,7 @@ export default function ConnectToSchool() {
             <button
               type="button"
               onClick={handleVerifyOtp}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="connect-action-button"
             >
               Verify OTP
             </button>
@@ -135,7 +135,7 @@ export default function ConnectToSchool() {
                 setOtp("");
                 setMessage("");
               }}
-              className="w-full text-sm text-blue-600 hover:underline"
+              className="secondary-action-button"
             >
               Change phone number
             </button>
@@ -143,7 +143,7 @@ export default function ConnectToSchool() {
         )}
 
         {message && (
-          <p className="text-sm text-gray-600" role="status" aria-live="polite">
+          <p className="connect-status" role="status" aria-live="polite">
             {message}
           </p>
         )}

@@ -28,6 +28,9 @@ import {
   UsersIcon,
   CalendarIcon,
   ArrowRightIcon,
+  SchoolIcon,
+  WalletIcon,
+  ReceiptIcon,
 } from "./components/common/Icons";
 
 // Parent Portal Suite
@@ -84,6 +87,12 @@ export function App() {
   // Tabs: overview | students | fees | promotion
   // --------------------------------------------------------------------------
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>("overview");
+
+  // WHAT: Stores the parent dashboard section currently visible.
+  // WHY: Parents can focus on one task at a time instead of scrolling through every card.
+  const [activeParentTab, setActiveParentTab] = useState<
+    "home" | "connect" | "payment" | "history"
+  >("home");
 
   // --------------------------------------------------------------------------
   // CENTRAL IN-MEMORY DOMAIN DATABASES (Clean Slate / Zero Mock Data)
@@ -528,25 +537,8 @@ export function App() {
 
   return (
     <div className="app-container">
-      {/* Visual Logout Button injected at the very top of the app */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          padding: "10px",
-          backgroundColor: "#f3f4f6",
-        }}
-      >
-        <button
-          onClick={logout}
-          className="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600 cursor-pointer"
-        >
-          Sign Out
-        </button>
-      </div>
-
       {/* 1. Global Navigation Header (Role is locked, no longer toggleable!) */}
-      <Header role={activeUserRole} />
+      <Header role={activeUserRole} onLogout={logout} />
 
       <main className="main-content">
         {dataLoadError && (
@@ -567,42 +559,47 @@ export function App() {
             {/* PARENT PORTAL VIEW                                                  */}
             {/* =================================================================== */}
             {activeUserRole === "parent" && (
-              <div className="parent-grid">
-                <div className="column-left">
-                  <ConnectToSchool />
-                  <ParentStudentSelector
-                    students={studentsDatabase}
-                    selectedStudentId={selectedStudentProfileId}
-                    onSelectStudent={setSelectedStudentProfileId}
-                  />
+              <div className="parent-portal">
+                <nav className="parent-nav-bar" aria-label="Parent Portal Navigation">
+                  <button type="button" className={`parent-tab-btn ${activeParentTab === "home" ? "active" : ""}`} onClick={() => setActiveParentTab("home")}>
+                    <SchoolIcon className="nav-btn-icon" />
+                    <span>Home</span>
+                  </button>
+                  <button type="button" className={`parent-tab-btn ${activeParentTab === "connect" ? "active" : ""}`} onClick={() => setActiveParentTab("connect")}>
+                    <UsersIcon className="nav-btn-icon" />
+                    <span>Connect School</span>
+                  </button>
+                  <button type="button" className={`parent-tab-btn ${activeParentTab === "payment" ? "active" : ""}`} onClick={() => setActiveParentTab("payment")}>
+                    <WalletIcon className="nav-btn-icon" />
+                    <span>Submit Payment</span>
+                  </button>
+                  <button type="button" className={`parent-tab-btn ${activeParentTab === "history" ? "active" : ""}`} onClick={() => setActiveParentTab("history")}>
+                    <ReceiptIcon className="nav-btn-icon" />
+                    <span>Payment History</span>
+                  </button>
+                </nav>
 
-                  {activeSelectedStudent && (
-                    <FeeDetail
-                      student={activeSelectedStudent}
-                      feeObligations={feeObligationsDatabase}
-                      payments={paymentsDatabase}
+                {activeParentTab === "connect" && <ConnectToSchool />}
+
+                {activeParentTab === "home" && (
+                  <div className="parent-home-grid">
+                    <ParentStudentSelector
+                      students={studentsDatabase}
+                      selectedStudentId={selectedStudentProfileId}
+                      onSelectStudent={setSelectedStudentProfileId}
+                      onConnectToSchool={() => setActiveParentTab("connect")}
                     />
-                  )}
-                </div>
+                    {activeSelectedStudent && <FeeDetail student={activeSelectedStudent} feeObligations={feeObligationsDatabase} payments={paymentsDatabase} />}
+                  </div>
+                )}
 
-                <div className="column-right">
-                  {activeSelectedStudent && (
-                    <>
-                      <PayFeesForm
-                        student={activeSelectedStudent}
-                        netPendingBalance={activeStudentFinancials.netBalance}
-                        onPayFee={handleProcessPayment}
-                      />
+                {activeParentTab === "payment" && activeSelectedStudent && (
+                  <PayFeesForm student={activeSelectedStudent} netPendingBalance={activeStudentFinancials.netBalance} onPayFee={handleProcessPayment} />
+                )}
 
-                      <PaymentHistory
-                        payments={paymentsDatabase.filter(
-                          (receipt) =>
-                            receipt.belongsTo === selectedStudentProfileId,
-                        )}
-                      />
-                    </>
-                  )}
-                </div>
+                {activeParentTab === "history" && (
+                  <PaymentHistory payments={paymentsDatabase.filter((receipt) => receipt.belongsTo === selectedStudentProfileId)} />
+                )}
               </div>
             )}
 

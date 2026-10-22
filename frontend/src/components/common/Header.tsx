@@ -3,13 +3,14 @@ import { SchoolIcon, UsersIcon, ShieldIcon } from "./Icons";
 
 export interface HeaderProps {
   role: Role;
+  onLogout: () => void;
 }
 
 /**
  * Modern Emerald & Gold Navigation Header
  * Updated to lock the UI to the actual role logged in, rather than allowing a fake manual toggle!
  */
-export function Header({ role }: HeaderProps) {
+export function Header({ role, onLogout }: HeaderProps) {
   return (
     <header className="header-bar" role="banner">
       <div className="header-inner">
@@ -27,7 +28,8 @@ export function Header({ role }: HeaderProps) {
         </div>
 
         {/* Right Corner: Shows the locked role instead of buttons */}
-        <nav className="role-switcher" aria-label="Portal Navigation" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
+        <div className="header-actions">
+          <nav className="role-switcher" aria-label="Portal Navigation">
           {role === "parent" ? (
             <>
               <UsersIcon className="nav-btn-icon" style={{ color: 'var(--emerald-primary)' }} />
@@ -39,7 +41,11 @@ export function Header({ role }: HeaderProps) {
               <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>Admin Office</span>
             </>
           )}
-        </nav>
+          </nav>
+          <button type="button" className="header-signout-button" onClick={onLogout}>
+            Sign Out
+          </button>
+        </div>
       </div>
     </header>
   );
