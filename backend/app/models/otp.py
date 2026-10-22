@@ -8,7 +8,7 @@ from sqlmodel import Field, SQLModel
 class OTP(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     email: str = Field(index=True)
-    otp_code: str
+    otp_hash: str
     expires_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), nullable=False)
     )

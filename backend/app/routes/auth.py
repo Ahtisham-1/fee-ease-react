@@ -24,6 +24,8 @@ from app.security import (
     normalize_phone,
 )
 from app.sms_service import send_otp_sms
+from alembic import op
+import sqlalchemy as sa
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -76,7 +78,9 @@ def register_user(payload: UserRegister, session: SessionDep):
     )
     code = generate_otp()
     new_otp = OTP(
-        email=payload.email, otp_code=code, expires_at=now + timedelta(minutes=1)
+        email=payload.email,
+        otp_hash=protect_otp(code, payload.email),
+        expires_at=now + timedelta(minutes=1),
     )
     session.add(pending_registration)
     session.add(new_otp)
@@ -121,7 +125,9 @@ def login_user(
 
 
 @router.post("/verify_otp")
-def verify_otp(request: OTPVerifyRequest, session: Session = Depends(get_session)):
+def verify_otp_email(
+    request: OTPVerifyRequest, session: Session = Depends(get_session)
+):
 
     db_otp = session.exec(
         select(OTP).where(OTP.email == request.email).order_by(col(OTP.id).desc())
@@ -150,11 +156,11 @@ def verify_otp(request: OTPVerifyRequest, session: Session = Depends(get_session
         raise HTTPException(
             status_code=429, detail="Too many failed attempts. This code is now locked."
         )
-
-    if db_otp.otp_code != request.otp_code:
+    submitted_otp_hash = protect_otp(request.otp_code, request.email)
+    if not hmac.compare_digest(submitted_otp_hash, db_otp.otp_hash):
         db_otp.attempts += 1
         session.commit()
-        raise HTTPException(400, detail="Invalid")
+        raise HTTPException(status_code=400, detail="Invalid")
     pending_user = session.exec(
         select(PendingRegistration).where(PendingRegistration.email == request.email)
     ).first()

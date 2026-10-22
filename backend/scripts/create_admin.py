@@ -1,15 +1,14 @@
 from getpass import getpass
 
 from app.database import engine
+from app.models.fee import FeeObligation
+from app.models.parent import ParentBlueprint
 from app.models.school import School
+from app.models.student import StudentBlueprint
 from app.models.user import User
 from app.security import hash_password
 from sqlmodel import Session, select
-from app.models.parent import ParentBlueprint
 
-from app.models.student import StudentBlueprint
-
-from app.models.fee import FeeObligation
 
 def main() -> None:
     school_name = input("School name: ").strip()
