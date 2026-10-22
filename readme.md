@@ -16,14 +16,18 @@ The single-school MVP includes:
 - Parent-scoped student, fee, and payment views.
 - Pagination and search for administrative records.
 - Phone OTP parent-account linking foundations and tested lifecycle behavior.
+- Phone-number normalization and validation for parent linking.
+- Alembic database migration tracking with timezone-aware OTP timestamps.
 - PostgreSQL, Docker, Render, and Vercel deployment.
 
 Current limitations:
 
 - Real SMS delivery for phone OTPs is not connected yet.
 - Payments currently represent simulated success; gateway verification and settlement are planned for Feature 20.
+- Real SMS delivery for phone OTPs requires a provider before production use.
+- Private administrator onboarding is the next implementation step.
 - Multi-school isolation is planned but not complete.
-- OTP lifetimes, resend rules, rate limits, cleanup, and phone normalization require production hardening.
+- Automated test coverage will be restored before production launch.
 
 ## Architecture
 
@@ -50,7 +54,8 @@ fee-ease/
 │   │   ├── database.py   Engine and request session dependency
 │   │   ├── security.py   Passwords, JWTs, OTP protection, RBAC
 │   │   └── main.py       FastAPI application
-│   ├── tests/            Backend tests
+│   ├── migrations/       Alembic database migrations
+│   ├── alembic.ini       Alembic configuration
 │   ├── pyproject.toml
 │   └── Dockerfile
 ├── frontend/
@@ -102,8 +107,9 @@ DATABASE_URL=your-postgresql-connection-string
 SECRET_KEY=your-jwt-secret
 ALGORITHM=HS256
 PHONE_OTP_SECRET=your-phone-otp-secret
-SMTP_EMAIL=your-sender-email
-SMTP_PASSWORD=your-sender-password
+BREVO_API_KEY=your-brevo-api-key
+BREVO_SENDER_EMAIL=your-sender-email
+BREVO_SENDER_NAME=your-sender-name
 ```
 
 Start PostgreSQL from the repository root:
@@ -122,14 +128,16 @@ uv run fastapi dev app/main.py
 
 The local API normally runs at `http://localhost:8000`.
 
-### Backend tests
+### Database migrations
 
 ```bash
 cd backend
-uv run pytest -q
+uv run alembic upgrade head
+uv run alembic check
 ```
 
-The tests use an isolated in-memory SQLite database.
+Database structure changes are recorded in `backend/migrations/` instead of being
+applied only through manual SQL commands.
 
 ## Frontend
 
