@@ -108,6 +108,10 @@ def protect_otp(otp: str, phone: str) -> str:
     ).hexdigest()
 
 
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
 def normalize_phone(phone: str) -> str:
     cleaned_phone = re.sub(r"[^\d+]", "", phone)
 

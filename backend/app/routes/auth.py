@@ -22,6 +22,7 @@ from app.security import (
     normalize_phone,
     protect_otp,
     verify_password,
+    normalize_email,
 )
 from app.sms_service import send_otp_sms
 
@@ -34,6 +35,7 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
     "/register",
 )
 def register_user(payload: UserRegister, session: SessionDep):
+    email = normalize_email(payload.email)
     now = datetime.now(timezone.utc)
     # Reject emails that already have registered accounts
     existing_user = session.exec(
@@ -66,9 +68,8 @@ def register_user(payload: UserRegister, session: SessionDep):
         for previous_otp in previous_otps:
             if not previous_otp.is_used:
                 previous_otp.is_used = True
-
     pending_registration = PendingRegistration(
-        email=payload.email,
+        email=email,
         hashed_password=hash_password(payload.password),
         role="parent",
         created_at=now,
@@ -76,8 +77,8 @@ def register_user(payload: UserRegister, session: SessionDep):
     )
     code = generate_otp()
     new_otp = OTP(
-        email=payload.email,
-        otp_hash=protect_otp(code, payload.email),
+        email=email,
+        otp_hash=protect_otp(code, email),
         expires_at=now + timedelta(minutes=1),
     )
     session.add(pending_registration)
@@ -88,7 +89,7 @@ def register_user(payload: UserRegister, session: SessionDep):
         session.rollback()
         raise HTTPException(status_code=500, detail="Could not start registration")
     try:
-        send_otp_email(recipient_email=payload.email, otp=code)
+        send_otp_email(recipient_email=email, otp=code)
     except Exception:
         logger.exception("Registration OTP email delivery failed")
         session.delete(new_otp)
@@ -110,7 +111,8 @@ def register_user(payload: UserRegister, session: SessionDep):
 def login_user(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep
 ):
-    user = session.exec(select(User).where(User.email == form_data.username)).first()
+    email = normalize_email(form_data.username)
+    user = session.exec(select(User).where(User.email == email)).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=401,
@@ -125,11 +127,11 @@ def login_user(
 @router.post("/verify_otp")
 def verify_otp_email(
     request: OTPVerifyRequest,
-    session: Session = Depends(get_session),  # noqa: B008
+    session: Session = Depends(get_session),
 ):
-
+    email = normalize_email(request.email)
     db_otp = session.exec(
-        select(OTP).where(OTP.email == request.email).order_by(col(OTP.id).desc())
+        select(OTP).where(OTP.email == email).order_by(col(OTP.id).desc())
     ).first()
 
     if db_otp is None:
@@ -155,19 +157,19 @@ def verify_otp_email(
         raise HTTPException(
             status_code=429, detail="Too many failed attempts. This code is now locked."
         )
-    submitted_otp_hash = protect_otp(request.otp_code, request.email)
+    submitted_otp_hash = protect_otp(request.otp_code, email)
     if not hmac.compare_digest(submitted_otp_hash, db_otp.otp_hash):
         db_otp.attempts += 1
         session.commit()
         raise HTTPException(status_code=400, detail="Invalid")
     pending_user = session.exec(
-        select(PendingRegistration).where(PendingRegistration.email == request.email)
+        select(PendingRegistration).where(PendingRegistration.email == email)
     ).first()
 
     if not pending_user:
         raise HTTPException(status_code=404, detail="No user found for this otp")
     verified_user = User(
-        email=pending_user.email,
+        email=email,
         hashed_password=pending_user.hashed_password,
         role=pending_user.role,
     )
