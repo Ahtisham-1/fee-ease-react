@@ -124,7 +124,8 @@ def login_user(
 
 @router.post("/verify_otp")
 def verify_otp_email(
-    request: OTPVerifyRequest, session: Session = Depends(get_session)  # noqa: B008
+    request: OTPVerifyRequest,
+    session: Session = Depends(get_session),  # noqa: B008
 ):
 
     db_otp = session.exec(
@@ -179,6 +180,7 @@ def verify_otp_email(
 
     except Exception:
         session.rollback()
+        logger.exception("Failed to complete email OTP registration")
         raise HTTPException(500, detail="Internal Error!")
 
     return {"message": "OTP verified correctly"}
