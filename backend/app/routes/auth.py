@@ -9,23 +9,21 @@ from sqlmodel import Session, col, select
 
 from app.database import SessionDep, get_session
 from app.email_service import send_otp_email
-from app.models.otp import OTP, OTPSendRequest, OTPVerifyRequest
+from app.models.otp import OTP, OTPVerifyRequest
 from app.models.parent import ParentBlueprint
 from app.models.pending_registration import PendingRegistration
 from app.models.phone_otp import PhoneOTP, PhoneOTPRequest, PhoneOTPVerifyRequest
-from app.models.user import Token, User, UserRegister, UserResponse
+from app.models.user import Token, User, UserRegister
 from app.security import (
     CurrentUser,
     create_access_token,
     generate_otp,
     hash_password,
+    normalize_phone,
     protect_otp,
     verify_password,
-    normalize_phone,
 )
 from app.sms_service import send_otp_sms
-from alembic import op
-import sqlalchemy as sa
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -126,7 +124,7 @@ def login_user(
 
 @router.post("/verify_otp")
 def verify_otp_email(
-    request: OTPVerifyRequest, session: Session = Depends(get_session)
+    request: OTPVerifyRequest, session: Session = Depends(get_session)  # noqa: B008
 ):
 
     db_otp = session.exec(
