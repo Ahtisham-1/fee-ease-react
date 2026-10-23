@@ -9,7 +9,7 @@ from sqlmodel import Session, col, select
 
 from app.database import SessionDep, get_session
 from app.email_service import send_otp_email
-from app.models.otp import OTP, OTPVerifyRequest
+from app.models.email_otp import OTP, OTPVerifyRequest
 from app.models.parent import ParentBlueprint
 from app.models.pending_registration import PendingRegistration
 from app.models.phone_otp import PhoneOTP, PhoneOTPRequest, PhoneOTPVerifyRequest
@@ -19,10 +19,10 @@ from app.security import (
     create_access_token,
     generate_otp,
     hash_password,
+    normalize_email,
     normalize_phone,
     protect_otp,
     verify_password,
-    normalize_email,
 )
 from app.sms_service import send_otp_sms
 
@@ -80,6 +80,7 @@ def register_user(payload: UserRegister, session: SessionDep):
         email=email,
         otp_hash=protect_otp(code, email),
         expires_at=now + timedelta(minutes=1),
+        created_at=now,
     )
     session.add(pending_registration)
     session.add(new_otp)

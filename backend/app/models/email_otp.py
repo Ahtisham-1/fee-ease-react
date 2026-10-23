@@ -14,6 +14,9 @@ class OTP(SQLModel, table=True):
     )
     is_used: bool = Field(default=False)
     attempts: int = Field(default=0)
+    created_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
 
 
 # when user sends the request
