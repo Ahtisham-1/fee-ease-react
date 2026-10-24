@@ -20,8 +20,8 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 from app.database import engine
-from app.models.fee import FeeObligation
 from app.models.email_otp import OTP
+from app.models.fee import FeeObligation
 from app.models.parent import ParentBlueprint
 from app.models.payment import Payment
 from app.models.pending_registration import PendingRegistration

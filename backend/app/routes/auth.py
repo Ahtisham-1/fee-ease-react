@@ -37,16 +37,25 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 def register_user(payload: UserRegister, session: SessionDep):
     email = normalize_email(payload.email)
     now = datetime.now(timezone.utc)
-    # Reject emails that already have registered accounts
-    existing_user = session.exec(
-        select(User).where(User.email == payload.email)
+    latest_otp = session.exec(
+        select(OTP).where(OTP.email == email).order_by(col(OTP.id).desc())
     ).first()
+    # Reject emails that already have registered accounts
+    existing_user = session.exec(select(User).where(User.email == email)).first()
     if existing_user:
         raise HTTPException(status_code=409, detail="Email already registered")
-
+    if latest_otp:
+        created_at = latest_otp.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        cooldown_ends_at = created_at + timedelta(seconds=60)
+        if now < cooldown_ends_at:
+            raise HTTPException(
+                status_code=429, detail="Please wait before requesting another OTP"
+            )
     # Check for an existing pending registration.
     pending = session.exec(
-        select(PendingRegistration).where(PendingRegistration.email == payload.email)
+        select(PendingRegistration).where(PendingRegistration.email == email)
     ).first()
     if pending:
         expiry = pending.expires_at
@@ -62,9 +71,7 @@ def register_user(payload: UserRegister, session: SessionDep):
         session.delete(pending)
 
         # Invalidate older OTPs for this email.
-        previous_otps = session.exec(
-            select(OTP).where(OTP.email == payload.email)
-        ).all()
+        previous_otps = session.exec(select(OTP).where(OTP.email == email)).all()
         for previous_otp in previous_otps:
             if not previous_otp.is_used:
                 previous_otp.is_used = True

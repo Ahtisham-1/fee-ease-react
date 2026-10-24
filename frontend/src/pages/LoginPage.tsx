@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ApiError } from '../services/apiClient';
 import { registerApi, verifyOtpApi } from '../services/authApi';
 
@@ -14,10 +14,22 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otpCode, setOtpCode] = useState("");
+  const [otpEmail, setOtpEmail] = useState("");
   
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setCooldownSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [cooldownSeconds]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +40,21 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     try {
       if (isRegistering) {
         if (!isVerifyingOtp) {
+          if (
+            cooldownSeconds > 0 &&
+            email.trim().toLowerCase() === otpEmail
+          ) {
+            setErrorMsg(
+              `Please wait ${cooldownSeconds} seconds before requesting another OTP for this email.`,
+            );
+            return;
+          }
+
           // STEP 1: Registration already creates the pending record and sends the OTP.
           await registerApi(email, password);
           setIsVerifyingOtp(true);
+          setOtpEmail(email.trim().toLowerCase());
+          setCooldownSeconds(60);
           setSuccessMsg(`Account created! A 6-digit verification code was sent to ${email}`);
         } else {
           // STEP 2: Verify OTP code + Auto-login
@@ -54,7 +78,20 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   const handleResendOtp = async () => {
-    setErrorMsg("Resending an OTP is not available yet. Please wait for the current code to expire or edit the email address.");
+    if (cooldownSeconds > 0) return;
+
+    setErrorMsg("");
+    setIsLoading(true);
+    try {
+      await registerApi(email, password);
+      setOtpEmail(email.trim().toLowerCase());
+      setCooldownSeconds(60);
+      setSuccessMsg("A new verification code was sent to your email.");
+    } catch (error) {
+      setErrorMsg(error instanceof ApiError ? error.message : "Could not resend the verification code");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -134,14 +171,20 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
           {/* Resend and Back controls during OTP verification */}
           {isRegistering && isVerifyingOtp && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.5rem' }}>
+              <p className="otp-cooldown-message" role="status" aria-live="polite">
+                {cooldownSeconds > 0
+                  ? `You can request another OTP after ${cooldownSeconds} seconds.`
+                  : "You can request another OTP now."}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <button 
                 type="button" 
                 className="mini-btn" 
                 onClick={handleResendOtp}
-                disabled={isLoading}
+                disabled={isLoading || cooldownSeconds > 0}
               >
-                Resend Code
+                {cooldownSeconds > 0 ? `Resend in ${cooldownSeconds}s` : "Resend Code"}
               </button>
               <button 
                 type="button" 
@@ -150,6 +193,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               >
                 Edit Email
               </button>
+              </div>
             </div>
           )}
         </form>
