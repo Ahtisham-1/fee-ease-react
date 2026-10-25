@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, col, select
 
@@ -14,6 +14,7 @@ from app.models.parent import ParentBlueprint
 from app.models.pending_registration import PendingRegistration
 from app.models.phone_otp import PhoneOTP, PhoneOTPRequest, PhoneOTPVerifyRequest
 from app.models.user import Token, User, UserRegister
+from app.rate_limiter import is_rate_limited
 from app.security import (
     CurrentUser,
     create_access_token,
@@ -34,7 +35,13 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 @router.post(
     "/register",
 )
-def register_user(payload: UserRegister, session: SessionDep):
+def register_user(payload: UserRegister, session: SessionDep, request: Request):
+    ip_address = request.client.host if request.client else "unknown"
+    if is_rate_limited(ip_address):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many registration requests. Please try again later",
+        )
     email = normalize_email(payload.email)
     now = datetime.now(timezone.utc)
     latest_otp = session.exec(
