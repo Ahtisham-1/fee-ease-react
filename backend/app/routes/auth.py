@@ -14,7 +14,7 @@ from app.models.parent import ParentBlueprint
 from app.models.pending_registration import PendingRegistration
 from app.models.phone_otp import PhoneOTP, PhoneOTPRequest, PhoneOTPVerifyRequest
 from app.models.user import Token, User, UserRegister
-from app.rate_limiter import is_rate_limited
+from app.rate_limiter import get_client_ip, is_rate_limited
 from app.security import (
     CurrentUser,
     create_access_token,
@@ -36,7 +36,7 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
     "/register",
 )
 def register_user(payload: UserRegister, session: SessionDep, request: Request):
-    ip_address = request.client.host if request.client else "unknown"
+    ip_address = get_client_ip(request)
     if is_rate_limited(ip_address):
         raise HTTPException(
             status_code=429,
