@@ -206,8 +206,15 @@ def verify_otp_email(
 # Phone OTP
 @router.post("/phone/send-otp")
 def send_phone_otp(
-    payload: PhoneOTPRequest, current_user: CurrentUser, session: SessionDep
+    payload: PhoneOTPRequest,
+    current_user: CurrentUser,
+    session: SessionDep,
+    request: Request,
 ):
+    ip_address = get_client_ip(request)
+    rate_limited = is_rate_limited(ip_address)
+    if rate_limited is True:
+        raise HTTPException(429, detail="Too many OTP requests. Please try again later")
     now = datetime.now(timezone.utc)
     phone_number = normalize_phone(payload.phone)
 
