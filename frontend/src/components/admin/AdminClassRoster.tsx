@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { Student, Parent, FeeObligation, Payment } from "../../types";
 import { getStudentFinancialSummary } from "../../utils/feeCalculator";
 import { formatRupees } from "../../utils/format";
@@ -46,15 +46,10 @@ export function AdminClassRoster({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 5;
 
-  // Whenever grade or search query changes, reset back to page 1
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedGrade, searchQuery]);
-
   const classStudents = students.filter(
     (student) => student.gradeName === selectedGrade
   );
- 
+
   // Precompute each student's pending balance ONCE per render instead of
   // recomputing it inside the sort comparator and again for every row.
   const netBalanceById = new Map<string, number>(
@@ -117,7 +112,10 @@ export function AdminClassRoster({
           <select
             className="class-selector mini-select"
             value={selectedGrade}
-            onChange={(e) => onSelectGrade?.(e.target.value)}
+            onChange={(e) => {
+              setCurrentPage(1);
+              onSelectGrade?.(e.target.value);
+            }}
             aria-label="Filter by Grade"
           >
             {classGrade.map((grade) => (
@@ -181,13 +179,19 @@ export function AdminClassRoster({
               className="text-input roster-search-input"
               placeholder={`Search in Class ${selectedGrade} by student or parent name...`}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setCurrentPage(1);
+                setSearchQuery(e.target.value);
+              }}
             />
             {searchQuery && (
               <button
                 type="button"
                 className="roster-search-clear"
-                onClick={() => setSearchQuery("")}
+                onClick={() => {
+                  setCurrentPage(1);
+                  setSearchQuery("");
+                }}
                 aria-label="Clear search"
                 title="Clear search"
               >
@@ -215,7 +219,10 @@ export function AdminClassRoster({
           <button
             type="button"
             className="role-btn mini-btn mt-2"
-            onClick={() => setSearchQuery("")}
+            onClick={() => {
+              setCurrentPage(1);
+              setSearchQuery("");
+            }}
           >
             Clear Search Filter
           </button>
