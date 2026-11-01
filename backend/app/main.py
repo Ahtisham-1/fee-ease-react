@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -43,7 +45,12 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "FeeEase API"}
+    health_data: dict[str, str] = {
+        "status": "ok",
+        "service": "FeeEase API",
+    }
+    health_data["checked_at"] = datetime.now(timezone.utc).isoformat()
+    return health_data
 
 
 # Create Database Tables on Startup
