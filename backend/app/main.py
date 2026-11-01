@@ -43,7 +43,7 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "service": "FeeEase API"}
 
 
 # Create Database Tables on Startup
