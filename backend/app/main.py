@@ -41,6 +41,11 @@ def read_root():
     return {"message": "Clean start successful!"}
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
 # Create Database Tables on Startup
 @app.on_event("startup")
 def on_startup():
