@@ -162,7 +162,7 @@ def verify_otp_email(
 
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
-
+    
     if current_time >= expires_at:
         raise HTTPException(
             status_code=400, detail="OTP has expired. Please request a new one."

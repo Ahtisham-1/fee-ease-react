@@ -11,6 +11,7 @@ class PhoneOTP(SQLModel, table=True):
     expires_at: datetime
     is_used: bool = Field(default=False)
     attempts: int = Field(default=0)
+    created_at:datetime = Field(default_factory=datetime.now)
 
 
 class PhoneOTPRequest(BaseModel):

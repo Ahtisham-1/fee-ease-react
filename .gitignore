@@ -32,3 +32,19 @@ venv/
 env/
 .env
 .pytest_cache/
+.PROJECT.md
+
+
+# Personal config files
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshrc
+.gitconfig
+.gitmodules
+.mcp.json
+.ripgreprc
+.claude/
+CLAUDE.md
+.ua/
