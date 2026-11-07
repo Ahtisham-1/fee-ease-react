@@ -229,6 +229,12 @@ def send_phone_otp(
         .order_by(col(PhoneOTP.id).desc())
     ).first()
     if latest_otp:
+        created_at = latest_otp.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        cooldown_ends_at = created_at + timedelta(seconds=60)
+        if now < cooldown_ends_at:
+            raise HTTPException(429, detail="Please wait before requesting another OTP")
         expires_at = latest_otp.expires_at
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
