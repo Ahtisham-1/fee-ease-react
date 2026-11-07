@@ -162,7 +162,7 @@ def verify_otp_email(
 
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
-    
+
     if current_time >= expires_at:
         raise HTTPException(
             status_code=400, detail="OTP has expired. Please request a new one."
@@ -310,11 +310,15 @@ def verify_phone_otp(
         session.add(phone_otp)
         session.commit()
         raise HTTPException(status_code=400, detail="Invalid verification code")
+    if current_user.parent_id is not None:
+        raise HTTPException(
+            status_code=400, detail="Parent account already linked to this user"
+        )
     parent = session.exec(
         select(ParentBlueprint).where(ParentBlueprint.phone == phone_number)
     ).first()
     if parent is None:
-        raise HTTPException(404, detail="No school recored found for this phone number")
+        raise HTTPException(400, detail="Verification failed")
     current_user.parent_id = parent.id
     phone_otp.is_used = True
     session.add(current_user)
