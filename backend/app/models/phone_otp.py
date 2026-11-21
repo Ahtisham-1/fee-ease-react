@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import Field, SQLModel
 from pydantic import BaseModel
+from sqlalchemy import Column, DateTime
 
 
 class PhoneOTP(SQLModel, table=True):
@@ -8,10 +9,15 @@ class PhoneOTP(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     phone: str = Field(index=True)
     otp_hash: str
-    expires_at: datetime
+    expires_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
     is_used: bool = Field(default=False)
     attempts: int = Field(default=0)
-    created_at:datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
 
 class PhoneOTPRequest(BaseModel):
