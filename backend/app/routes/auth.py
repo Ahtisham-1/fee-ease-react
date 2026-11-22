@@ -320,11 +320,10 @@ def verify_phone_otp(
         raise HTTPException(
             status_code=400, detail="Parent account already linked to this user"
         )
-    parent = session.exec(
-        select(ParentBlueprint).where(ParentBlueprint.phone == phone_number)
-    ).first()
-    if parent is None:
-        raise HTTPException(400, detail="Verification failed")
+    matching_parents = session.exec(select(ParentBlueprint).where(ParentBlueprint.phone == phone_number)).all()
+    if len(matching_parents) != 1:
+        raise HTTPException(400 , detail="Verification failed")
+    parent = matching_parents[0]
     current_user.parent_id = parent.id
     phone_otp.is_used = True
     session.add(current_user)
