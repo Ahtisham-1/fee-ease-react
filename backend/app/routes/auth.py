@@ -286,11 +286,14 @@ def verify_phone_otp(
         raise HTTPException(500, detail="Authenticated user has no database ID")
 
     phone_number = normalize_phone(payload.phone)
-
     phone_otp = session.exec(
         select(PhoneOTP)
-        .where(PhoneOTP.user_id == current_user.id, PhoneOTP.phone == phone_number)
+        .where(
+            PhoneOTP.user_id == current_user.id,
+            PhoneOTP.phone == phone_number,
+        )
         .order_by(col(PhoneOTP.id).desc())
+        .with_for_update()
     ).first()
 
     if phone_otp is None:
@@ -320,9 +323,11 @@ def verify_phone_otp(
         raise HTTPException(
             status_code=400, detail="Parent account already linked to this user"
         )
-    matching_parents = session.exec(select(ParentBlueprint).where(ParentBlueprint.phone == phone_number)).all()
+    matching_parents = session.exec(
+        select(ParentBlueprint).where(ParentBlueprint.phone == phone_number)
+    ).all()
     if len(matching_parents) != 1:
-        raise HTTPException(400 , detail="Verification failed")
+        raise HTTPException(400, detail="Verification failed")
     parent = matching_parents[0]
     current_user.parent_id = parent.id
     phone_otp.is_used = True
