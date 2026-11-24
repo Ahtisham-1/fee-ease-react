@@ -11,7 +11,7 @@ from app.models.school import School
 from app.models.user import User
 from app.security import create_access_token, protect_otp
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 
 def test_two_requests_cannot_use_the_same_otp():
@@ -25,6 +25,7 @@ def test_two_requests_cannot_use_the_same_otp():
         session.add(school)
         session.commit()
         session.refresh(school)
+        assert school.id is not None
 
         parent = ParentBlueprint(
             name="OTP lock test parent",
@@ -41,6 +42,8 @@ def test_two_requests_cannot_use_the_same_otp():
         session.commit()
         session.refresh(parent)
         session.refresh(user)
+        assert parent.id is not None
+        assert user.id is not None
 
         phone_otp = PhoneOTP(
             user_id=user.id,
@@ -51,6 +54,7 @@ def test_two_requests_cannot_use_the_same_otp():
         session.add(phone_otp)
         session.commit()
         session.refresh(phone_otp)
+        assert phone_otp.id is not None
 
         school_id = school.id
         parent_id = parent.id
@@ -139,6 +143,7 @@ def _seed_phone_otp_case(
         session.add(school)
         session.commit()
         session.refresh(school)
+        assert school.id is not None
 
         parents = [
             ParentBlueprint(
@@ -150,17 +155,26 @@ def _seed_phone_otp_case(
         ]
         session.add_all(parents)
         session.flush()
+        if already_linked and parents:
+            assert parents[0].id is not None
+            linked_parent_id = parents[0].id
+        else:
+            linked_parent_id = None
         user = User(
             email=email,
             hashed_password="not-used",
             role="parent",
-            parent_id=parents[0].id if already_linked and parents else None,
+            parent_id=linked_parent_id,
         )
         session.add(user)
         session.commit()
         session.refresh(user)
+        assert user.id is not None
+        parent_ids = []
         for parent in parents:
             session.refresh(parent)
+            assert parent.id is not None
+            parent_ids.append(parent.id)
 
         phone_otp = PhoneOTP(
             user_id=user.id,
@@ -173,13 +187,14 @@ def _seed_phone_otp_case(
         session.add(phone_otp)
         session.commit()
         session.refresh(phone_otp)
+        assert phone_otp.id is not None
 
         case = {
             "phone": phone,
             "email": email,
             "otp_code": otp_code,
             "school_id": school.id,
-            "parent_ids": [parent.id for parent in parents],
+            "parent_ids": parent_ids,
             "user_id": user.id,
             "otp_id": phone_otp.id,
             "token": create_access_token({"sub": email}),
@@ -234,6 +249,8 @@ def test_expired_otp_is_rejected_without_linking_or_using_it():
         with Session(engine) as session:
             user = session.get(User, case["user_id"])
             phone_otp = session.get(PhoneOTP, case["otp_id"])
+            assert user is not None
+            assert phone_otp is not None
             assert user.parent_id is None
             assert phone_otp.is_used is False
     finally:
@@ -249,6 +266,7 @@ def test_wrong_otp_increments_attempts_and_three_attempts_lock_the_code():
             assert response.json()["detail"] == "Invalid verification code"
             with Session(engine) as session:
                 phone_otp = session.get(PhoneOTP, case["otp_id"])
+                assert phone_otp is not None
                 assert phone_otp.attempts == attempt + 1
 
         locked_response = _verify(case)
@@ -259,6 +277,8 @@ def test_wrong_otp_increments_attempts_and_three_attempts_lock_the_code():
         with Session(engine) as session:
             user = session.get(User, case["user_id"])
             phone_otp = session.get(PhoneOTP, case["otp_id"])
+            assert user is not None
+            assert phone_otp is not None
             assert user.parent_id is None
             assert phone_otp.is_used is False
             assert phone_otp.attempts == 3
@@ -276,6 +296,7 @@ def test_used_otp_is_rejected():
         )
         with Session(engine) as session:
             user = session.get(User, case["user_id"])
+            assert user is not None
             assert user.parent_id is None
     finally:
         _delete_phone_otp_case(case)
@@ -290,6 +311,7 @@ def test_phone_without_an_otp_request_is_rejected():
         assert response.json()["detail"] == "No phone verification request found"
         with Session(engine) as session:
             user = session.get(User, case["user_id"])
+            assert user is not None
             assert user.parent_id is None
     finally:
         _delete_phone_otp_case(case)
@@ -307,6 +329,7 @@ def test_otp_cannot_be_used_by_a_different_user():
         session.add(other_user)
         session.commit()
         session.refresh(other_user)
+        assert other_user.id is not None
         other_user_id = other_user.id
 
     try:
@@ -316,6 +339,8 @@ def test_otp_cannot_be_used_by_a_different_user():
         with Session(engine) as session:
             user = session.get(User, other_user_id)
             phone_otp = session.get(PhoneOTP, case["otp_id"])
+            assert user is not None
+            assert phone_otp is not None
             assert user.parent_id is None
             assert phone_otp.is_used is False
     finally:
@@ -336,6 +361,8 @@ def test_phone_with_no_matching_parent_is_rejected():
         with Session(engine) as session:
             user = session.get(User, case["user_id"])
             phone_otp = session.get(PhoneOTP, case["otp_id"])
+            assert user is not None
+            assert phone_otp is not None
             assert user.parent_id is None
             assert phone_otp.is_used is False
     finally:
@@ -347,6 +374,7 @@ def test_already_linked_user_cannot_link_a_second_parent():
     try:
         with Session(engine) as session:
             user = session.get(User, case["user_id"])
+            assert user is not None
             existing_parent_id = user.parent_id
 
         response = _verify(case)
@@ -356,6 +384,8 @@ def test_already_linked_user_cannot_link_a_second_parent():
         with Session(engine) as session:
             user = session.get(User, case["user_id"])
             phone_otp = session.get(PhoneOTP, case["otp_id"])
+            assert user is not None
+            assert phone_otp is not None
             assert user.parent_id == existing_parent_id
             assert phone_otp.is_used is False
     finally:
@@ -382,6 +412,7 @@ def _seed_user_for_send_test():
         session.add(user)
         session.commit()
         session.refresh(user)
+        assert user.id is not None
         user_id = user.id
     return {
         "email": email,
@@ -547,7 +578,7 @@ def test_new_otp_request_invalidates_expired_previous_code(monkeypatch):
             records = session.exec(
                 select(PhoneOTP)
                 .where(PhoneOTP.user_id == case["user_id"])
-                .order_by(PhoneOTP.id)
+                .order_by(col(PhoneOTP.id))
             ).all()
             assert len(records) == 2
             assert records[0].is_used is True
@@ -599,6 +630,7 @@ def test_duplicate_parent_phone_is_rejected():
         session.add(school)
         session.commit()
         session.refresh(school)
+        assert school.id is not None
 
         first_parent = ParentBlueprint(
             name="First matching parent",
@@ -620,6 +652,9 @@ def test_duplicate_parent_phone_is_rejected():
         session.refresh(first_parent)
         session.refresh(second_parent)
         session.refresh(user)
+        assert first_parent.id is not None
+        assert second_parent.id is not None
+        assert user.id is not None
 
         phone_otp = PhoneOTP(
             user_id=user.id,
@@ -630,6 +665,7 @@ def test_duplicate_parent_phone_is_rejected():
         session.add(phone_otp)
         session.commit()
         session.refresh(phone_otp)
+        assert phone_otp.id is not None
 
         school_id = school.id
         parent_ids = [first_parent.id, second_parent.id]
@@ -653,6 +689,8 @@ def test_duplicate_parent_phone_is_rejected():
         with Session(engine) as session:
             saved_user = session.get(User, user_id)
             saved_otp = session.get(PhoneOTP, otp_id)
+            assert saved_user is not None
+            assert saved_otp is not None
             linked_parent_id = saved_user.parent_id if saved_user else None
             otp_was_used = saved_otp.is_used if saved_otp else False
 
