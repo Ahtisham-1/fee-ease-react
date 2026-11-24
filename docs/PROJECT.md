@@ -103,7 +103,7 @@ FEE-EASE-PROJECT/
 docker compose up -d db
 
 # Set up environment (create .env file in backend/)
-DATABASE_URL=postgresql+psycopg2://postgres:password@localhost:5432/feeease_db
+DATABASE_URL=postgresql+psycopg2://postgres:password@localhost:5433/feeease_db
 SECRET_KEY=your-secret-key-here
 ALGORITHM=HS256
 PHONE_OTP_SECRET=your-phone-otp-secret
@@ -137,7 +137,7 @@ Set `VITE_API_URL=http://localhost:8000` in `.env` if needed.
 
 ### Tests
 
-The tests directory is currently empty. Testing will be restored before production launch as noted in the README.
+Focused phone OTP lifecycle tests are available in `backend/tests/test_phone_otp_concurrency.py`. Run them from `backend/` with `uv run python -m pytest tests/test_phone_otp_concurrency.py -q`. Broader regression coverage is still needed before production launch.
 
 ## Main Flows
 
@@ -287,7 +287,7 @@ The tests directory is currently empty. Testing will be restored before producti
 
 ## Known Gaps
 
-1. **Empty tests directory**: Tests were removed/failed; will be restored before production launch per README.
+1. **Incomplete test coverage**: Focused phone OTP lifecycle tests exist; the rest of the backend still needs broader regression coverage before production launch.
 
 2. **Mock data in frontend**: `mockData.ts` shows empty arrays (`initialParents`, `initialStudents`, etc.) but type definitions expect these to be populated from backend API calls.
 

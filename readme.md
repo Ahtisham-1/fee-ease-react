@@ -27,7 +27,7 @@ Current limitations:
 - Real SMS delivery for phone OTPs requires a provider before production use.
 - Private administrator onboarding is the next implementation step.
 - Multi-school isolation is planned but not complete.
-- Automated test coverage will be restored before production launch.
+- Test coverage is incomplete: focused phone OTP lifecycle tests exist, and broader regression coverage is still needed before production launch.
 
 ## Architecture
 
