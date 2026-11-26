@@ -10,7 +10,7 @@ FeeEase is a school fee-management platform for schools in Kashmir. It enables a
 - **Verification:** `backend/tests/test_phone_otp_concurrency.py` contains 15 focused tests. The latest run passed all 15; broader backend regression coverage is still needed.
 - **SMS delivery:** The console provider is intentional during development. A real SMS provider is deferred.
 - **Next feature:** Feature 12, School Isolation, according to the numbered Feature notes in Obsidian. The older 12-phase Masterplan uses a different numbering system.
-- **Feature 12 progress:** Chunk 12.1 documents the ownership boundary below. No Feature 12 schema or route changes have started.
+- **Feature 12 progress:** Chunk 12.1 documents the ownership boundary. Chunk 12.2 adds active status and a UTC creation time to schools; tenant route filtering is still to be built.
 - **Local database:** Docker Compose exposes PostgreSQL on host port `5433` because another PostgreSQL service uses `5432`. The local backend `.env` points to Neon and should not be committed.
 
 ## Stack and Versions
@@ -80,18 +80,20 @@ FEE-EASE-PROJECT/
 │   │   ├── README                    # Migration folder notes
 │   │   ├── env.py                    # Loads application models and database settings
 │   │   ├── script.py.mako            # Template for new migration files
-│   │   └── versions/                 # Five database schema migrations
+│   │   └── versions/                 # Six database schema migrations
 │   │       ├── 063c15ecffda_record_current_database_schema.py
 │   │       ├── 327151d03f78_add_created_at_to_phone_otp.py
 │   │       ├── 5596ae7a6d80_replace_readable_email_otp_with_hash.py
 │   │       ├── a1a85880649e_add_email_otp_creation_timestamp.py
-│   │       └── f52c88c4fade_make_phone_otp_timestamps_timezone_aware.py
+│   │       ├── f52c88c4fade_make_phone_otp_timestamps_timezone_aware.py
+│   │       └── 30fd4a0aee93_add_school_active_status_and_creation_.py
 │   ├── scripts/                       # Setup and maintenance commands
 │   │   ├── cleanup_expired_otps.py    # Deletes expired OTP records
 │   │   └── create_admin.py            # Creates the initial school and admin account
 │   └── tests/                         # Automated backend tests
 │       ├── test_otp_lifecycle.py      # OTP lifecycle tests
-│       └── test_phone_otp_concurrency.py # Phone OTP linking and concurrent reuse tests
+│       ├── test_phone_otp_concurrency.py # Phone OTP linking and concurrent reuse tests
+│       └── test_school_identity.py    # School status and timestamp tests
 └── frontend/
     ├── index.html                     # Browser HTML entry page
     ├── package.json                   # Frontend scripts and dependencies
@@ -192,7 +194,7 @@ Set `VITE_API_URL=http://localhost:8000` in `.env` if needed.
 
 ### Tests
 
-Focused phone OTP lifecycle tests are available in `backend/tests/test_phone_otp_concurrency.py`. Run them from `backend/` with `uv run python -m pytest tests/test_phone_otp_concurrency.py -q`. Broader regression coverage is still needed before production launch.
+The school identity tests do not connect to a database. Run them from `backend/` with `uv run python -m pytest tests/test_school_identity.py -q`. The OTP integration tests write and delete database records, so run them only against a disposable local test database. The local `backend/.env` currently points to Neon; always override `DATABASE_URL` before running database tests. Broader regression coverage is still needed before production launch.
 
 ## Main Flows
 
@@ -260,7 +262,7 @@ Focused phone OTP lifecycle tests are available in `backend/tests/test_phone_otp
 | **StudentBlueprint** | id (int) | parent_id → ParentBlueprint.id, school_id → School.id | student_name, phone, grade, tuition_fee, has_transport, transport_fee, school_id |
 | **FeeObligation** | id (int) | student_id → StudentBlueprint.id | fee_amount, month, academic_year, fee_type, fee_status |
 | **Payment** | id (int) | fee_id → FeeObligation.id, student_id → StudentBlueprint.id | amount, date_time, fee_id, student_id, status |
-| **School** | id (int) | - | name |
+| **School** | id (int) | - | name, is_active, created_at (timezone-aware UTC) |
 | **OTP** | id (int) | - | email, otp_hash, expires_at, is_used, attempts, created_at |
 | **PendingRegistration** | id (int) | - | email, hashed_password, role, created_at, expires_at |
 | **PhoneOTP** | id (int) | user_id → User.id | user_id, phone, otp_hash, expires_at, is_used, attempts |
