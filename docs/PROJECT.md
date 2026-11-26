@@ -4,6 +4,15 @@
 
 FeeEase is a school fee-management platform for schools in Kashmir. It enables administrators to manage students, parents, classes, monthly fee obligations, and payment records. Parents can log in to view their children's fees and make payments against outstanding obligations.
 
+## Current Project Status
+
+- **Current feature:** Feature 11, Secure Parent Account Linking via Phone OTP, is complete for the current development scope.
+- **Verification:** `backend/tests/test_phone_otp_concurrency.py` contains 15 focused tests. The latest run passed all 15; broader backend regression coverage is still needed.
+- **SMS delivery:** The console provider is intentional during development. A real SMS provider is deferred.
+- **Next feature:** Feature 12, School Isolation, according to the numbered Feature notes in Obsidian. The older 12-phase Masterplan uses a different numbering system.
+- **Feature 12 progress:** Chunk 12.1 documents the ownership boundary below. No Feature 12 schema or route changes have started.
+- **Local database:** Docker Compose exposes PostgreSQL on host port `5433` because another PostgreSQL service uses `5432`. The local backend `.env` points to Neon and should not be committed.
+
 ## Stack and Versions
 
 | Component | Technology | Version |
@@ -19,80 +28,126 @@ FeeEase is a school fee-management platform for schools in Kashmir. It enables a
 
 ## Folder Map
 
-```
+This map lists the application code, tests, migrations, scripts, and configuration files currently present. Dependency folders, build output, caches, local environment files, and temporary analysis batches are not expanded.
+
+~~~
 FEE-EASE-PROJECT/
-├── readme.md                    # Project overview
-├── docker-compose.yml           # PostgreSQL container definition
+├── .gitignore                         # Git ignore rules, including local secrets and generated output
+├── readme.md                          # Project overview and setup notes
+├── docker-compose.yml                 # Local PostgreSQL service (host port 5433)
+├── .ua/                               # Generated Understand Anything analysis files
+│   ├── knowledge-graph.json           # Project knowledge graph
+│   ├── meta.json                      # Graph metadata
+│   ├── config.json                    # Analysis configuration
+│   ├── fingerprints.json              # File change fingerprints
+│   ├── code-lessons.json              # Extracted code lessons
+│   └── intermediate/scan-result.json  # Intermediate project scan
 ├── docs/
-│   └── PROJECT.md              # This file
+│   └── PROJECT.md                     # Project status, architecture, flows, and notes
 ├── backend/
-│   ├── pyproject.toml          # Python project config + dependencies (uv)
-│   ├── requirements.txt         # Legacy requirements list
+│   ├── Dockerfile                     # Backend container build instructions
+│   ├── pyproject.toml                 # Python project settings and uv dependencies
+│   ├── requirements.txt               # Older pip dependency list
+│   ├── uv.lock                        # Locked Python dependency versions
+│   ├── alembic.ini                    # Database migration configuration
 │   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py             # FastAPI application entry point
-│   │   ├── database.py           # Database engine + session setup
-│   │   ├── security.py           # Password hashing, JWT, OTP protection
-│   │   ├── rate_limiter.py       # IP-based rate limiting
-│   │   ├── email_service.py      # Brevo email OTP delivery
-│   │   ├── sms_service.py        # Console SMS delivery (dev)
-│   │   ├── models/               # SQLModel database models
-│   │   │   ├── __init__.py
-│   │   │   ├── user.py           # User auth model + Token schemas
-│   │   │   ├── student.py        # StudentBlueprint model
-│   │   │   ├── parent.py         # ParentBlueprint model
-│   │   │   ├── fee.py            # FeeObligation model
-│   │   │   ├── payment.py        # Payment model
-│   │   │   ├── school.py         # School model
-│   │   │   ├── phone_otp.py      # PhoneOTP for parent linking
-│   │   │   ├── email_otp.py      # OTP for email verification
-│   │   │   └── pending_registration.py  # PendingRegistration model
-│   │   ├── routes/               # FastAPI routers
-│   │   │   ├── __init__.py
-│   │   │   ├── auth.py           # /api/auth endpoints
-│   │   │   ├── students.py       # /api/students endpoints
-│   │   │   ├── parents.py        # /api/parents endpoints
-│   │   │   ├── fees.py           # /api/fees endpoints
-│   │   │   └── payments.py       # /api/payments endpoints
-│   ├── migrations/               # Alembic migrations
-│   │   ├── env.py
-│   │   └── versions/             # Migration files (3 migrations)
-│   ├── scripts/
-│   │   └── create_admin.py       # Admin user creation script
-│   └── tests/                    # Empty directory (pending tests)
+│   │   ├── __init__.py                # Backend application package
+│   │   ├── main.py                    # FastAPI application and router setup
+│   │   ├── database.py                # PostgreSQL connection and session dependency
+│   │   ├── security.py                # Password, JWT, and OTP security helpers
+│   │   ├── rate_limiter.py            # Request rate limiting
+│   │   ├── email_service.py           # Email delivery service
+│   │   ├── sms_service.py             # SMS delivery interface (console provider in development)
+│   │   ├── models/                    # SQLModel database tables and schemas
+│   │   │   ├── __init__.py            # Model imports for metadata and migrations
+│   │   │   ├── user.py                # User account and authentication schemas
+│   │   │   ├── school.py              # School table
+│   │   │   ├── parent.py              # ParentBlueprint table
+│   │   │   ├── student.py             # StudentBlueprint table
+│   │   │   ├── fee.py                 # FeeObligation table
+│   │   │   ├── payment.py             # Payment table
+│   │   │   ├── email_otp.py           # Email OTP table
+│   │   │   ├── phone_otp.py           # Phone OTP table for parent linking
+│   │   │   └── pending_registration.py # Registration awaiting email verification
+│   │   └── routes/                    # HTTP API endpoint handlers
+│   │       ├── __init__.py            # Router package
+│   │       ├── auth.py                # Registration, login, and OTP endpoints
+│   │       ├── parents.py              # Parent endpoints
+│   │       ├── students.py             # Student endpoints
+│   │       ├── fees.py                 # Fee and fee assignment endpoints
+│   │       └── payments.py             # Payment endpoints
+│   ├── migrations/                    # Alembic migration setup
+│   │   ├── README                    # Migration folder notes
+│   │   ├── env.py                    # Loads application models and database settings
+│   │   ├── script.py.mako            # Template for new migration files
+│   │   └── versions/                 # Five database schema migrations
+│   │       ├── 063c15ecffda_record_current_database_schema.py
+│   │       ├── 327151d03f78_add_created_at_to_phone_otp.py
+│   │       ├── 5596ae7a6d80_replace_readable_email_otp_with_hash.py
+│   │       ├── a1a85880649e_add_email_otp_creation_timestamp.py
+│   │       └── f52c88c4fade_make_phone_otp_timestamps_timezone_aware.py
+│   ├── scripts/                       # Setup and maintenance commands
+│   │   ├── cleanup_expired_otps.py    # Deletes expired OTP records
+│   │   └── create_admin.py            # Creates the initial school and admin account
+│   └── tests/                         # Automated backend tests
+│       ├── test_otp_lifecycle.py      # OTP lifecycle tests
+│       └── test_phone_otp_concurrency.py # Phone OTP linking and concurrent reuse tests
 └── frontend/
-    ├── package.json
-    ├── vite.config.ts
-    ├── src/
-    │   ├── main.tsx              # React entry point
-    │   ├── App.tsx               # Main app orchestrator
-    │   ├── index.css             # Tailwind CSS styles
-    │   ├── index.html            # HTML entry point
-    │   ├── pages/
-    │   │   └── LoginPage.tsx     # Login/register/verify UI
-    │   ├── components/
-    │   │   ├── common/           # Header, Icons
-    │   │   ├── admin/            # Admin portal components
-    │   │   └── parent/           # Parent portal components
-    │   ├── services/             # API client functions
-    │   │   ├── apiClient.ts      # Shared HTTP client with JWT
-    │   │   ├── authApi.ts        # Authentication API calls
-    │   │   ├── studentApi.ts     # Student API calls
-    │   │   ├── parentApi.ts      # Parent API calls
-    │   │   ├── feeApi.ts         # Fee API calls
-    │   │   └── paymentApi.ts     # Payment API calls
-    │   ├── hooks/
-    │   │   └── useAuth.ts        # Auth state hook
-    │   ├── types/
-    │   │   └── index.ts          # TypeScript type definitions
-    │   ├── utils/
-    │   │   ├── feeCalculator.ts  # FIFO payment allocation, balance calculations
-    │   │   └── format.ts         # Currency (₹) and timestamp formatting
-    │   ├── data/
-    │   │   └── mockData.ts       # Initial data + constants (gradeArray, months)
-    │   └── public/
-    └── vite.config.ts
-```
+    ├── index.html                     # Browser HTML entry page
+    ├── package.json                   # Frontend scripts and dependencies
+    ├── package-lock.json              # Locked JavaScript dependency versions
+    ├── eslint.config.js               # JavaScript and TypeScript lint rules
+    ├── tsconfig.json                  # TypeScript project references
+    ├── tsconfig.app.json              # TypeScript settings for application source
+    ├── tsconfig.node.json             # TypeScript settings for Node config files
+    ├── vite.config.ts                 # Vite, React, and Tailwind setup
+    ├── README.md                      # Frontend setup and architecture notes
+    ├── public/
+    │   └── favicon.svg                # Browser tab icon
+    └── src/
+        ├── main.tsx                   # React entry point; mounts the app
+        ├── App.tsx                    # Main app and role-based portal flow
+        ├── index.css                  # Global styles and Tailwind CSS
+        ├── pages/
+        │   └── LoginPage.tsx          # Login, registration, and verification screens
+        ├── components/
+        │   ├── common/
+        │   │   ├── Header.tsx         # Shared app header
+        │   │   └── Icons.tsx          # Shared icon components
+        │   ├── admin/                 # Admin dashboard forms, roster, and reports
+        │   │   ├── AdminAddStudentForm.tsx
+        │   │   ├── AdminAssignFeesForm.tsx
+        │   │   ├── AdminClassRoster.tsx
+        │   │   ├── AdminCollectionsSummary.tsx
+        │   │   ├── AdminEditStudentModal.tsx
+        │   │   ├── AdminPaymentHistory.tsx
+        │   │   └── AdminPromoteClass.tsx
+        │   └── parent/                # Parent portal, student, fee, and payment views
+        │       ├── ConnectToSchool.tsx
+        │       ├── FeeDetail.tsx
+        │       ├── ParentStudentSelector.tsx
+        │       ├── PayFeesForm.tsx
+        │       └── PaymentHistory.tsx
+        ├── services/                  # Frontend functions that call backend APIs
+        │   ├── apiClient.ts            # Shared HTTP client and authentication header
+        │   ├── authApi.ts              # Authentication and OTP requests
+        │   ├── studentApi.ts            # Student API requests
+        │   ├── parentApi.ts             # Parent API requests
+        │   ├── feeApi.ts                # Fee API requests
+        │   └── paymentApi.ts            # Payment API requests
+        ├── hooks/
+        │   ├── useAuth.ts              # Authentication state and user session
+        │   └── useModalBehavior.ts     # Shared modal behavior
+        ├── types/
+        │   └── index.ts               # Shared frontend data and API types
+        ├── utils/
+        │   ├── feeCalculator.ts       # Fee balance and payment allocation calculations
+        │   └── format.ts              # Currency and date formatting helpers
+        └── data/
+            └── mockData.ts            # Sample data and shared grade/month values
+~~~
+
+The tree shows the current source layout. Generated analysis batches, .git, installed dependencies, virtual environments, caches, and local .env files are not expanded.
 
 ## How to Run and Test
 
@@ -210,6 +265,27 @@ Focused phone OTP lifecycle tests are available in `backend/tests/test_phone_otp
 | **PendingRegistration** | id (int) | - | email, hashed_password, role, created_at, expires_at |
 | **PhoneOTP** | id (int) | user_id → User.id | user_id, phone, otp_hash, expires_at, is_used, attempts |
 
+### Feature 12.1 — School Ownership Boundary
+
+The school is the tenant boundary: one school's users must only access records belonging to that same school.
+
+~~~
+School
+├── Admin User                         User.school_id
+├── ParentBlueprint                    ParentBlueprint.school_id
+│   └── StudentBlueprint               StudentBlueprint.school_id + parent_id
+│       └── FeeObligation               student_id today; school_id to add
+│           └── Payment                 fee_id + student_id today; school_id to add
+├── Invitation                         Not implemented
+└── Audit record                       Not implemented
+~~~
+
+- **Users:** Admin accounts belong to a school through User.school_id. A parent account belongs to the school of its linked ParentBlueprint; phone linking must also set User.school_id to that same school. An unlinked account has no school yet and must not access school data.
+- **Parents and students:** Both already have required school_id fields. A student's parent_id must point to a parent in the same school.
+- **Fees and payments:** Neither table currently has school_id. A fee belongs to its student's school; a payment must belong to the same school through both its fee and student. Feature 12.3 will add these fields and backfill them from student records, while keeping the payment's fee and student references consistent.
+- **Invitations and audit records:** These are future school-owned data types; no such models or tables exist in the current project.
+- **School setup:** The existing create_admin.py script creates a school and its admin. It can be run once for each school; there is no public school-creation endpoint.
+
 ## API Endpoints
 
 ### Auth Router (`/api/auth`)
@@ -283,7 +359,7 @@ Focused phone OTP lifecycle tests are available in `backend/tests/test_phone_otp
 
 6. **Rate limiting**: Registration uses IP-based rate limiting (5 requests per 10 minutes) to prevent abuse.
 
-7. **School isolation**: Pending, not implemented. Each table has `school_id` but no tenant filtering exists yet.
+7. **School isolation**: Not implemented. `User`, `ParentBlueprint`, and `StudentBlueprint` have `school_id`; `FeeObligation` and `Payment` do not. Several admin routes and bulk fee assignment are not filtered by school. Feature 12.1 documents the ownership boundary above; schema and route enforcement are still to be built.
 
 ## Known Gaps
 
@@ -297,7 +373,7 @@ Focused phone OTP lifecycle tests are available in `backend/tests/test_phone_otp
 
 5. **No automated admin onboarding**: Admins must be created manually via scripts or direct database access.
 
-6. **Multi-school data isolation**: Not implemented. `school_id` exists in schemas but not enforced in queries.
+6. **Multi-school data isolation**: Not implemented. Some records have `school_id`, but admin queries and mutations are not consistently restricted to the authenticated admin's school.
 
 7. **Payment gateway not integrated**: Payments are simulated. Real payment gateway verification and settlement planned for Feature 20.
 
