@@ -1,11 +1,9 @@
-from typing import Annotated
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select
 
 from app.database import SessionDep
-from app.models.fee import FeeObligation, FeeUpdate
-from app.models.payment import Payment
+from app.models.fee import FeeObligation
+from app.models.payment import Payment, PaymentCreate
 from app.models.student import StudentBlueprint
 from app.security import CurrentUser, get_current_user
 
@@ -16,8 +14,10 @@ router = APIRouter(
 
 # Payment Endpoints
 @router.post("/")
-def assign_payments(payment: Payment, session: SessionDep, current_user: CurrentUser):
-    payment_db = session.get(FeeObligation, payment.fee_id)
+def assign_payments(
+    payload: PaymentCreate, session: SessionDep, current_user: CurrentUser
+):
+    payment_db = session.get(FeeObligation, payload.fee_id)
 
     if not payment_db:
         raise HTTPException(status_code=404, detail="Fee record not found")
@@ -27,26 +27,33 @@ def assign_payments(payment: Payment, session: SessionDep, current_user: Current
     student = session.get(StudentBlueprint, payment_db.student_id)
     if not student:
         raise HTTPException(404, detail="Student was not found")
-    payment.student_id = payment_db.student_id
     if current_user.role == "parent" and current_user.parent_id != student.parent_id:
         raise HTTPException(403, detail="Forbidden")
 
-    if payment.amount <= 0:
+    if payload.amount <= 0:
         raise HTTPException(400, detail="The payment amount cannot be zero")
     existing_payments = session.exec(
-        select(Payment).where(Payment.fee_id == payment.fee_id)
+        select(Payment).where(Payment.fee_id == payload.fee_id)
     ).all()
     already_paid = sum(p.amount for p in existing_payments)
     remaining_due = payment_db.fee_amount - already_paid
-    if payment.amount > remaining_due:
+    if payload.amount > remaining_due:
         raise HTTPException(
             400,
-            detail=f"payment of {payment.amount} exceeds remaining balance of {remaining_due}",
+            detail=f"payment of {payload.amount} exceeds remaining balance of {remaining_due}",
         )
-    if (already_paid + payment.amount) >= payment_db.fee_amount:
+    if (already_paid + payload.amount) >= payment_db.fee_amount:
         payment_db.fee_status = "paid"
     else:
         payment_db.fee_status = "pending"
+    payment = Payment(
+        amount=payload.amount,
+        date_time=payload.date_time,
+        fee_id=payment_db.id,
+        student_id=student.id,
+        school_id=payment_db.school_id,
+        status=payload.status,
+    )
     session.add(payment_db)
     session.add(payment)
     try:

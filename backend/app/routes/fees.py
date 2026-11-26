@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select
 
 from app.database import SessionDep
-from app.models.fee import AssignFeesPayload, FeeObligation
+from app.models.fee import AssignFeesPayload, FeeCreate, FeeObligation, FeeUpdate
 from app.models.student import StudentBlueprint
 from app.security import CurrentUser, get_current_user, require_admin
 
@@ -15,11 +15,15 @@ router = APIRouter(
 
 # -------- FEE OBLIGATION END POINTS ----------
 @router.post("/", response_model=FeeObligation, dependencies=[Depends(require_admin)])
-def create_fees(createfeeobligation: FeeObligation, session: SessionDep):
-    session.add(createfeeobligation)
+def create_fees(payload: FeeCreate, session: SessionDep):
+    student = session.get(StudentBlueprint, payload.student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    fee = FeeObligation(**payload.model_dump(), school_id=student.school_id)
+    session.add(fee)
     session.commit()
-    session.refresh(createfeeobligation)
-    return createfeeobligation
+    session.refresh(fee)
+    return fee
 
 
 @router.get("/", response_model=list[FeeObligation])
@@ -64,7 +68,7 @@ def read_one_fees(
 @router.patch(
     "/{fees_id}", response_model=FeeObligation, dependencies=[Depends(require_admin)]
 )
-def update_fees(fees_id: int, feeobligation: FeeObligation, session: SessionDep):
+def update_fees(fees_id: int, feeobligation: FeeUpdate, session: SessionDep):
     fee_db = session.get(FeeObligation, fees_id)
     if not fee_db:
         raise HTTPException(
@@ -107,6 +111,7 @@ def assign_fees(payload: AssignFeesPayload, session: SessionDep):
                 raise HTTPException(409, detail="Fees already assigned for this class")
         fee = FeeObligation(
             student_id=x.id,
+            school_id=x.school_id,
             fee_amount=payload.assign_fees,
             month=payload.target_month,
             academic_year=payload.academic_year,

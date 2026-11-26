@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 class FeeObligation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     student_id: int | None = Field(default=None, foreign_key="studentblueprint.id")
+    school_id: int = Field(foreign_key="school.id", index=True)
     fee_amount: int
     month: str
     academic_year: int
@@ -17,7 +18,16 @@ class FeeObligation(SQLModel, table=True):
     student: Optional["StudentBlueprint"] = Relationship(back_populates="feeobligation")
  
 
-# Fee Obligation update
+# Client fields for creating a fee; the server gets school_id from the student.
+class FeeCreate(SQLModel):
+    student_id: int
+    fee_amount: int
+    month: str
+    academic_year: int
+    fee_type: str
+    fee_status: str = "pending"
+
+
 class FeeUpdate(SQLModel):
     fee_amount: int | None = None
     month: str | None = None

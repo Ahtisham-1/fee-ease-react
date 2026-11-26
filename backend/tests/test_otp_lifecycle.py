@@ -26,10 +26,30 @@ from sqlmodel import Session, select
 
 def test_full_parent_registration_to_payment_flow(monkeypatch):
     """
-    Integration test: full parent journey from registration to fee access.
+    Integration test: full parent journey from registration through payment.
     """
     # Create a test client that simulates HTTP requests to our app
     client = TestClient(app)
+
+    # This test uses a disposable database, so clear leftovers before each run.
+    def cleanup():
+        with Session(engine) as session:
+            for model in [
+                Payment,
+                FeeObligation,
+                StudentBlueprint,
+                PhoneOTP,
+                User,
+                OTP,
+                PendingRegistration,
+                ParentBlueprint,
+                School,
+            ]:
+                for record in session.exec(select(model)).all():
+                    session.delete(record)
+            session.commit()
+
+    cleanup()
 
     # Empty lists to store OTP codes captured by our mocked senders
     email_otp_codes = []
@@ -59,26 +79,6 @@ def test_full_parent_registration_to_payment_flow(monkeypatch):
         # Save IDs for later cleanup and assertions
         parent_id = parent.id
         school_id = school.id
-
-    # --- HELPER: Clean up all test data after test finishes ---
-    def cleanup():
-        with Session(engine) as session:
-            # Delete in reverse dependency order (children before parents)
-            for model in [
-                Payment,
-                FeeObligation,
-                StudentBlueprint,
-                User,
-                PhoneOTP,
-                OTP,
-                PendingRegistration,
-                ParentBlueprint,
-                School,
-            ]:
-                records = session.exec(select(model)).all()
-                for r in records:
-                    session.delete(r)
-            session.commit()
 
     try:
         # ===== MOCK EMAIL SENDER BEFORE REGISTER =====
@@ -187,6 +187,7 @@ def test_full_parent_registration_to_payment_flow(monkeypatch):
             # Create a pending fee obligation for that student
             fee = FeeObligation(
                 student_id=student_id,
+                school_id=school_id,
                 fee_amount=1000,
                 month="January",
                 academic_year=2026,
@@ -195,13 +196,15 @@ def test_full_parent_registration_to_payment_flow(monkeypatch):
             )
             session.add(fee)
             session.commit()
+            session.refresh(fee)
+            fee_id = fee.id
 
         # Call GET /api/students/ with parent's token
         students_resp = client.get("/api/students/", headers=auth_header)
         assert students_resp.status_code == 200
         students = students_resp.json()
         assert len(students) == 1
-        assert students[0]["name"] == "Test Student"
+        assert students[0]["student_name"] == "Test Student"
 
         # Call GET /api/fees/ with parent's token
         fees_resp = client.get("/api/fees/", headers=auth_header)
@@ -209,6 +212,22 @@ def test_full_parent_registration_to_payment_flow(monkeypatch):
         fees = fees_resp.json()
         assert len(fees) == 1
         assert fees[0]["fee_amount"] == 1000
+        assert fees[0]["school_id"] == school_id
+
+        payment_resp = client.post(
+            "/api/payments/",
+            headers=auth_header,
+            json={
+                "amount": 1000,
+                "date_time": "2026-01-01T00:00:00Z",
+                "fee_id": fee_id,
+                "student_id": student_id + 1_000_000,
+                "status": "SUCCESS",
+            },
+        )
+        assert payment_resp.status_code == 200
+        assert payment_resp.json()["student_id"] == student_id
+        assert payment_resp.json()["school_id"] == school_id
 
     finally:
         # Always run cleanup, even if test fails

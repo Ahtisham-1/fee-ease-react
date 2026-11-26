@@ -7,10 +7,10 @@ FeeEase is a school fee-management platform for schools in Kashmir. It enables a
 ## Current Project Status
 
 - **Current feature:** Feature 11, Secure Parent Account Linking via Phone OTP, is complete for the current development scope.
-- **Verification:** `backend/tests/test_phone_otp_concurrency.py` contains 15 focused tests. The latest run passed all 15; broader backend regression coverage is still needed.
+- **Verification:** The backend suite has 22 tests and the latest full run passed all 22. It includes 15 focused phone OTP tests; broader production coverage is still needed.
 - **SMS delivery:** The console provider is intentional during development. A real SMS provider is deferred.
 - **Next feature:** Feature 12, School Isolation, according to the numbered Feature notes in Obsidian. The older 12-phase Masterplan uses a different numbering system.
-- **Feature 12 progress:** Chunk 12.1 documents the ownership boundary. Chunk 12.2 adds active status and a UTC creation time to schools; tenant route filtering is still to be built.
+- **Feature 12 progress:** Chunks 12.1–12.3 document the ownership boundary, add school status and creation time, and add fee/payment school IDs with a backfill migration. Tenant route filtering is still to be built.
 - **Local database:** Docker Compose exposes PostgreSQL on host port `5433` because another PostgreSQL service uses `5432`. The local backend `.env` points to Neon and should not be committed.
 
 ## Stack and Versions
@@ -80,20 +80,22 @@ FEE-EASE-PROJECT/
 │   │   ├── README                    # Migration folder notes
 │   │   ├── env.py                    # Loads application models and database settings
 │   │   ├── script.py.mako            # Template for new migration files
-│   │   └── versions/                 # Six database schema migrations
+│   │   └── versions/                 # Seven database schema migrations
 │   │       ├── 063c15ecffda_record_current_database_schema.py
 │   │       ├── 327151d03f78_add_created_at_to_phone_otp.py
 │   │       ├── 5596ae7a6d80_replace_readable_email_otp_with_hash.py
 │   │       ├── a1a85880649e_add_email_otp_creation_timestamp.py
 │   │       ├── f52c88c4fade_make_phone_otp_timestamps_timezone_aware.py
-│   │       └── 30fd4a0aee93_add_school_active_status_and_creation_.py
+│   │       ├── 30fd4a0aee93_add_school_active_status_and_creation_.py
+│   │       └── 77119301ba2c_add_school_ids_to_fees_payments.py
 │   ├── scripts/                       # Setup and maintenance commands
 │   │   ├── cleanup_expired_otps.py    # Deletes expired OTP records
 │   │   └── create_admin.py            # Creates the initial school and admin account
 │   └── tests/                         # Automated backend tests
 │       ├── test_otp_lifecycle.py      # OTP lifecycle tests
 │       ├── test_phone_otp_concurrency.py # Phone OTP linking and concurrent reuse tests
-│       └── test_school_identity.py    # School status and timestamp tests
+│       ├── test_school_identity.py    # School status and timestamp tests
+│       └── test_school_ownership.py   # Required school IDs and safe write schemas
 └── frontend/
     ├── index.html                     # Browser HTML entry page
     ├── package.json                   # Frontend scripts and dependencies
@@ -194,7 +196,7 @@ Set `VITE_API_URL=http://localhost:8000` in `.env` if needed.
 
 ### Tests
 
-The school identity tests do not connect to a database. Run them from `backend/` with `uv run python -m pytest tests/test_school_identity.py -q`. The OTP integration tests write and delete database records, so run them only against a disposable local test database. The local `backend/.env` currently points to Neon; always override `DATABASE_URL` before running database tests. Broader regression coverage is still needed before production launch.
+The school identity and ownership model tests do not connect to a database. Run them from `backend/` with `uv run python -m pytest tests/test_school_identity.py tests/test_school_ownership.py -q`. The OTP integration tests write and delete database records, so run them only against a disposable local test database. The local `backend/.env` currently points to Neon; always override `DATABASE_URL` before running database tests. Broader regression coverage is still needed before production launch.
 
 ## Main Flows
 
@@ -260,8 +262,8 @@ The school identity tests do not connect to a database. Run them from `backend/`
 | **User** | id (int) | parent_id → ParentBlueprint.id, school_id → School.id | email, hashed_password, role, parent_id, school_id |
 | **ParentBlueprint** | id (int) | school_id → School.id | name, phone, school_id |
 | **StudentBlueprint** | id (int) | parent_id → ParentBlueprint.id, school_id → School.id | student_name, phone, grade, tuition_fee, has_transport, transport_fee, school_id |
-| **FeeObligation** | id (int) | student_id → StudentBlueprint.id | fee_amount, month, academic_year, fee_type, fee_status |
-| **Payment** | id (int) | fee_id → FeeObligation.id, student_id → StudentBlueprint.id | amount, date_time, fee_id, student_id, status |
+| **FeeObligation** | id (int) | student_id → StudentBlueprint.id, school_id → School.id | fee_amount, month, academic_year, fee_type, fee_status, school_id |
+| **Payment** | id (int) | fee_id → FeeObligation.id, student_id → StudentBlueprint.id, school_id → School.id | amount, date_time, fee_id, student_id, status, school_id |
 | **School** | id (int) | - | name, is_active, created_at (timezone-aware UTC) |
 | **OTP** | id (int) | - | email, otp_hash, expires_at, is_used, attempts, created_at |
 | **PendingRegistration** | id (int) | - | email, hashed_password, role, created_at, expires_at |
@@ -276,15 +278,15 @@ School
 ├── Admin User                         User.school_id
 ├── ParentBlueprint                    ParentBlueprint.school_id
 │   └── StudentBlueprint               StudentBlueprint.school_id + parent_id
-│       └── FeeObligation               student_id today; school_id to add
-│           └── Payment                 fee_id + student_id today; school_id to add
+│       └── FeeObligation               student_id + school_id
+│           └── Payment                 fee_id + student_id + school_id
 ├── Invitation                         Not implemented
 └── Audit record                       Not implemented
 ~~~
 
 - **Users:** Admin accounts belong to a school through User.school_id. A parent account belongs to the school of its linked ParentBlueprint; phone linking must also set User.school_id to that same school. An unlinked account has no school yet and must not access school data.
 - **Parents and students:** Both already have required school_id fields. A student's parent_id must point to a parent in the same school.
-- **Fees and payments:** Neither table currently has school_id. A fee belongs to its student's school; a payment must belong to the same school through both its fee and student. Feature 12.3 will add these fields and backfill them from student records, while keeping the payment's fee and student references consistent.
+- **Fees and payments:** Their models now include school_id. The Feature 12.3 migration backfills fee ownership from its student and payment ownership through its fee's student. It stops if a fee or payment cannot be matched safely. Route filtering is still to be built.
 - **Invitations and audit records:** These are future school-owned data types; no such models or tables exist in the current project.
 - **School setup:** The existing create_admin.py script creates a school and its admin. It can be run once for each school; there is no public school-creation endpoint.
 
@@ -361,7 +363,7 @@ School
 
 6. **Rate limiting**: Registration uses IP-based rate limiting (5 requests per 10 minutes) to prevent abuse.
 
-7. **School isolation**: Not implemented. `User`, `ParentBlueprint`, and `StudentBlueprint` have `school_id`; `FeeObligation` and `Payment` do not. Several admin routes and bulk fee assignment are not filtered by school. Feature 12.1 documents the ownership boundary above; schema and route enforcement are still to be built.
+7. **School isolation**: Not complete. Models include `school_id` for users, parents, students, fees, and payments. The Feature 12.3 migration was applied and its backfill verified on the disposable local test database; deployment database status has not been checked. Several admin routes and bulk fee assignment are not filtered by school. Route enforcement is still to be built.
 
 ## Known Gaps
 
@@ -375,7 +377,7 @@ School
 
 5. **No automated admin onboarding**: Admins must be created manually via scripts or direct database access.
 
-6. **Multi-school data isolation**: Not implemented. Some records have `school_id`, but admin queries and mutations are not consistently restricted to the authenticated admin's school.
+6. **Multi-school data isolation**: Not implemented. School IDs now exist in the models for all current school-owned records, but admin queries and mutations are not consistently restricted to the authenticated admin's school.
 
 7. **Payment gateway not integrated**: Payments are simulated. Real payment gateway verification and settlement planned for Feature 20.
 
