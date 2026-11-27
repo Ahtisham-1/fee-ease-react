@@ -14,7 +14,7 @@ from app.models.user import User
 from app.security import create_access_token
 
 
-def test_school_owned_lists_only_return_rows_for_the_users_school():
+def test_school_owned_lists_and_id_lookups_only_return_school_records():
     suffix = uuid4().hex
     school_a = School(name=f"List test A {suffix}")
     school_b = School(name=f"List test B {suffix}")
@@ -152,6 +152,39 @@ def test_school_owned_lists_only_return_rows_for_the_users_school():
             students = client.get("/api/students/", headers=admin_headers)
             assert students.status_code == 200
             assert [row["school_id"] for row in students.json()] == [school_a_id]
+
+            assert client.get(
+                f"/api/parents/{parent_a_id}", headers=admin_headers
+            ).status_code == 200
+            assert client.get(
+                f"/api/parents/{parent_b_id}", headers=admin_headers
+            ).status_code == 404
+
+            for headers in (admin_headers, parent_headers):
+                assert client.get(
+                    f"/api/students/{student_a_id}", headers=headers
+                ).status_code == 200
+                assert client.get(
+                    f"/api/students/{student_b_id}", headers=headers
+                ).status_code == 404
+                assert client.get(
+                    f"/api/students/student/{student_a_id}", headers=headers
+                ).status_code == 200
+                assert client.get(
+                    f"/api/students/student/{student_b_id}", headers=headers
+                ).status_code == 404
+                assert client.get(
+                    f"/api/fees/{fee_a_id}", headers=headers
+                ).status_code == 200
+                assert client.get(
+                    f"/api/fees/{fee_b_id}", headers=headers
+                ).status_code == 404
+                assert client.get(
+                    f"/api/payments/student/{student_a_id}", headers=headers
+                ).status_code == 200
+                assert client.get(
+                    f"/api/payments/student/{student_b_id}", headers=headers
+                ).status_code == 404
 
     finally:
         with Session(engine) as session:

@@ -57,9 +57,11 @@ def read_all_parents(
 
 
 @router.get("/{parent_id}", response_model=ParentBlueprint)
-def read_one_parent(parent_id: int, session: SessionDep) -> ParentBlueprint:
+def read_one_parent(
+    parent_id: int, session: SessionDep, current_user: CurrentUser
+) -> ParentBlueprint:
     parent = session.get(ParentBlueprint, parent_id)
-    if not parent:
+    if not parent or parent.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Parent not found")
     return parent
 

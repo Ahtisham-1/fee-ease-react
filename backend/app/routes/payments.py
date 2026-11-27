@@ -103,7 +103,7 @@ def read_student_payments(
     student_id: int, session: SessionDep, current_user: CurrentUser
 ):
     student = session.get(StudentBlueprint, student_id)
-    if not student:
+    if not student or student.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Student Payment detail not found")
     if current_user.role == "parent" and current_user.parent_id != student.parent_id:
         raise HTTPException(status_code=403, detail="Forbidden you cannot access this ")

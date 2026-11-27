@@ -69,6 +69,11 @@ def read_one_fees(
     student = session.get(StudentBlueprint, feeobligation.student_id)
     if not student:
         raise HTTPException(404, detail="Student record not found")
+    if (
+        feeobligation.school_id != current_user.school_id
+        or student.school_id != current_user.school_id
+    ):
+        raise HTTPException(status_code=404, detail="Fees detail not found")
     if current_user.role == "parent" and current_user.parent_id != student.parent_id:
         raise HTTPException(status_code=403, detail="Forbidden details")
     return feeobligation

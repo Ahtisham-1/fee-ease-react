@@ -71,11 +71,9 @@ def read_one_student(
     student_id: int, session: SessionDep, current_user: CurrentUser
 ) -> StudentBlueprint:
     student = session.get(StudentBlueprint, student_id)
-    if not student:
+    if not student or student.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Student not found")
     if current_user.role == "admin":
-        if student.school_id != current_user.school_id:
-            raise HTTPException(status_code=404, detail="Student not found")
         return student
     if current_user.role == "parent" and current_user.parent_id != student.parent_id:
         raise HTTPException(
@@ -121,7 +119,7 @@ def read_student_fees(student_id: int, session: SessionDep, current_user: Curren
     student = session.get(StudentBlueprint, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student Fee detail not found")
-    if current_user.role == "admin" and student.school_id != current_user.school_id:
+    if student.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Student Fee detail not found")
     if current_user.role == "parent" and current_user.parent_id != student.parent_id:
         raise HTTPException(
