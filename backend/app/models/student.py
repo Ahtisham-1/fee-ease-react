@@ -25,7 +25,7 @@ class StudentBlueprint(SQLModel, table=True):
 # For student update
 class StudentUpdate(SQLModel):
     student_name: str | None = None
-    parent_id: str | None = None
+    parent_id: int | None = None
     phone: str | None = None
     grade: str | None = None
     tuition_fee: int | None = None

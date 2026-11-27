@@ -10,7 +10,7 @@ FeeEase is a school fee-management platform for schools in Kashmir. It enables a
 - **Verification:** The backend suite has 24 tests and the latest full run passed all 24. It includes 15 focused phone OTP tests; broader production coverage is still needed.
 - **SMS delivery:** The console provider is intentional during development. A real SMS provider is deferred.
 - **Feature numbering:** Feature 12 follows the numbered Feature notes in Obsidian. The older 12-phase Masterplan uses a different numbering system.
-- **Feature 12 progress:** Chunks 12.1–12.5 define school ownership, add school IDs, and scope collection lists and ID-based GET lookups to the user's school. Write routes still need school restrictions.
+- **Feature 12 progress:** Chunks 12.1–12.6 define school ownership, add school IDs, and scope collection lists, ID-based GET lookups, and write operations to the user's school. Cross-school integration checks cover the main list, lookup, and write paths; a final denial-coverage review remains.
 - **Local database:** Docker Compose exposes PostgreSQL on host port `5433` because another PostgreSQL service uses `5432`. The local backend `.env` points to Neon and should not be committed.
 
 ## Stack and Versions
@@ -96,7 +96,7 @@ FEE-EASE-PROJECT/
 │       ├── test_phone_otp_concurrency.py # Phone OTP linking and concurrent reuse tests
 │       ├── test_school_identity.py    # School status and timestamp tests
 │       ├── test_school_ownership.py   # Required school IDs and safe write schemas
-│       ├── test_school_scoped_lists.py # School filters for list endpoints
+│       ├── test_school_scoped_lists.py # School-scoped reads and cross-school write denial
 │       └── test_school_student_reads.py # Admin student and fee read isolation
 └── frontend/
     ├── index.html                     # Browser HTML entry page
@@ -288,8 +288,8 @@ School
 
 - **Users:** Admin accounts belong to a school through User.school_id. A parent account belongs to the school of its linked ParentBlueprint; phone linking must also set User.school_id to that same school. An unlinked account has no school yet and must not access school data.
 - **Parents and students:** Both already have required school_id fields. A student's parent_id must point to a parent in the same school.
-- **Fees and payments:** Their models now include school_id. The Feature 12.3 migration backfills fee ownership from its student and payment ownership through its fee's student. It stops if a fee or payment cannot be matched safely. Their collection lists and ID-based reads are now school-filtered; write routes still need restrictions.
-- **Read queries:** Feature 12.4 scopes student, parent, fee, and payment lists to the authenticated user's school. Feature 12.5 applies the same school boundary to parent, student, fee, and student-based fee/payment lookups by ID. Cross-school lookups return 404.
+- **Fees and payments:** Their models now include school_id. The Feature 12.3 migration backfills fee ownership from its student and payment ownership through its fee's student. It stops if a fee or payment cannot be matched safely. Their collection lists, ID-based reads, and writes now enforce school ownership.
+- **School-scoped routes:** Feature 12.4 scopes student, parent, fee, and payment lists. Feature 12.5 scopes single-record reads. Feature 12.6 scopes create, update, delete, bulk fee assignment, payment recording, and parent linking. Cross-school access is rejected.
 - **Invitations and audit records:** These are future school-owned data types; no such models or tables exist in the current project.
 - **School setup:** The existing create_admin.py script creates a school and its admin. It can be run once for each school; there is no public school-creation endpoint.
 
@@ -366,7 +366,7 @@ School
 
 6. **Rate limiting**: Registration uses IP-based rate limiting (5 requests per 10 minutes) to prevent abuse.
 
-7. **School isolation**: Not complete. Models include `school_id` for users, parents, students, fees, and payments. Features 12.4–12.5 scope collection lists and ID-based reads; write routes still need school restrictions. The Feature 12.3 migration was applied and its backfill verified locally.
+7. **School isolation**: Not complete. Models include `school_id` for users, parents, students, fees, and payments. Features 12.4–12.6 scope collection lists, ID-based reads, and write routes. Feature 12.7 is the final cross-school denial coverage review. The Feature 12.3 migration was applied and its backfill verified locally.
 
 ## Known Gaps
 
@@ -380,7 +380,7 @@ School
 
 5. **No automated admin onboarding**: Admins must be created manually via scripts or direct database access.
 
-6. **Multi-school data isolation**: In progress. Collection lists and ID-based GET reads are school-scoped. Mutation routes are not consistently restricted yet.
+6. **Multi-school data isolation**: In progress. Collection lists, ID-based GET reads, and write routes are school-scoped. Feature 12.7 still needs the final cross-school denial coverage review.
 
 7. **Payment gateway not integrated**: Payments are simulated. Real payment gateway verification and settlement planned for Feature 20.
 

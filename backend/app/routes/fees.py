@@ -15,9 +15,11 @@ router = APIRouter(
 
 # -------- FEE OBLIGATION END POINTS ----------
 @router.post("/", response_model=FeeObligation, dependencies=[Depends(require_admin)])
-def create_fees(payload: FeeCreate, session: SessionDep):
+def create_fees(payload: FeeCreate, session: SessionDep, current_user: CurrentUser):
+    if current_user.school_id is None:
+        raise HTTPException(status_code=403, detail="Admin is not assigned to a school")
     student = session.get(StudentBlueprint, payload.student_id)
-    if not student:
+    if not student or student.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Student not found")
     fee = FeeObligation(**payload.model_dump(), school_id=student.school_id)
     session.add(fee)
@@ -82,9 +84,14 @@ def read_one_fees(
 @router.patch(
     "/{fees_id}", response_model=FeeObligation, dependencies=[Depends(require_admin)]
 )
-def update_fees(fees_id: int, feeobligation: FeeUpdate, session: SessionDep):
+def update_fees(
+    fees_id: int,
+    feeobligation: FeeUpdate,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
     fee_db = session.get(FeeObligation, fees_id)
-    if not fee_db:
+    if not fee_db or fee_db.school_id != current_user.school_id:
         raise HTTPException(
             status_code=404, detail="Fees detail not found to be updated"
         )
@@ -97,9 +104,9 @@ def update_fees(fees_id: int, feeobligation: FeeUpdate, session: SessionDep):
 
 
 @router.delete("/{fees_id}", dependencies=[Depends(require_admin)])
-def delete_fees(fees_id: int, session: SessionDep):
+def delete_fees(fees_id: int, session: SessionDep, current_user: CurrentUser):
     feeobligation = session.get(FeeObligation, fees_id)
-    if not feeobligation:
+    if not feeobligation or feeobligation.school_id != current_user.school_id:
         raise HTTPException(
             status_code=404, detail="No Fees details found to be deleted"
         )
@@ -110,9 +117,16 @@ def delete_fees(fees_id: int, session: SessionDep):
 
 # ---------- ASSIGN FEES ENDPOINTS ----------
 @router.post("/assign", dependencies=[Depends(require_admin)])
-def assign_fees(payload: AssignFeesPayload, session: SessionDep):
+def assign_fees(
+    payload: AssignFeesPayload, session: SessionDep, current_user: CurrentUser
+):
+    if current_user.school_id is None:
+        raise HTTPException(status_code=403, detail="Admin is not assigned to a school")
     students = session.exec(
-        select(StudentBlueprint).where(StudentBlueprint.grade == payload.target_class)
+        select(StudentBlueprint).where(
+            StudentBlueprint.grade == payload.target_class,
+            StudentBlueprint.school_id == current_user.school_id,
+        )
     ).all()
     if not students:
         raise HTTPException(status_code=404, detail="No students found in this class")

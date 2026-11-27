@@ -67,9 +67,9 @@ def read_one_parent(
 
 
 @router.delete("/{parent_id}")
-def delete_parent(parent_id: int, session: SessionDep):
+def delete_parent(parent_id: int, session: SessionDep, current_user: CurrentUser):
     parent = session.get(ParentBlueprint, parent_id)
-    if not parent:
+    if not parent or parent.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Parent not found to be deleted")
     if parent.students:
         raise HTTPException(
@@ -81,9 +81,14 @@ def delete_parent(parent_id: int, session: SessionDep):
 
 
 @router.patch("/{parent_id}", response_model=ParentBlueprint)
-def update_parent(parent_id: int, parent: ParentUpdate, session: SessionDep):
+def update_parent(
+    parent_id: int,
+    parent: ParentUpdate,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
     parent_db = session.get(ParentBlueprint, parent_id)
-    if not parent_db:
+    if not parent_db or parent_db.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Parnet not found")
     parent_data = parent.model_dump(exclude_unset=True)
     parent_db.sqlmodel_update(parent_data)

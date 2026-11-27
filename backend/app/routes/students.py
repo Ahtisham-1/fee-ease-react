@@ -5,6 +5,7 @@ from sqlmodel import col, select
 
 from app.database import SessionDep
 from app.models.fee import FeeObligation
+from app.models.parent import ParentBlueprint
 from app.models.student import StudentBlueprint, StudentUpdate
 from app.security import CurrentUser, get_current_user, require_admin
 
@@ -55,6 +56,10 @@ def create_student(
 ):
     if current_user.school_id is None:
         raise HTTPException(403, detail="Admin not assigned to a school")
+    if student.parent_id is not None:
+        parent = session.get(ParentBlueprint, student.parent_id)
+        if not parent or parent.school_id != current_user.school_id:
+            raise HTTPException(status_code=404, detail="Parent not found")
     student.school_id = current_user.school_id
     # Put it in the cart
     session.add(student)
@@ -94,9 +99,13 @@ def update_student(
     current_user: CurrentUser,
 ):
     student_db = session.get(StudentBlueprint, student_id)
-    if not student_db:
+    if not student_db or student_db.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Student not found")
     student_data = student.model_dump(exclude_unset=True)
+    if student_data.get("parent_id") is not None:
+        parent = session.get(ParentBlueprint, student_data["parent_id"])
+        if not parent or parent.school_id != current_user.school_id:
+            raise HTTPException(status_code=404, detail="Parent not found")
     student_db.sqlmodel_update(student_data)
     session.add(student_db)
     session.commit()
@@ -107,7 +116,7 @@ def update_student(
 @router.delete("/{student_id}", dependencies=[Depends(require_admin)])
 def delete_student(student_id: int, session: SessionDep, current_user: CurrentUser):
     student = session.get(StudentBlueprint, student_id)
-    if not student:
+    if not student or student.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Item not found to be deleted")
     session.delete(student)
     session.commit()

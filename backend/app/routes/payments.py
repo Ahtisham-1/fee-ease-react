@@ -21,12 +21,16 @@ def assign_payments(
 
     if not payment_db:
         raise HTTPException(status_code=404, detail="Fee record not found")
-    elif payment_db.fee_status == "paid":
-        raise HTTPException(status_code=409, detail="Fee has already paid")
 
     student = session.get(StudentBlueprint, payment_db.student_id)
-    if not student:
-        raise HTTPException(404, detail="Student was not found")
+    if (
+        not student
+        or payment_db.school_id != current_user.school_id
+        or student.school_id != current_user.school_id
+    ):
+        raise HTTPException(status_code=404, detail="Fee record not found")
+    if payment_db.fee_status == "paid":
+        raise HTTPException(status_code=409, detail="Fee has already paid")
     if current_user.role == "parent" and current_user.parent_id != student.parent_id:
         raise HTTPException(403, detail="Forbidden")
 

@@ -39,8 +39,9 @@ def test_new_fee_takes_school_id_from_its_student():
         academic_year=2026,
         fee_type="tuition",
     )
+    admin = SimpleNamespace(id=1, school_id=9, role="admin")
 
-    fee = create_fees(payload, session)
+    fee = create_fees(payload, session, admin)
 
     assert fee.student_id == 123
     assert fee.school_id == 9
