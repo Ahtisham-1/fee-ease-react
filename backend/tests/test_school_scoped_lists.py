@@ -354,6 +354,58 @@ def test_school_owned_lists_lookups_and_writes_stay_within_school():
                 assert saved_phone_otp is not None
                 assert saved_phone_otp.is_used is False
 
+                saved_parent_b = session.get(ParentBlueprint, parent_b_id)
+                saved_student_a = session.get(StudentBlueprint, student_a_id)
+                saved_student_b = session.get(StudentBlueprint, student_b_id)
+                saved_student_b_without_fees = session.get(
+                    StudentBlueprint, student_b_without_fees_id
+                )
+                saved_fee_b = session.get(FeeObligation, fee_b_id)
+                saved_fee_b_without_payments = session.get(
+                    FeeObligation, fee_b_without_payments_id
+                )
+                assert saved_parent_b is not None
+                assert saved_parent_b.name == f"Parent B {suffix}"
+                assert saved_student_a is not None
+                assert saved_student_a.parent_id == parent_a_id
+                assert saved_student_b is not None
+                assert saved_student_b.student_name == f"Student B {suffix}"
+                assert saved_student_b_without_fees is not None
+                assert saved_fee_b is not None
+                assert saved_fee_b.fee_amount == 1000
+                assert saved_fee_b.fee_status == "pending"
+                assert saved_fee_b_without_payments is not None
+
+                attempted_student = session.exec(
+                    select(StudentBlueprint).where(
+                        StudentBlueprint.student_name == f"Wrong school parent {suffix}"
+                    )
+                ).first()
+                assert attempted_student is None
+                attempted_fees = session.exec(
+                    select(FeeObligation).where(
+                        FeeObligation.student_id == student_b_id,
+                        FeeObligation.month == "March",
+                        FeeObligation.academic_year == 2027,
+                    )
+                ).all()
+                assert attempted_fees == []
+
+                assigned_fee_rows = session.exec(
+                    select(FeeObligation).where(
+                        FeeObligation.student_id.in_([student_a_id, student_b_id]),
+                        FeeObligation.month == "February",
+                        FeeObligation.academic_year == 2027,
+                    )
+                ).all()
+                assert len(assigned_fee_rows) == 1
+                assert assigned_fee_rows[0].school_id == school_a_id
+
+                saved_payments = session.exec(
+                    select(Payment).where(Payment.fee_id == fee_b_id)
+                ).all()
+                assert len(saved_payments) == 1
+
     finally:
         with Session(engine) as session:
             test_students = session.exec(
