@@ -35,16 +35,25 @@ def read_all_fees(
 ):
     if current_user.role == "admin":
         offset = (page - 1) * limit
-        statement = select(FeeObligation).offset(offset).limit(limit)
+        statement = (
+            select(FeeObligation)
+            .where(FeeObligation.school_id == current_user.school_id)
+            .offset(offset)
+            .limit(limit)
+        )
         feeobligation = session.exec(statement).all()
         return feeobligation
     elif current_user.role == "parent":
-        if not current_user.parent_id:
+        if not current_user.parent_id or current_user.school_id is None:
             return []
         student_fees = session.exec(
             select(FeeObligation)
             .join(StudentBlueprint)
-            .where(StudentBlueprint.parent_id == current_user.parent_id)
+            .where(
+                FeeObligation.school_id == current_user.school_id,
+                StudentBlueprint.school_id == current_user.school_id,
+                StudentBlueprint.parent_id == current_user.parent_id,
+            )
         ).all()
         return student_fees
     return []

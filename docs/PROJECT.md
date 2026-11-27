@@ -7,10 +7,10 @@ FeeEase is a school fee-management platform for schools in Kashmir. It enables a
 ## Current Project Status
 
 - **Current feature:** Feature 12, School Isolation, is in progress.
-- **Verification:** The backend suite has 23 tests and the latest full run passed all 23. It includes 15 focused phone OTP tests; broader production coverage is still needed.
+- **Verification:** The backend suite has 24 tests and the latest full run passed all 24. It includes 15 focused phone OTP tests; broader production coverage is still needed.
 - **SMS delivery:** The console provider is intentional during development. A real SMS provider is deferred.
 - **Feature numbering:** Feature 12 follows the numbered Feature notes in Obsidian. The older 12-phase Masterplan uses a different numbering system.
-- **Feature 12 progress:** Chunks 12.1–12.4 document the ownership boundary, add school identity fields and fee/payment school IDs, and scope admin student reads. Other routes and writes still need school restrictions.
+- **Feature 12 progress:** Chunks 12.1–12.4 define school ownership, add school IDs, and scope list queries for students, parents, fees, and payments. Single-record lookups and writes still need school restrictions.
 - **Local database:** Docker Compose exposes PostgreSQL on host port `5433` because another PostgreSQL service uses `5432`. The local backend `.env` points to Neon and should not be committed.
 
 ## Stack and Versions
@@ -96,6 +96,7 @@ FEE-EASE-PROJECT/
 │       ├── test_phone_otp_concurrency.py # Phone OTP linking and concurrent reuse tests
 │       ├── test_school_identity.py    # School status and timestamp tests
 │       ├── test_school_ownership.py   # Required school IDs and safe write schemas
+│       ├── test_school_scoped_lists.py # School filters for list endpoints
 │       └── test_school_student_reads.py # Admin student and fee read isolation
 └── frontend/
     ├── index.html                     # Browser HTML entry page
@@ -197,7 +198,7 @@ Set `VITE_API_URL=http://localhost:8000` in `.env` if needed.
 
 ### Tests
 
-The school identity and ownership model tests do not connect to a database. Run them from `backend/` with `uv run python -m pytest tests/test_school_identity.py tests/test_school_ownership.py -q`. The OTP and student-isolation integration tests write and delete database records, so run them only against a disposable local test database. The local `backend/.env` currently points to Neon; always override `DATABASE_URL` before running database tests. Broader regression coverage is still needed before production launch.
+The school identity and ownership model tests do not connect to a database. Run them from `backend/` with `uv run python -m pytest tests/test_school_identity.py tests/test_school_ownership.py -q`. The OTP and school-isolation integration tests write and delete database records, so run them only against a disposable local test database. The local `backend/.env` currently points to Neon; always override `DATABASE_URL` before running database tests. Broader regression coverage is still needed before production launch.
 
 ## Main Flows
 
@@ -287,8 +288,8 @@ School
 
 - **Users:** Admin accounts belong to a school through User.school_id. A parent account belongs to the school of its linked ParentBlueprint; phone linking must also set User.school_id to that same school. An unlinked account has no school yet and must not access school data.
 - **Parents and students:** Both already have required school_id fields. A student's parent_id must point to a parent in the same school.
-- **Fees and payments:** Their models now include school_id. The Feature 12.3 migration backfills fee ownership from its student and payment ownership through its fee's student. It stops if a fee or payment cannot be matched safely. Admin fee and payment routes still need school restrictions.
-- **Student reads:** Feature 12.4 scopes admin student lists, student details, and fees-by-student reads to the admin's school. Admin student writes and other route groups still need restrictions.
+- **Fees and payments:** Their models now include school_id. The Feature 12.3 migration backfills fee ownership from its student and payment ownership through its fee's student. It stops if a fee or payment cannot be matched safely. Their collection lists are now school-filtered; single-record and write routes still need restrictions.
+- **List queries:** Feature 12.4 scopes student, parent, fee, and payment lists to the authenticated user's school. Student details and fees-by-student reads also check the admin's school. Other single-record lookups and writes still need restrictions.
 - **Invitations and audit records:** These are future school-owned data types; no such models or tables exist in the current project.
 - **School setup:** The existing create_admin.py script creates a school and its admin. It can be run once for each school; there is no public school-creation endpoint.
 
@@ -365,7 +366,7 @@ School
 
 6. **Rate limiting**: Registration uses IP-based rate limiting (5 requests per 10 minutes) to prevent abuse.
 
-7. **School isolation**: Not complete. Models include `school_id` for users, parents, students, fees, and payments. Feature 12.4 scopes admin student reads, but admin parent details, fee/payment routes, and admin writes still need school restrictions. The Feature 12.3 migration was applied and its backfill verified locally.
+7. **School isolation**: Not complete. Models include `school_id` for users, parents, students, fees, and payments. Feature 12.4 scopes list queries, but single-record lookups and writes still need school restrictions. The Feature 12.3 migration was applied and its backfill verified locally.
 
 ## Known Gaps
 
@@ -379,7 +380,7 @@ School
 
 5. **No automated admin onboarding**: Admins must be created manually via scripts or direct database access.
 
-6. **Multi-school data isolation**: In progress. Admin student read routes are restricted to the authenticated admin's school, but other reads and mutations are not consistently restricted yet.
+6. **Multi-school data isolation**: In progress. Collection list queries and selected student ID reads are school-scoped. Other single-record lookups and mutations are not consistently restricted yet.
 
 7. **Payment gateway not integrated**: Payments are simulated. Real payment gateway verification and settlement planned for Feature 20.
 

@@ -167,6 +167,7 @@ def test_full_parent_registration_to_payment_flow(monkeypatch):
             assert user is not None
             # Confirm the link worked: user.parent_id matches our parent
             assert user.parent_id == parent_id
+            assert user.school_id == school_id
 
         # ===== STEP 7: Verify Parent Can Access Student Fees =====
         # Create a student and fee so there's data to access

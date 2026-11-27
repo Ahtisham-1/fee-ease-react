@@ -35,11 +35,12 @@ def read_students(
         students = session.exec(statement).all()
         return students
     elif current_user.role == "parent":
-        if not current_user.parent_id:
+        if not current_user.parent_id or current_user.school_id is None:
             return []
         one_student = session.exec(
             select(StudentBlueprint).where(
-                StudentBlueprint.parent_id == current_user.parent_id
+                StudentBlueprint.parent_id == current_user.parent_id,
+                StudentBlueprint.school_id == current_user.school_id,
             )
         ).all()
         return one_student
@@ -127,6 +128,9 @@ def read_student_fees(student_id: int, session: SessionDep, current_user: Curren
             status_code=403, detail="Forbidden you cannot read this data"
         )
     fees = session.exec(
-        select(FeeObligation).where(FeeObligation.student_id == student_id)
+        select(FeeObligation).where(
+            FeeObligation.student_id == student_id,
+            FeeObligation.school_id == current_user.school_id,
+        )
     ).all()
     return fees

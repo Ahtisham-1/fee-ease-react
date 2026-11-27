@@ -330,6 +330,7 @@ def verify_phone_otp(
         raise HTTPException(400, detail="Verification failed")
     parent = matching_parents[0]
     current_user.parent_id = parent.id
+    current_user.school_id = parent.school_id
     phone_otp.is_used = True
     session.add(current_user)
     session.add(phone_otp)

@@ -74,16 +74,25 @@ def read_all_payments(
 ):
     if current_user.role == "admin":
         offset = (page - 1) * limit
-        statement = select(Payment).offset(offset).limit(limit)
+        statement = (
+            select(Payment)
+            .where(Payment.school_id == current_user.school_id)
+            .offset(offset)
+            .limit(limit)
+        )
         payment = session.exec(statement).all()
         return payment
     elif current_user.role == "parent":
-        if not current_user.parent_id:
+        if not current_user.parent_id or current_user.school_id is None:
             return []
         current_user_payments = session.exec(
             select(Payment)
             .join(StudentBlueprint)
-            .where(StudentBlueprint.parent_id == current_user.parent_id)
+            .where(
+                Payment.school_id == current_user.school_id,
+                StudentBlueprint.school_id == current_user.school_id,
+                StudentBlueprint.parent_id == current_user.parent_id,
+            )
         ).all()
         return current_user_payments
     return []
@@ -99,6 +108,9 @@ def read_student_payments(
     if current_user.role == "parent" and current_user.parent_id != student.parent_id:
         raise HTTPException(status_code=403, detail="Forbidden you cannot access this ")
     payments = session.exec(
-        select(Payment).where(Payment.student_id == student_id)
+        select(Payment).where(
+            Payment.student_id == student_id,
+            Payment.school_id == current_user.school_id,
+        )
     ).all()
     return payments

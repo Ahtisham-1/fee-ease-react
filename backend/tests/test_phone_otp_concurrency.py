@@ -95,9 +95,11 @@ def test_two_requests_cannot_use_the_same_otp():
             saved_user = session.get(User, user_id)
             saved_otp = session.get(PhoneOTP, otp_id)
             linked_parent_id = saved_user.parent_id if saved_user else None
+            linked_school_id = saved_user.school_id if saved_user else None
             otp_was_used = saved_otp.is_used if saved_otp else False
 
         assert linked_parent_id == parent_id
+        assert linked_school_id == school_id
         assert otp_was_used is True
 
     finally:
