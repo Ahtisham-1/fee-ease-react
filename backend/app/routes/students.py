@@ -23,7 +23,9 @@ def read_students(
     search: str | None = Query(default=None),
 ):
     if current_user.role == "admin":
-        statement = select(StudentBlueprint)
+        statement = select(StudentBlueprint).where(
+            StudentBlueprint.school_id == current_user.school_id
+        )
         if search:
             statement = statement.where(
                 col(StudentBlueprint.student_name).ilike(f"%{search}%")
@@ -71,6 +73,8 @@ def read_one_student(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     if current_user.role == "admin":
+        if student.school_id != current_user.school_id:
+            raise HTTPException(status_code=404, detail="Student not found")
         return student
     if current_user.role == "parent" and current_user.parent_id != student.parent_id:
         raise HTTPException(
@@ -115,6 +119,8 @@ def delete_student(student_id: int, session: SessionDep, current_user: CurrentUs
 def read_student_fees(student_id: int, session: SessionDep, current_user: CurrentUser):
     student = session.get(StudentBlueprint, student_id)
     if not student:
+        raise HTTPException(status_code=404, detail="Student Fee detail not found")
+    if current_user.role == "admin" and student.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Student Fee detail not found")
     if current_user.role == "parent" and current_user.parent_id != student.parent_id:
         raise HTTPException(
