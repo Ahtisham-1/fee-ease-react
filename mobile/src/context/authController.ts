@@ -88,7 +88,7 @@ export function createAuthController(
 
   function start(): () => void {
     disposed = false;
-    const hydrationEpoch = authEpoch;
+    const hydrationEpoch = ++authEpoch;
 
     const unsubscribe = subscribeUnauthorized(() => {
       if (disposed || explicitLogout) {
@@ -158,7 +158,6 @@ export function createAuthController(
 
   function login(email: string, password: string): Promise<Role> {
     const loginEpoch = ++authEpoch;
-    explicitLogout = false;
 
     return enqueueAuthOp(async () => {
       if (disposed || authEpoch !== loginEpoch) {
@@ -196,6 +195,7 @@ export function createAuthController(
         throw new ApiError("Authentication was superseded.", 0, "aborted");
       }
 
+      explicitLogout = false;
       commitState({
         isHydrating: false,
         isLoggedIn: true,
@@ -209,6 +209,7 @@ export function createAuthController(
   }
 
   function logout(): Promise<void> {
+    const hadPersistedSession = state.userRole === "parent";
     authEpoch += 1;
     explicitLogout = true;
 
@@ -221,6 +222,11 @@ export function createAuthController(
     });
 
     return enqueueAuthOp(async () => {
+      if (!hadPersistedSession) {
+        // Admin sessions stay memory-only, so Sign Out must succeed even on platforms without SecureStore.
+        await deleteToken().catch(() => {});
+        return;
+      }
       await deleteToken();
     });
   }

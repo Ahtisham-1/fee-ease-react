@@ -214,7 +214,9 @@ test("authApi validates bad local inputs and malformed server responses", async 
   const authApi = createAuthApi(client);
 
   await assert.rejects(() => authApi.loginApi("   ", "pass"), /email and password/i);
+  await assert.rejects(() => authApi.loginApi("not-an-email", "pass"), /valid email/i);
   await assert.rejects(() => authApi.registerApi("parent@example.com", "   "), /email and password/i);
+  await assert.rejects(() => authApi.registerApi("parent@example.com", "short"), /at least 6/i);
   await assert.rejects(() => authApi.verifyOtpApi("parent@example.com", "12ab56"), /6-digit/i);
   await assert.rejects(() => authApi.sendPhoneOtpApi("12345"), /mobile number/i);
   await assert.rejects(() => authApi.verifyPhoneOtpApi("9876543210", "12"), /6-digit/i);

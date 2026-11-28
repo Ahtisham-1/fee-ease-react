@@ -26,8 +26,20 @@ const defaultAuthClient: AuthClient = {
   requestJson,
 };
 
+const BASIC_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 function normalizeEmailInput(email: string): string {
   return typeof email === "string" ? email.trim().toLowerCase() : "";
+}
+
+function assertValidEmail(normalizedEmail: string): void {
+  if (!BASIC_EMAIL_PATTERN.test(normalizedEmail)) {
+    throw new ApiError(
+      "Please enter a valid email address.",
+      400,
+      "validation",
+    );
+  }
 }
 
 function parseAuthMessageResponse(raw: unknown): AuthMessageResponse {
@@ -71,6 +83,7 @@ export function createAuthApi(client: AuthClient = defaultAuthClient): AuthApi {
         "validation",
       );
     }
+    assertValidEmail(normalizedEmail);
 
     const formData = new URLSearchParams();
     formData.append("username", normalizedEmail);
@@ -131,6 +144,14 @@ export function createAuthApi(client: AuthClient = defaultAuthClient): AuthApi {
         "validation",
       );
     }
+    assertValidEmail(normalizedEmail);
+    if (password.length < 6) {
+      throw new ApiError(
+        "Password must be at least 6 characters.",
+        400,
+        "validation",
+      );
+    }
 
     // Mobile registration always forces role="parent" so admin accounts cannot be created here.
     const raw = await client.requestJson<unknown>("/api/auth/register", {
@@ -154,6 +175,7 @@ export function createAuthApi(client: AuthClient = defaultAuthClient): AuthApi {
         "validation",
       );
     }
+    assertValidEmail(normalizedEmail);
 
     const raw = await client.requestJson<unknown>("/api/auth/verify_otp", {
       method: "POST",

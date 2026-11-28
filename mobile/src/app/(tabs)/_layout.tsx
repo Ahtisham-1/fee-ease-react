@@ -1,8 +1,12 @@
 import { Tabs } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { COLORS } from "@/src/theme/tokens";
+import { Pressable, StyleSheet, Text } from "react-native";
+import { useAuth } from "@/src/context/AuthContext";
+import { COLORS, RADII, SPACING } from "@/src/theme/tokens";
 
 export default function TabLayout() {
+  const { logout } = useAuth();
+
   return (
     <Tabs
       screenOptions={{
@@ -14,6 +18,17 @@ export default function TabLayout() {
         },
         headerStyle: { backgroundColor: COLORS.cardBg },
         headerTintColor: COLORS.textPrimary,
+        headerRight: () => (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              void logout().catch(() => {});
+            }}
+            style={styles.signOutBtn}
+          >
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </Pressable>
+        ),
       }}
     >
       <Tabs.Screen
@@ -37,3 +52,20 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  signOutBtn: {
+    marginRight: SPACING.md,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: SPACING.xs + 2,
+    borderRadius: RADII.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.inputBg,
+  },
+  signOutText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+});

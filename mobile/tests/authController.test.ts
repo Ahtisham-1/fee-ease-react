@@ -119,6 +119,26 @@ test("authController never persists admin tokens and clears any pre-existing tok
   assert.equal(controller.getState().isLoggedIn, true);
   assert.equal(controller.getState().userRole, "admin");
   stop();
+
+  // Admin Sign Out succeeds gracefully even if clearAuthToken throws (e.g. Web without SecureStore).
+  const webAdminController = createAuthController({
+    getToken: async () => null,
+    setAuthToken: async () => {},
+    clearAuthToken: async () => {
+      throw new Error("SecureStore unavailable on web");
+    },
+    loginApi: async () => ({ access_token: ADMIN_JWT, token_type: "bearer" }),
+    registerUnauthorizedHandler: () => () => {},
+    onStateChange: () => {},
+    nowSeconds: () => NOW,
+  });
+  const stopWebAdmin = webAdminController.start();
+  await flushMicrotasks();
+  assert.equal(await webAdminController.login("admin@school.com", "secret"), "admin");
+  await webAdminController.logout();
+  assert.equal(webAdminController.getState().isLoggedIn, false);
+  assert.equal(webAdminController.getState().userRole, null);
+  stopWebAdmin();
 });
 
 test("authController exits isHydrating cleanly even when getToken throws", async () => {
