@@ -1,7 +1,7 @@
 import type { FeeObligation, Payment, PaymentAllocation } from "../types/index.ts";
 import { formatRupees } from "./format.ts";
 
-export const ACADEMIC_MONTHS = [
+export const ACADEMIC_MONTHS: readonly string[] = [
   "January",
   "February",
   "March",
@@ -14,7 +14,7 @@ export const ACADEMIC_MONTHS = [
   "October",
   "November",
   "December",
-] as const;
+];
 
 export interface StudentFinancialSummary {
   totalFees: number;
@@ -80,12 +80,8 @@ export function calculateSequentialFeeKnockout(
       return yearA - yearB;
     }
 
-    const monthAIndex = ACADEMIC_MONTHS.indexOf(
-      a.month as (typeof ACADEMIC_MONTHS)[number],
-    );
-    const monthBIndex = ACADEMIC_MONTHS.indexOf(
-      b.month as (typeof ACADEMIC_MONTHS)[number],
-    );
+    const monthAIndex = ACADEMIC_MONTHS.indexOf(a.month);
+    const monthBIndex = ACADEMIC_MONTHS.indexOf(b.month);
 
     return (monthAIndex !== -1 ? monthAIndex : 0) - (monthBIndex !== -1 ? monthBIndex : 0);
   });
@@ -108,8 +104,8 @@ export function calculateSequentialFeeKnockout(
 }
 
 /**
- * Splits a valid parent payment sequentially across oldest pending FeeObligation IDs
- * so each POST /api/payments/ call stays within that obligation's remaining_due.
+ * Splits a valid whole-rupee parent payment sequentially across oldest pending
+ * FeeObligation IDs so each POST /api/payments/ call stays within remaining_due.
  */
 export function buildFifoPaymentAllocations(
   studentId: string,
@@ -120,8 +116,13 @@ export function buildFifoPaymentAllocations(
   if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
     throw new Error("Please enter a valid positive payment amount.");
   }
+  if (!Number.isInteger(paymentAmount)) {
+    throw new Error("Please enter a whole rupee amount without decimals.");
+  }
 
-  const { netBalance } = getStudentFinancialSummary(studentId, obligations, payments);
+  const schedule = calculateSequentialFeeKnockout(studentId, obligations, payments);
+  const netBalance = schedule.reduce((sum, item) => sum + item.remainingDue, 0);
+
   if (netBalance <= 0) {
     throw new Error("No pending fee balance remaining for this student.");
   }
@@ -131,7 +132,6 @@ export function buildFifoPaymentAllocations(
     );
   }
 
-  const schedule = calculateSequentialFeeKnockout(studentId, obligations, payments);
   const allocations: PaymentAllocation[] = [];
   let remainingToAllocate = paymentAmount;
 

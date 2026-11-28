@@ -76,11 +76,34 @@ test("financial summary ignores failed payments and other students", () => {
   });
 });
 
-test("fifo knockout sorts by academic year then calendar month", () => {
+test("financial summary clamps netBalance to zero when paid exceeds total fees", () => {
+  const overpaid: Payment[] = [
+    {
+      id: "p-over",
+      amount: 6000,
+      dateTime: "2026-01-10T10:00:00Z",
+      belongsTo: "10",
+      status: "SUCCESS",
+    },
+  ];
+  const summary = getStudentFinancialSummary("10", sampleObligations, overpaid);
+  assert.equal(summary.netBalance, 0);
+});
+
+test("fifo knockout sorts chronologically and marks fully covered months paid", () => {
+  const paymentsCoveringJan: Payment[] = [
+    {
+      id: "p1",
+      amount: 1800,
+      dateTime: "2026-01-10T10:00:00Z",
+      belongsTo: "10",
+      status: "SUCCESS",
+    },
+  ];
   const schedule = calculateSequentialFeeKnockout(
     "10",
     sampleObligations,
-    samplePayments,
+    paymentsCoveringJan,
   );
 
   assert.deepEqual(
@@ -98,17 +121,17 @@ test("fifo knockout sorts by academic year then calendar month", () => {
         id: "1",
         month: "January",
         year: 2026,
-        paidAmount: 1000,
-        remainingDue: 500,
-        isCovered: false,
-        feeStatus: "pending",
+        paidAmount: 1500,
+        remainingDue: 0,
+        isCovered: true,
+        feeStatus: "paid",
       },
       {
         id: "2",
         month: "March",
         year: 2026,
-        paidAmount: 0,
-        remainingDue: 1500,
+        paidAmount: 300,
+        remainingDue: 1200,
         isCovered: false,
         feeStatus: "pending",
       },
@@ -147,17 +170,24 @@ test("buildFifoPaymentAllocations splits payment across multiple pending months"
     },
   ];
 
-  const allocations = buildFifoPaymentAllocations(
-    "10",
-    twoMonthObligations,
-    [],
-    2200,
+  assert.deepEqual(
+    buildFifoPaymentAllocations("10", twoMonthObligations, [], 2200),
+    [
+      { feeId: "1", amount: 1500 },
+      { feeId: "2", amount: 700 },
+    ],
   );
-
-  assert.deepEqual(allocations, [
-    { feeId: "1", amount: 1500 },
-    { feeId: "2", amount: 700 },
-  ]);
+  assert.deepEqual(
+    buildFifoPaymentAllocations("10", twoMonthObligations, [], 3000),
+    [
+      { feeId: "1", amount: 1500 },
+      { feeId: "2", amount: 1500 },
+    ],
+  );
+  assert.deepEqual(
+    buildFifoPaymentAllocations("10", twoMonthObligations, [], 500),
+    [{ feeId: "1", amount: 500 }],
+  );
 });
 
 test("buildFifoPaymentAllocations accounts for prior partial payments", () => {
@@ -174,7 +204,7 @@ test("buildFifoPaymentAllocations accounts for prior partial payments", () => {
   ]);
 });
 
-test("buildFifoPaymentAllocations rejects zero, negative, NaN, or over-balance amounts", () => {
+test("buildFifoPaymentAllocations rejects invalid, fractional, settled, or over-balance amounts", () => {
   assert.throws(
     () => buildFifoPaymentAllocations("10", sampleObligations, samplePayments, 0),
     /positive/i,
@@ -188,8 +218,29 @@ test("buildFifoPaymentAllocations rejects zero, negative, NaN, or over-balance a
     /positive/i,
   );
   assert.throws(
+    () => buildFifoPaymentAllocations("10", sampleObligations, samplePayments, Number.POSITIVE_INFINITY),
+    /positive/i,
+  );
+  assert.throws(
+    () => buildFifoPaymentAllocations("10", sampleObligations, samplePayments, 100.5),
+    /whole rupee/i,
+  );
+  assert.throws(
     () => buildFifoPaymentAllocations("10", sampleObligations, samplePayments, 4001),
     /exceed/i,
+  );
+  const fullySettled: Payment[] = [
+    {
+      id: "p-full",
+      amount: 5000,
+      dateTime: "2026-01-10T10:00:00Z",
+      belongsTo: "10",
+      status: "SUCCESS",
+    },
+  ];
+  assert.throws(
+    () => buildFifoPaymentAllocations("10", sampleObligations, fullySettled, 100),
+    /no pending fee balance/i,
   );
 });
 
@@ -198,7 +249,10 @@ test("formatRupees uses Indian numbering format", () => {
   assert.equal(formatRupees(0), "₹0");
 });
 
-test("formatTimestamp falls back to raw value on invalid date", () => {
+test("formatTimestamp formats valid ISO strings and falls back on invalid dates", () => {
   assert.equal(formatTimestamp("not-a-date"), "not-a-date");
-  assert.notEqual(formatTimestamp("2026-01-10T10:00:00Z"), "");
+  const formatted = formatTimestamp("2026-01-10T10:00:00Z");
+  assert.notEqual(formatted, "2026-01-10T10:00:00Z");
+  assert.match(formatted, /2026/);
+  assert.match(formatted, /Jan/);
 });
