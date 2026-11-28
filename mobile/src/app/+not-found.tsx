@@ -1,5 +1,5 @@
 import { Link, Stack } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { COLORS, RADII, SPACING } from "@/src/theme/tokens";
 
 export default function NotFoundScreen() {
@@ -8,8 +8,10 @@ export default function NotFoundScreen() {
       <Stack.Screen options={{ title: "Page Not Found" }} />
       <View style={styles.container}>
         <Text style={styles.title}>This screen doesn't exist.</Text>
-        <Link href="/(tabs)" style={styles.link}>
-          <Text style={styles.linkText}>Return to FeeEase Home</Text>
+        <Link href="/" asChild>
+          <Pressable style={styles.link}>
+            <Text style={styles.linkText}>Return to FeeEase Home</Text>
+          </Pressable>
         </Link>
       </View>
     </>
