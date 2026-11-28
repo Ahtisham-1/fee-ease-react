@@ -8,6 +8,10 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: COLORS.emeraldPrimary,
         tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarStyle: {
+          backgroundColor: COLORS.cardBg,
+          borderTopColor: COLORS.border,
+        },
         headerStyle: { backgroundColor: COLORS.cardBg },
         headerTintColor: COLORS.textPrimary,
       }}
@@ -28,12 +32,6 @@ export default function TabLayout() {
               size={22}
             />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="two"
-        options={{
-          href: null,
         }}
       />
     </Tabs>
