@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { ApiError } from "../src/services/apiClient";
+import type { NewPaymentData } from "../src/services/paymentApi";
 import type { FeeObligation, Payment, Student } from "../src/types/index";
 import {
   createSchoolDataController,
@@ -172,6 +173,212 @@ test("schoolDataController surfaces ApiError and preserves prior linked data if 
   assert.equal(controller.getState().error, "Unable to reach server.");
   // Keep previously loaded data visible when a background refresh fails.
   assert.deepEqual(controller.getState().students, [STUDENT_1]);
+
+  stop();
+});
+
+test("schoolDataController.processPayment splits multi-month payments FIFO sequentially and refreshes data", async () => {
+  const feeApr: FeeObligation = {
+    id: "101",
+    studentId: "10",
+    feeAmount: 1500,
+    month: "April",
+    academicYear: 2026,
+    feeType: "tuition",
+    feeStatus: "pending",
+  };
+  const feeMay: FeeObligation = {
+    id: "102",
+    studentId: "10",
+    feeAmount: 1500,
+    month: "May",
+    academicYear: 2026,
+    feeType: "tuition",
+    feeStatus: "pending",
+  };
+  const serverPayments: Payment[] = [];
+  const sentCalls: NewPaymentData[] = [];
+  let refreshCount = 0;
+
+  const controller = createSchoolDataController({
+    getStudents: async () => [STUDENT_1],
+    getFees: async () => [feeMay, feeApr],
+    getPayments: async () => {
+      refreshCount += 1;
+      return [...serverPayments];
+    },
+    sendPayment: async (data) => {
+      sentCalls.push(data);
+      const created: Payment = {
+        id: String(700 + sentCalls.length),
+        amount: data.amount,
+        dateTime: data.date_time,
+        belongsTo: String(data.student_id),
+        status: data.status,
+      };
+      serverPayments.push(created);
+      return created;
+    },
+    onStateChange: () => {},
+  });
+
+  const stop = controller.start();
+  await flushMicrotasks();
+
+  await controller.processPayment(2200);
+
+  assert.equal(sentCalls.length, 2);
+  assert.equal(sentCalls[0].fee_id, 101);
+  assert.equal(sentCalls[0].amount, 1500);
+  assert.equal(sentCalls[0].student_id, 10);
+  assert.equal(sentCalls[0].status, "SUCCESS");
+
+  assert.equal(sentCalls[1].fee_id, 102);
+  assert.equal(sentCalls[1].amount, 700);
+  assert.equal(sentCalls[1].student_id, 10);
+  assert.equal(sentCalls[1].status, "SUCCESS");
+
+  assert.equal(refreshCount, 2);
+  assert.equal(controller.getState().payments.length, 2);
+  assert.equal(controller.getState().isProcessingPayment, false);
+
+  stop();
+});
+
+test("schoolDataController.processPayment guards double-submit and always refreshes on partial failure", async () => {
+  const feeApr: FeeObligation = {
+    id: "101",
+    studentId: "10",
+    feeAmount: 1500,
+    month: "April",
+    academicYear: 2026,
+    feeType: "tuition",
+    feeStatus: "pending",
+  };
+  const feeMay: FeeObligation = {
+    id: "102",
+    studentId: "10",
+    feeAmount: 1500,
+    month: "May",
+    academicYear: 2026,
+    feeType: "tuition",
+    feeStatus: "pending",
+  };
+  const serverPayments: Payment[] = [];
+  let releaseFirst!: () => void;
+  let callIndex = 0;
+
+  const controller = createSchoolDataController({
+    getStudents: async () => [STUDENT_1],
+    getFees: async () => [feeApr, feeMay],
+    getPayments: async () => [...serverPayments],
+    sendPayment: async (data) => {
+      callIndex += 1;
+      if (callIndex === 1) {
+        await new Promise<void>((resolve) => {
+          releaseFirst = resolve;
+        });
+        const created: Payment = {
+          id: "801",
+          amount: data.amount,
+          dateTime: data.date_time,
+          belongsTo: String(data.student_id),
+          status: data.status,
+        };
+        serverPayments.push(created);
+        return created;
+      }
+      throw new ApiError("Server rejected second chunk.", 400, "http");
+    },
+    onStateChange: () => {},
+  });
+
+  const stop = controller.start();
+  await flushMicrotasks();
+
+  const firstAttempt = controller.processPayment(2200);
+  assert.equal(controller.getState().isProcessingPayment, true);
+
+  // Overlapping concurrent payment attempt must be rejected synchronously.
+  await assert.rejects(() => controller.processPayment(500), /already in progress/i);
+
+  releaseFirst();
+  await assert.rejects(
+    () => firstAttempt,
+    /1 of 2.*Server rejected second chunk/i,
+  );
+
+  // Server truth from the 1st succeeded chunk must be synced in memory even after 2nd chunk failed.
+  assert.equal(controller.getState().isProcessingPayment, false);
+  assert.equal(controller.getState().payments.length, 1);
+  assert.equal(controller.getState().payments[0].amount, 1500);
+
+  stop();
+});
+
+test("schoolDataController.processPayment skips post-error refresh on 401 unauthorized", async () => {
+  let fetchCalls = 0;
+
+  const controller = createSchoolDataController({
+    getStudents: async () => {
+      fetchCalls += 1;
+      return [STUDENT_1];
+    },
+    getFees: async () => [FEE_1],
+    getPayments: async () => [],
+    sendPayment: async () => {
+      throw new ApiError("Unauthorized", 401, "http");
+    },
+    onStateChange: () => {},
+  });
+
+  const stop = controller.start();
+  await flushMicrotasks();
+  assert.equal(fetchCalls, 1);
+
+  await assert.rejects(
+    () => controller.processPayment(500),
+    (err: unknown) => err instanceof ApiError && err.status === 401,
+  );
+  // 401 triggers session sign-out via apiClient; finally must not fire redundant reloads.
+  assert.equal(fetchCalls, 1);
+  assert.equal(controller.getState().isProcessingPayment, false);
+
+  stop();
+});
+
+test("schoolDataController.processPayment populates error and resets isProcessingPayment when post-payment refresh fails", async () => {
+  let studentCalls = 0;
+
+  const controller = createSchoolDataController({
+    getStudents: async () => {
+      studentCalls += 1;
+      if (studentCalls > 1) {
+        throw new ApiError("Network timeout during refresh", 0, "network");
+      }
+      return [STUDENT_1];
+    },
+    getFees: async () => [FEE_1],
+    getPayments: async () => [],
+    sendPayment: async (payload) => ({
+      id: "801",
+      amount: payload.amount,
+      dateTime: payload.date_time,
+      belongsTo: String(payload.student_id),
+      status: payload.status,
+    }),
+    onStateChange: () => {},
+  });
+
+  const stop = controller.start();
+  await flushMicrotasks();
+
+  await controller.processPayment(500);
+
+  const finalState = controller.getState();
+  assert.equal(finalState.isProcessingPayment, false);
+  assert.equal(finalState.isRefreshing, false);
+  assert.match(finalState.error ?? "", /Network timeout during refresh/);
 
   stop();
 });

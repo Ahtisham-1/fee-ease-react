@@ -1,8 +1,13 @@
 import { ApiError } from "../services/apiClient";
 import { getFees } from "../services/feeApi";
-import { getPayments } from "../services/paymentApi";
+import {
+  getPayments,
+  sendPayment,
+  type NewPaymentData,
+} from "../services/paymentApi";
 import { getStudents } from "../services/studentApi";
 import type { FeeObligation, Payment, Student } from "../types/index";
+import { buildFifoPaymentAllocations } from "../utils/feeCalculator";
 
 export interface SchoolDataState {
   students: Student[];
@@ -11,6 +16,7 @@ export interface SchoolDataState {
   selectedStudentId: string;
   isLoading: boolean;
   isRefreshing: boolean;
+  isProcessingPayment: boolean;
   error: string | null;
 }
 
@@ -18,6 +24,7 @@ export interface SchoolDataControllerDeps {
   getStudents?: () => Promise<Student[]>;
   getFees?: () => Promise<FeeObligation[]>;
   getPayments?: () => Promise<Payment[]>;
+  sendPayment?: (data: NewPaymentData) => Promise<Payment>;
   onStateChange: (state: SchoolDataState) => void;
 }
 
@@ -25,6 +32,7 @@ export interface SchoolDataController {
   start(): () => void;
   refreshData(): Promise<boolean>;
   setSelectedStudentId(studentId: string): void;
+  processPayment(amount: number): Promise<void>;
   getState(): SchoolDataState;
 }
 
@@ -57,6 +65,7 @@ export function createSchoolDataController(
   const fetchStudents = deps.getStudents ?? getStudents;
   const fetchFees = deps.getFees ?? getFees;
   const fetchPayments = deps.getPayments ?? getPayments;
+  const submitPayment = deps.sendPayment ?? sendPayment;
 
   let state: SchoolDataState = {
     students: [],
@@ -65,11 +74,13 @@ export function createSchoolDataController(
     selectedStudentId: "",
     isLoading: true,
     isRefreshing: false,
+    isProcessingPayment: false,
     error: null,
   };
 
   let loadEpoch = 0;
   let disposed = false;
+  let paymentInFlight = false;
 
   function commitState(next: SchoolDataState): void {
     state = next;
@@ -104,6 +115,7 @@ export function createSchoolDataController(
       }
 
       commitState({
+        ...state,
         students,
         fees,
         payments,
@@ -146,7 +158,7 @@ export function createSchoolDataController(
   }
 
   function setSelectedStudentId(studentId: string): void {
-    if (disposed) {
+    if (disposed || paymentInFlight) {
       return;
     }
     if (!studentId || !state.students.some((s) => s.id === studentId)) {
@@ -161,10 +173,99 @@ export function createSchoolDataController(
     });
   }
 
+  async function processPayment(amount: number): Promise<void> {
+    if (disposed) {
+      throw new Error("School session ended before payment could start.");
+    }
+    if (paymentInFlight) {
+      throw new Error("A payment is already in progress. Please wait.");
+    }
+
+    const activeStudentId = resolveSelectedStudentId(
+      state.students,
+      state.selectedStudentId,
+    );
+    const studentIdNum = Number(activeStudentId);
+    if (
+      !activeStudentId ||
+      !Number.isSafeInteger(studentIdNum) ||
+      studentIdNum <= 0
+    ) {
+      throw new Error("No student is selected for this payment.");
+    }
+
+    const allocations = buildFifoPaymentAllocations(
+      activeStudentId,
+      state.fees,
+      state.payments,
+      amount,
+    );
+    if (allocations.length === 0) {
+      throw new Error("No pending fee balance remaining for this student.");
+    }
+
+    paymentInFlight = true;
+    commitState({
+      ...state,
+      isProcessingPayment: true,
+    });
+
+    let completedCount = 0;
+    let skipFinallyRefresh = false;
+    try {
+      for (const allocation of allocations) {
+        if (disposed) {
+          skipFinallyRefresh = true;
+          throw new Error("Payment interrupted because session ended.");
+        }
+        const feeIdNum = Number(allocation.feeId);
+        if (!Number.isSafeInteger(feeIdNum) || feeIdNum <= 0) {
+          throw new Error("Invalid fee obligation reference.");
+        }
+
+        await submitPayment({
+          amount: allocation.amount,
+          fee_id: feeIdNum,
+          student_id: studentIdNum,
+          date_time: new Date().toISOString(),
+          status: "SUCCESS",
+        });
+        completedCount += 1;
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        skipFinallyRefresh = true;
+        throw error;
+      }
+      if (completedCount > 0) {
+        const detail = formatLoadError(error);
+        throw new Error(
+          `Partial payment applied (${completedCount} of ${allocations.length} fee items succeeded): ${detail}. Your ledger has been refreshed.`,
+        );
+      }
+      throw error;
+    } finally {
+      try {
+        if (!disposed && !skipFinallyRefresh) {
+          await runLoad(true).catch(() => false);
+        }
+      } finally {
+        paymentInFlight = false;
+        if (!disposed) {
+          commitState({
+            ...state,
+            isProcessingPayment: false,
+          });
+        }
+      }
+    }
+  }
+
   return {
     start,
     refreshData,
     setSelectedStudentId,
+    processPayment,
     getState: () => state,
   };
 }

@@ -14,6 +14,10 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: COLORS.emeraldPrimary,
           tabBarInactiveTintColor: COLORS.textMuted,
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: "600",
+          },
           tabBarStyle: {
             backgroundColor: COLORS.cardBg,
             borderTopColor: COLORS.border,
@@ -23,6 +27,7 @@ export default function TabLayout() {
           headerRight: () => (
             <Pressable
               accessibilityRole="button"
+              hitSlop={8}
               onPress={() => {
                 void logout().catch(() => {});
               }}
@@ -44,6 +49,42 @@ export default function TabLayout() {
                   ios: "house.fill",
                   android: "home",
                   web: "home",
+                }}
+                tintColor={color}
+                size={22}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="pay"
+          options={{
+            title: "Pay Fees",
+            tabBarLabel: "Pay Fees",
+            tabBarIcon: ({ color }) => (
+              <SymbolView
+                name={{
+                  ios: "creditcard.fill",
+                  android: "payments",
+                  web: "payments",
+                }}
+                tintColor={color}
+                size={22}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="history"
+          options={{
+            title: "Payment History",
+            tabBarLabel: "History",
+            tabBarIcon: ({ color }) => (
+              <SymbolView
+                name={{
+                  ios: "clock.fill",
+                  android: "receipt_long",
+                  web: "receipt_long",
                 }}
                 tintColor={color}
                 size={22}

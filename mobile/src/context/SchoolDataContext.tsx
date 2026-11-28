@@ -20,6 +20,7 @@ import {
 export interface SchoolDataContextValue extends SchoolDataState {
   refreshData: () => Promise<boolean>;
   setSelectedStudentId: (studentId: string) => void;
+  processPayment: (amount: number) => Promise<void>;
 }
 
 const SchoolDataContext = createContext<SchoolDataContextValue | null>(null);
@@ -32,6 +33,7 @@ function buildInitialState(isParentSession: boolean): SchoolDataState {
     selectedStudentId: "",
     isLoading: isParentSession,
     isRefreshing: false,
+    isProcessingPayment: false,
     error: null,
   };
 }
@@ -83,13 +85,22 @@ export function SchoolDataProvider({
     controllerRef.current?.setSelectedStudentId(studentId);
   }, []);
 
+  const processPayment = useCallback(async (amount: number): Promise<void> => {
+    const controller = controllerRef.current;
+    if (!controller) {
+      throw new Error("School session is not active.");
+    }
+    return controller.processPayment(amount);
+  }, []);
+
   const value = useMemo<SchoolDataContextValue>(
     () => ({
       ...state,
       refreshData,
       setSelectedStudentId,
+      processPayment,
     }),
-    [state, refreshData, setSelectedStudentId],
+    [state, refreshData, setSelectedStudentId, processPayment],
   );
 
   return (
