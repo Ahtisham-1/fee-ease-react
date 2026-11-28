@@ -122,9 +122,33 @@ test("clearAuthToken deletes token and propagates storage errors", async () => {
     () => webStorage.clearAuthToken(),
     /not available/i,
   );
+
+  // Expo Web defines stub setItemAsync/getItemAsync functions while isAvailableAsync returns false.
+  const webMethodStubStore: SecureStoreLike = {
+    isAvailableAsync: async () => false,
+    async getItemAsync() {
+      throw new Error("getValueWithKeyAsync is not a function");
+    },
+    async setItemAsync() {
+      throw new Error("setValueWithKeyAsync is not a function");
+    },
+    async deleteItemAsync() {
+      throw new Error("deleteValueWithKeyAsync is not a function");
+    },
+  };
+  const webStubStorage = createTokenStorage(webMethodStubStore, 6);
+  assert.equal(await webStubStorage.getToken(), null);
+  await assert.rejects(
+    () => webStubStorage.setAuthToken("abc.def.ghi"),
+    /not available/i,
+  );
+  await assert.rejects(
+    () => webStubStorage.clearAuthToken(),
+    /not available/i,
+  );
 });
 
-test("getToken returns null safely if secure store read throws", async () => {
+test("getToken returns null safely if secure store read or isAvailableAsync throws", async () => {
   const failingStore: SecureStoreLike = {
     async getItemAsync() {
       throw new Error("Keychain locked");
@@ -133,6 +157,24 @@ test("getToken returns null safely if secure store read throws", async () => {
     async deleteItemAsync() {},
   };
   const storage = createTokenStorage(failingStore, 6);
-
   assert.equal(await storage.getToken(), null);
+
+  const crashingAvailabilityStore: SecureStoreLike = {
+    isAvailableAsync: async () => {
+      throw new Error("Bridge failure");
+    },
+    async getItemAsync() {
+      return "should.not.read";
+    },
+    async setItemAsync() {},
+    async deleteItemAsync() {},
+  };
+  const unavailableStorage = createTokenStorage(crashingAvailabilityStore);
+  assert.equal(await unavailableStorage.getToken(), null);
+
+  // When keychainAccessible is omitted (Android/mock default), options are undefined.
+  const { store, calls } = createMemoryStore();
+  const defaultOptStorage = createTokenStorage(store);
+  await defaultOptStorage.setAuthToken("valid.jwt.token");
+  assert.deepEqual(calls[0], { op: "set", key: TOKEN_KEY, options: undefined });
 });

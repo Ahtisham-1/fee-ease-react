@@ -5,6 +5,7 @@ export type SecureStoreOptionsLike = {
 };
 
 export interface SecureStoreLike {
+  isAvailableAsync?: () => Promise<boolean>;
   getItemAsync(
     key: string,
     options?: SecureStoreOptionsLike,
@@ -46,14 +47,22 @@ function sanitizeToken(raw: unknown): string {
 
 export function createTokenStorage(
   store: SecureStoreLike,
-  keychainAccessible: number,
+  keychainAccessible?: number,
 ): TokenStorage {
-  const accessOptions: SecureStoreOptionsLike = { keychainAccessible };
+  const accessOptions: SecureStoreOptionsLike | undefined =
+    keychainAccessible !== undefined ? { keychainAccessible } : undefined;
+
+  async function ensureAvailable(): Promise<boolean> {
+    if (typeof store.isAvailableAsync === "function") {
+      return Boolean(await store.isAvailableAsync());
+    }
+    return typeof store.getItemAsync === "function";
+  }
 
   return {
     async getToken(): Promise<string | null> {
       try {
-        if (typeof store.getItemAsync !== "function") {
+        if (!(await ensureAvailable()) || typeof store.getItemAsync !== "function") {
           return null;
         }
         const stored = await store.getItemAsync(TOKEN_KEY, accessOptions);
@@ -73,7 +82,7 @@ export function createTokenStorage(
 
     async setAuthToken(token: string): Promise<void> {
       const normalized = sanitizeToken(token);
-      if (typeof store.setItemAsync !== "function") {
+      if (!(await ensureAvailable()) || typeof store.setItemAsync !== "function") {
         throw new Error(
           "Secure token storage is not available on this platform.",
         );
@@ -82,7 +91,7 @@ export function createTokenStorage(
     },
 
     async clearAuthToken(): Promise<void> {
-      if (typeof store.deleteItemAsync !== "function") {
+      if (!(await ensureAvailable()) || typeof store.deleteItemAsync !== "function") {
         throw new Error(
           "Secure token storage is not available on this platform.",
         );
@@ -98,8 +107,12 @@ async function getDefaultStorage(): Promise<TokenStorage> {
   if (!defaultStoragePromise) {
     // Lazy import keeps Node unit tests decoupled from Expo's native bridge while Metro bundles it cleanly.
     defaultStoragePromise = import("expo-secure-store")
-      .then((SecureStore) => {
-        if (typeof SecureStore.setItemAsync !== "function") {
+      .then(async (SecureStore) => {
+        const available =
+          typeof SecureStore.isAvailableAsync === "function"
+            ? await SecureStore.isAvailableAsync()
+            : typeof SecureStore.setItemAsync === "function";
+        if (!available) {
           throw new Error(
             "Secure token storage is not available on this platform.",
           );
@@ -118,8 +131,12 @@ async function getDefaultStorage(): Promise<TokenStorage> {
 }
 
 export async function getToken(): Promise<string | null> {
-  const storage = await getDefaultStorage();
-  return storage.getToken();
+  try {
+    const storage = await getDefaultStorage();
+    return await storage.getToken();
+  } catch {
+    return null;
+  }
 }
 
 export async function setAuthToken(token: string): Promise<void> {

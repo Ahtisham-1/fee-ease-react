@@ -168,9 +168,10 @@ function validateApiPath(path: string, apiBase: string): string {
     path.startsWith("//") ||
     path.includes("://") ||
     path.includes("\\") ||
+    /%5c/i.test(path) ||
     path.includes("#") ||
     /[\x00-\x1f\x7f]/.test(path) ||
-    /(?:^|\/)(?:\.|%2e){1,2}(?:\/|$|\?)/i.test(path)
+    /(?:^|\/|%2f|%5c)(?:\.|%2e){1,2}(?:\/|%2f|%5c|$|\?)/i.test(path)
   ) {
     throw new Error("Invalid API path.");
   }
@@ -240,17 +241,13 @@ function parseJsonSafely(
 }
 
 function isBinaryOrNativeBody(body: unknown): body is BodyInit {
-  if (
+  return (
     typeof body === "string" ||
     (typeof FormData !== "undefined" && body instanceof FormData) ||
     (typeof Blob !== "undefined" && body instanceof Blob) ||
     body instanceof ArrayBuffer ||
     ArrayBuffer.isView(body)
-  ) {
-    return true;
-  }
-  // React Native asset upload object ({ uri: string }).
-  return isRecord(body) && typeof body.uri === "string";
+  );
 }
 
 function serializeRequestBody(
@@ -279,7 +276,11 @@ function serializeRequestBody(
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  return JSON.stringify(body);
+  try {
+    return JSON.stringify(body);
+  } catch {
+    throw new ApiError("Invalid request payload.", 400, "validation");
+  }
 }
 
 async function prepareRequestHeaders(
@@ -298,7 +299,12 @@ async function prepareRequestHeaders(
     return { headers, sentToken: null };
   }
 
-  const token = await tokenStorage.getToken();
+  let token: string | null = null;
+  try {
+    token = await tokenStorage.getToken();
+  } catch {
+    token = null;
+  }
   if (!token || !isValidAuthTokenFormat(token)) {
     return { headers, sentToken: null };
   }
@@ -326,6 +332,9 @@ async function fetchTextWithTimeout(
   };
 
   if (externalSignal) {
+    if (externalSignal.aborted) {
+      throw new ApiError("Request was cancelled.", 0, "aborted");
+    }
     externalSignal.addEventListener("abort", onExternalAbort, { once: true });
   }
 
@@ -429,7 +438,12 @@ export function createApiClient(deps: ApiClientDeps = {}): ApiClient {
 
     const cleanupPromise = (async () => {
       // Skip clearing if user re-authenticated with a newer token while this request was in flight.
-      const currentToken = await tokenStorage.getToken();
+      let currentToken: string | null = sentToken;
+      try {
+        currentToken = await tokenStorage.getToken();
+      } catch {
+        currentToken = sentToken;
+      }
       if (currentToken !== sentToken) {
         return;
       }

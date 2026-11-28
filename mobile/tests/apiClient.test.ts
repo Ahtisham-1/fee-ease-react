@@ -114,6 +114,8 @@ test("requestJson blocks protocol-relative, external, traversal, control-char, a
     "api/auth/me",
     "/../admin",
     "/%2e%2e/admin",
+    "/..%2fadmin",
+    "/%2e%2e%5cadmin",
     "/api/test\r\nX-Evil: 1",
     "/api/test\t",
     "/api/test\x00",
@@ -394,4 +396,109 @@ test("expectArray returns arrays and throws ApiError on malformed non-array payl
     () => client.expectArray({ items: [] }, "payments"),
     (err: unknown) => err instanceof ApiError && /Invalid payments response/i.test(err.message),
   );
+});
+
+test("requestJson serializes JSON bodies, rejects circular payloads, handles 204 empty responses, oversized payloads, and mid-flight abort", async () => {
+  const { storage } = createStubStorage(null);
+  let sentContentType: string | null = null;
+  let sentBody: unknown = null;
+
+  const client = createApiClient({
+    baseUrl: "https://api.feeease.example.com",
+    tokenStorage: storage,
+    fetchFn: async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/empty")) {
+        return new Response(null, { status: 204 });
+      }
+      if (url.endsWith("/too-big-header")) {
+        return new Response("{}", {
+          status: 200,
+          headers: { "Content-Length": String(6 * 1024 * 1024) },
+        });
+      }
+      if (url.endsWith("/slow-abort")) {
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            const err = new Error("Aborted");
+            err.name = "AbortError";
+            reject(err);
+          });
+        });
+      }
+      sentContentType = new Headers(init?.headers).get("Content-Type");
+      sentBody = init?.body;
+      return new Response(JSON.stringify({ saved: true }), { status: 200 });
+    },
+  });
+
+  const jsonRes = await client.requestJson<{ saved: boolean }>("/api/test", {
+    method: "POST",
+    body: { amount: 1500 },
+  });
+  assert.deepEqual(jsonRes, { saved: true });
+  assert.equal(sentContentType, "application/json");
+  assert.equal(sentBody, '{"amount":1500}');
+
+  assert.equal(await client.requestJson("/empty"), null);
+
+  const circular: Record<string, unknown> = {};
+  circular.self = circular;
+  await assert.rejects(
+    () => client.requestJson("/api/test", { method: "POST", body: circular }),
+    (err: unknown) => err instanceof ApiError && err.code === "validation",
+  );
+
+  await assert.rejects(
+    () => client.requestJson("/too-big-header"),
+    (err: unknown) => err instanceof ApiError && err.code === "invalid_response",
+  );
+
+  const abortController = new AbortController();
+  setTimeout(() => abortController.abort(), 10);
+  await assert.rejects(
+    () =>
+      client.requestJson("/slow-abort", {
+        signal: abortController.signal,
+        timeoutMs: 5000,
+      }),
+    (err: unknown) => err instanceof ApiError && err.code === "aborted",
+  );
+
+  // Oversized response body without Content-Length rejects with invalid_response.
+  const hugeTextClient = createApiClient({
+    baseUrl: "https://api.feeease.example.com",
+    tokenStorage: storage,
+    fetchFn: async () => new Response("x".repeat(5 * 1024 * 1024 + 1), { status: 200 }),
+  });
+  await assert.rejects(
+    () => hugeTextClient.requestJson("/api/huge"),
+    (err: unknown) => err instanceof ApiError && err.code === "invalid_response",
+  );
+
+  // Failing tokenStorage.getToken() must neither crash unauthenticated calls nor hide ApiError(401).
+  let throwingReadClears = 0;
+  let throwingReadUnauthorized = 0;
+  const throwingReadClient = createApiClient({
+    baseUrl: "https://api.feeease.example.com",
+    tokenStorage: {
+      async getToken() {
+        throw new Error("Keychain read error");
+      },
+      async setAuthToken() {},
+      async clearAuthToken() {
+        throwingReadClears += 1;
+      },
+    },
+    fetchFn: async () => new Response(JSON.stringify({ detail: "Unauthorized" }), { status: 401 }),
+  });
+  throwingReadClient.registerUnauthorizedHandler(() => {
+    throwingReadUnauthorized += 1;
+  });
+  await assert.rejects(
+    () => throwingReadClient.requestJson("/api/parent/me"),
+    (err: unknown) => err instanceof ApiError && err.status === 401,
+  );
+  assert.equal(throwingReadClears, 0);
+  assert.equal(throwingReadUnauthorized, 0);
 });
