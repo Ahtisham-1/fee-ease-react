@@ -1,12 +1,12 @@
-import { ApiError, registerUnauthorizedHandler } from "../services/apiClient.ts";
-import { loginApi, type LoginResponse } from "../services/authApi.ts";
+import { ApiError, registerUnauthorizedHandler } from "../services/apiClient";
+import { loginApi, type LoginResponse } from "../services/authApi";
 import {
   clearAuthToken,
   getToken,
   setAuthToken,
-} from "../services/tokenStorage.ts";
-import type { Role } from "../types/index.ts";
-import { inspectSessionToken } from "../utils/jwt.ts";
+} from "../services/tokenStorage";
+import type { Role } from "../types/index";
+import { inspectSessionToken } from "../utils/jwt";
 
 export const SESSION_EXPIRED_NOTICE =
   "Your session expired. Please log in again.";

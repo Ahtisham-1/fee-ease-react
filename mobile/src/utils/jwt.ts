@@ -1,5 +1,5 @@
-import type { Role } from "../types/index.ts";
-import { hasSafeOwnKey, isRecord } from "./validation.ts";
+import type { Role } from "../types/index";
+import { hasSafeOwnKey, isRecord } from "./validation";
 
 export interface JwtPayload {
   sub?: string;

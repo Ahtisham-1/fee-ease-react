@@ -5,7 +5,7 @@ import {
   TOKEN_KEY,
   createTokenStorage,
   type SecureStoreLike,
-} from "../src/services/tokenStorage.ts";
+} from "../src/services/tokenStorage";
 
 function createMemoryStore(initial: Record<string, string> = {}) {
   const data = new Map<string, string>(Object.entries(initial));

@@ -5,9 +5,9 @@ import {
   buildFifoPaymentAllocations,
   calculateSequentialFeeKnockout,
   getStudentFinancialSummary,
-} from "../src/utils/feeCalculator.ts";
-import { formatRupees, formatTimestamp } from "../src/utils/format.ts";
-import type { FeeObligation, Payment } from "../src/types/index.ts";
+} from "../src/utils/feeCalculator";
+import { formatRupees, formatTimestamp } from "../src/utils/format";
+import type { FeeObligation, Payment } from "../src/types/index";
 
 const sampleObligations: FeeObligation[] = [
   {

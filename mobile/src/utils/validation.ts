@@ -1,4 +1,4 @@
-import { ApiError } from "../services/apiClient.ts";
+import { ApiError } from "../services/apiClient";
 
 export const MAX_PG_INT = 2_147_483_647;
 

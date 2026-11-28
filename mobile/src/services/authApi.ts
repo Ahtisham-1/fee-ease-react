@@ -1,6 +1,6 @@
-import { expectRecord, hasSafeOwnKey, normalizeIndianPhone } from "../utils/validation.ts";
-import { ApiError, requestJson, type ApiClient } from "./apiClient.ts";
-import { isValidAuthTokenFormat } from "./tokenStorage.ts";
+import { expectRecord, hasSafeOwnKey, normalizeIndianPhone } from "../utils/validation";
+import { ApiError, requestJson, type ApiClient } from "./apiClient";
+import { isValidAuthTokenFormat } from "./tokenStorage";
 
 export interface LoginResponse {
   access_token: string;

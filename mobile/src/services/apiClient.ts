@@ -4,7 +4,7 @@ import {
   isValidAuthTokenFormat,
   setAuthToken,
   type TokenStorage,
-} from "./tokenStorage.ts";
+} from "./tokenStorage";
 
 export const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_TIMEOUT_MS = 2_147_483_647;
@@ -260,7 +260,10 @@ function serializeRequestBody(
   if (body === undefined || body === null) {
     return undefined;
   }
-  if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams) {
+  if (
+    typeof URLSearchParams !== "undefined" &&
+    body instanceof URLSearchParams
+  ) {
     if (!headers.has("Content-Type")) {
       headers.set(
         "Content-Type",
@@ -342,7 +345,10 @@ async function fetchTextWithTimeout(
     const contentLengthHeader = response.headers?.get?.("Content-Length");
     if (contentLengthHeader) {
       const contentLength = Number(contentLengthHeader);
-      if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) {
+      if (
+        Number.isFinite(contentLength) &&
+        contentLength > MAX_RESPONSE_BYTES
+      ) {
         throw new ApiError(
           "Server response exceeded maximum allowed size.",
           response.status,
@@ -366,11 +372,7 @@ async function fetchTextWithTimeout(
       throw err;
     }
     if (timedOut) {
-      throw new ApiError(
-        "Request timed out. Please try again.",
-        0,
-        "timeout",
-      );
+      throw new ApiError("Request timed out. Please try again.", 0, "timeout");
     }
     if (
       controller.signal.aborted ||

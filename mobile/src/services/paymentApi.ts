@@ -1,4 +1,4 @@
-import type { Payment, PaymentStatus } from "../types/index.ts";
+import type { Payment, PaymentStatus } from "../types/index";
 import {
   expectRecord,
   isRecord,
@@ -6,8 +6,8 @@ import {
   parsePositiveInt,
   parsePositiveIntId,
   parseStringField,
-} from "../utils/validation.ts";
-import { ApiError, expectArray, requestJson, type ApiClient } from "./apiClient.ts";
+} from "../utils/validation";
+import { ApiError, expectArray, requestJson, type ApiClient } from "./apiClient";
 
 export interface NewPaymentData {
   amount: number;

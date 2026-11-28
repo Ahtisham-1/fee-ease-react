@@ -5,7 +5,7 @@ import {
   createAuthController,
   SESSION_EXPIRED_NOTICE,
   type AuthState,
-} from "../src/context/authController.ts";
+} from "../src/context/authController";
 
 function toBase64Url(value: string): string {
   return Buffer.from(value, "utf8")

@@ -6,8 +6,8 @@ import {
   createApiClient,
   extractErrorMessage,
   resolveApiBase,
-} from "../src/services/apiClient.ts";
-import type { TokenStorage } from "../src/services/tokenStorage.ts";
+} from "../src/services/apiClient";
+import type { TokenStorage } from "../src/services/tokenStorage";
 
 function createStubStorage(initialToken: string | null = null) {
   let token = initialToken;

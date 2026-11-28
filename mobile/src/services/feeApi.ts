@@ -1,12 +1,12 @@
-import type { FeeObligation, FeeStatus, FeeType } from "../types/index.ts";
+import type { FeeObligation, FeeStatus, FeeType } from "../types/index";
 import {
   expectRecord,
   parseNonNegativeInt,
   parsePositiveInt,
   parsePositiveIntId,
   parseStringField,
-} from "../utils/validation.ts";
-import { ApiError, expectArray, requestJson, type ApiClient } from "./apiClient.ts";
+} from "../utils/validation";
+import { ApiError, expectArray, requestJson, type ApiClient } from "./apiClient";
 
 export interface FeeApi {
   getFees(): Promise<FeeObligation[]>;

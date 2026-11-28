@@ -1,5 +1,5 @@
-import type { FeeObligation, Payment, PaymentAllocation } from "../types/index.ts";
-import { formatRupees } from "./format.ts";
+import type { FeeObligation, Payment, PaymentAllocation } from "../types/index";
+import { formatRupees } from "./format";
 
 export const ACADEMIC_MONTHS: readonly string[] = [
   "January",

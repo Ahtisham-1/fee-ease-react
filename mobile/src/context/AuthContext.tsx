@@ -9,12 +9,12 @@ import {
   type ReactNode,
 } from "react";
 
-import type { Role } from "../types/index.ts";
+import type { Role } from "../types/index";
 import {
   createAuthController,
   type AuthController,
   type AuthState,
-} from "./authController.ts";
+} from "./authController";
 
 export interface AuthContextValue extends AuthState {
   clearSessionNotice: () => void;

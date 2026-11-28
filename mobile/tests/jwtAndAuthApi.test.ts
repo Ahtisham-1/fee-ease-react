@@ -6,12 +6,12 @@ import {
   inspectSessionToken,
   isTokenExpired,
   parseJwtRole,
-} from "../src/utils/jwt.ts";
-import { createAuthApi } from "../src/services/authApi.ts";
-import { createStudentApi } from "../src/services/studentApi.ts";
-import { createFeeApi } from "../src/services/feeApi.ts";
-import { createPaymentApi } from "../src/services/paymentApi.ts";
-import { ApiError, type ApiClient, type JsonRequestInit } from "../src/services/apiClient.ts";
+} from "../src/utils/jwt";
+import { createAuthApi } from "../src/services/authApi";
+import { createStudentApi } from "../src/services/studentApi";
+import { createFeeApi } from "../src/services/feeApi";
+import { createPaymentApi } from "../src/services/paymentApi";
+import { ApiError, type ApiClient, type JsonRequestInit } from "../src/services/apiClient";
 
 function toBase64Url(value: string): string {
   return Buffer.from(value, "utf8")
