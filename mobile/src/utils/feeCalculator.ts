@@ -16,6 +16,10 @@ export const ACADEMIC_MONTHS: readonly string[] = [
   "December",
 ];
 
+const NORMALIZED_MONTH_INDEX = new Map<string, number>(
+  ACADEMIC_MONTHS.map((month, index) => [month.toLowerCase(), index]),
+);
+
 export interface StudentFinancialSummary {
   totalFees: number;
   totalAssigned: number;
@@ -27,6 +31,56 @@ export interface KnockoutFeeItem extends FeeObligation {
   isCovered: boolean;
   paidAmount: number;
   remainingDue: number;
+}
+
+function toSafeMoney(amount: number): number {
+  return typeof amount === "number" && Number.isFinite(amount) && amount > 0
+    ? amount
+    : 0;
+}
+
+function getMonthSortIndex(month: string): number {
+  const key = typeof month === "string" ? month.trim().toLowerCase() : "";
+  // Unknown months sort after December instead of masquerading as January (index 0).
+  return NORMALIZED_MONTH_INDEX.get(key) ?? ACADEMIC_MONTHS.length;
+}
+
+function parseNumericId(id: string): number {
+  if (typeof id !== "string") return Number.NaN;
+  const trimmed = id.trim();
+  return trimmed ? Number(trimmed) : Number.NaN;
+}
+
+function compareObligationsChronologically(
+  a: FeeObligation,
+  b: FeeObligation,
+): number {
+  // Missing/corrupt academic years sort last so they cannot consume oldest payments first.
+  const yearA =
+    typeof a.academicYear === "number" && Number.isFinite(a.academicYear)
+      ? a.academicYear
+      : Number.MAX_SAFE_INTEGER;
+  const yearB =
+    typeof b.academicYear === "number" && Number.isFinite(b.academicYear)
+      ? b.academicYear
+      : Number.MAX_SAFE_INTEGER;
+  if (yearA !== yearB) {
+    return yearA - yearB;
+  }
+
+  const monthDiff = getMonthSortIndex(a.month) - getMonthSortIndex(b.month);
+  if (monthDiff !== 0) {
+    return monthDiff;
+  }
+
+  const idA = parseNumericId(a.id);
+  const idB = parseNumericId(b.id);
+  if (Number.isFinite(idA) && Number.isFinite(idB) && idA !== idB) {
+    return idA - idB;
+  }
+  const strA = typeof a.id === "string" ? a.id : "";
+  const strB = typeof b.id === "string" ? b.id : "";
+  return strA.localeCompare(strB);
 }
 
 /**
@@ -43,8 +97,14 @@ export function getStudentFinancialSummary(
     (p) => p.belongsTo === studentId && p.status === "SUCCESS",
   );
 
-  const totalFees = studentObligations.reduce((acc, curr) => acc + curr.feeAmount, 0);
-  const totalPaid = studentSuccessfulPayments.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalFees = studentObligations.reduce(
+    (acc, curr) => acc + toSafeMoney(curr.feeAmount),
+    0,
+  );
+  const totalPaid = studentSuccessfulPayments.reduce(
+    (acc, curr) => acc + toSafeMoney(curr.amount),
+    0,
+  );
   const netBalance = Math.max(0, totalFees - totalPaid);
 
   return {
@@ -69,32 +129,25 @@ export function calculateSequentialFeeKnockout(
     (p) => p.belongsTo === studentId && p.status === "SUCCESS",
   );
   let remainingWallet = studentSuccessfulPayments.reduce(
-    (acc, curr) => acc + curr.amount,
+    (acc, curr) => acc + toSafeMoney(curr.amount),
     0,
   );
 
-  const chronologicalObligations = [...studentObligations].sort((a, b) => {
-    const yearA = a.academicYear || 0;
-    const yearB = b.academicYear || 0;
-    if (yearA !== yearB) {
-      return yearA - yearB;
-    }
-
-    const monthAIndex = ACADEMIC_MONTHS.indexOf(a.month);
-    const monthBIndex = ACADEMIC_MONTHS.indexOf(b.month);
-
-    return (monthAIndex !== -1 ? monthAIndex : 0) - (monthBIndex !== -1 ? monthBIndex : 0);
-  });
+  const chronologicalObligations = [...studentObligations].sort(
+    compareObligationsChronologically,
+  );
 
   return chronologicalObligations.map((obligation) => {
-    const allocatedToThisMonth = Math.min(remainingWallet, obligation.feeAmount);
+    const safeFeeAmount = toSafeMoney(obligation.feeAmount);
+    const allocatedToThisMonth = Math.min(remainingWallet, safeFeeAmount);
     remainingWallet -= allocatedToThisMonth;
 
-    const remainingDue = obligation.feeAmount - allocatedToThisMonth;
+    const remainingDue = safeFeeAmount - allocatedToThisMonth;
     const isCovered = remainingDue === 0;
 
     return {
       ...obligation,
+      feeAmount: safeFeeAmount,
       isCovered,
       paidAmount: allocatedToThisMonth,
       remainingDue,
@@ -106,6 +159,7 @@ export function calculateSequentialFeeKnockout(
 /**
  * Splits a valid whole-rupee parent payment sequentially across oldest pending
  * FeeObligation IDs so each POST /api/payments/ call stays within remaining_due.
+ * Callers submitting these allocations should still handle server 409/400 conflicts gracefully.
  */
 export function buildFifoPaymentAllocations(
   studentId: string,
@@ -118,6 +172,9 @@ export function buildFifoPaymentAllocations(
   }
   if (!Number.isInteger(paymentAmount)) {
     throw new Error("Please enter a whole rupee amount without decimals.");
+  }
+  if (!Number.isSafeInteger(paymentAmount)) {
+    throw new Error("Payment amount exceeds the supported maximum.");
   }
 
   const schedule = calculateSequentialFeeKnockout(studentId, obligations, payments);

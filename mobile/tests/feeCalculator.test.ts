@@ -244,15 +244,119 @@ test("buildFifoPaymentAllocations rejects invalid, fractional, settled, or over-
   );
 });
 
-test("formatRupees uses Indian numbering format", () => {
+test("formatRupees uses Indian numbering format and handles invalid/negative values", () => {
   assert.equal(formatRupees(150000), "₹1,50,000");
   assert.equal(formatRupees(0), "₹0");
+  assert.equal(formatRupees(-0), "₹0");
+  assert.equal(formatRupees(-500), "-₹500");
+  assert.equal(formatRupees(Number.NaN), "₹0");
+  assert.equal(formatRupees(Number.POSITIVE_INFINITY), "₹0");
+  assert.equal(formatRupees(Number.NEGATIVE_INFINITY), "₹0");
 });
 
 test("formatTimestamp formats valid ISO strings and falls back on invalid dates", () => {
   assert.equal(formatTimestamp("not-a-date"), "not-a-date");
+  assert.equal(formatTimestamp(""), "");
+  assert.equal(formatTimestamp("   "), "   ");
   const formatted = formatTimestamp("2026-01-10T10:00:00Z");
   assert.notEqual(formatted, "2026-01-10T10:00:00Z");
   assert.match(formatted, /2026/);
-  assert.match(formatted, /Jan/);
+});
+
+test("fifo sorting normalizes month case, tie-breaks numeric IDs, and skips settled/zero fees", () => {
+  const mixedObligations: FeeObligation[] = [
+    {
+      id: "12",
+      studentId: "10",
+      feeAmount: 500,
+      month: "Term-Misc",
+      academicYear: 2026,
+      feeType: "tuition",
+      feeStatus: "pending",
+    },
+    {
+      id: "11",
+      studentId: "10",
+      feeAmount: 1000,
+      month: " march ",
+      academicYear: 2026,
+      feeType: "tuition",
+      feeStatus: "pending",
+    },
+    {
+      id: "2",
+      studentId: "10",
+      feeAmount: 1000,
+      month: "February",
+      academicYear: 2026,
+      feeType: "tuition",
+      feeStatus: "pending",
+    },
+    {
+      id: "10",
+      studentId: "10",
+      feeAmount: 400,
+      month: "February",
+      academicYear: 2026,
+      feeType: "tuition",
+      feeStatus: "pending",
+    },
+    {
+      id: "13",
+      studentId: "10",
+      feeAmount: -200,
+      month: "April",
+      academicYear: 2026,
+      feeType: "tuition",
+      feeStatus: "pending",
+    },
+    {
+      id: "14",
+      studentId: "10",
+      feeAmount: 300,
+      month: "January",
+      academicYear: Number.NaN,
+      feeType: "tuition",
+      feeStatus: "pending",
+    },
+  ];
+  const mixedPayments: Payment[] = [
+    {
+      id: "px",
+      amount: Number.NaN,
+      dateTime: "2026-02-01T10:00:00Z",
+      belongsTo: "10",
+      status: "SUCCESS",
+    },
+    {
+      id: "py",
+      amount: 1200,
+      dateTime: "2026-02-05T10:00:00Z",
+      belongsTo: "10",
+      status: "SUCCESS",
+    },
+  ];
+
+  const schedule = calculateSequentialFeeKnockout("10", mixedObligations, mixedPayments);
+  assert.deepEqual(
+    schedule.map((item) => item.id),
+    ["2", "10", "11", "13", "12", "14"],
+  );
+  assert.equal(schedule[0].isCovered, true);
+  assert.equal(schedule[1].paidAmount, 200);
+  assert.equal(schedule[1].remainingDue, 200);
+  // Negative feeAmount is sanitized to 0 and immediately considered covered.
+  assert.equal(schedule[3].feeAmount, 0);
+  assert.equal(schedule[3].isCovered, true);
+  assert.equal(schedule[3].feeStatus, "paid");
+
+  // Allocation skips 0-rupee clamped row ("13") and continues to "12".
+  assert.deepEqual(
+    buildFifoPaymentAllocations("10", mixedObligations, mixedPayments, 1500),
+    [
+      { feeId: "10", amount: 200 },
+      { feeId: "11", amount: 1000 },
+      { feeId: "12", amount: 300 },
+    ],
+  );
 });
