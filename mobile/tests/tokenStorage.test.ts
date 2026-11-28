@@ -48,7 +48,7 @@ test("setAuthToken trims token and writes with WHEN_UNLOCKED_THIS_DEVICE_ONLY", 
   });
 });
 
-test("setAuthToken rejects empty or whitespace-only tokens", async () => {
+test("setAuthToken rejects empty, malformed, control-char, and non-string tokens", async () => {
   const { store, data, calls } = createMemoryStore();
   const storage = createTokenStorage(store, 6);
 
@@ -60,28 +60,68 @@ test("setAuthToken rejects empty or whitespace-only tokens", async () => {
     () => storage.setAuthToken("   \n\t "),
     /empty authentication token/i,
   );
+  await assert.rejects(
+    () => storage.setAuthToken(null as unknown as string),
+    /empty authentication token/i,
+  );
+  await assert.rejects(
+    () => storage.setAuthToken("jwt\r\nX-Evil: 1"),
+    /malformed authentication token/i,
+  );
+  await assert.rejects(
+    () => storage.setAuthToken("header payload"),
+    /malformed authentication token/i,
+  );
+  await assert.rejects(
+    () => storage.setAuthToken("jwt\x00token"),
+    /malformed authentication token/i,
+  );
+  await assert.rejects(
+    () => storage.setAuthToken("jwt\u2028token"),
+    /malformed authentication token/i,
+  );
+
   assert.equal(data.size, 0);
   assert.equal(calls.length, 0);
 });
 
-test("getToken returns trimmed token or null when empty", async () => {
+test("getToken returns valid trimmed token or null when empty or corrupted", async () => {
   const { store } = createMemoryStore({ [TOKEN_KEY]: "  abc.def.ghi  " });
   const storage = createTokenStorage(store, 6);
 
   assert.equal(await storage.getToken(), "abc.def.ghi");
 
-  const emptyStore = createMemoryStore({ [TOKEN_KEY]: "   " });
-  const emptyStorage = createTokenStorage(emptyStore.store, 6);
-  assert.equal(await emptyStorage.getToken(), null);
+  for (const invalidValue of [
+    "   ",
+    "bad\r\ntoken",
+    "bad\x00token",
+    "bad token",
+  ]) {
+    const corrupted = createMemoryStore({ [TOKEN_KEY]: invalidValue });
+    const corruptedStorage = createTokenStorage(corrupted.store, 6);
+    assert.equal(await corruptedStorage.getToken(), null);
+  }
 });
 
-test("clearAuthToken deletes token from secure storage", async () => {
+test("clearAuthToken deletes token and propagates storage errors", async () => {
   const { store, data } = createMemoryStore({ [TOKEN_KEY]: "secret.jwt" });
   const storage = createTokenStorage(store, 6);
 
   await storage.clearAuthToken();
   assert.equal(data.has(TOKEN_KEY), false);
   assert.equal(await storage.getToken(), null);
+
+  const webEmptyStore = {} as unknown as SecureStoreLike;
+  const webStorage = createTokenStorage(webEmptyStore, 6);
+  assert.equal(await webStorage.getToken(), null);
+  await assert.rejects(
+    () => webStorage.setAuthToken("abc.def.ghi"),
+    /not available/i,
+  );
+  await assert.rejects(
+    () => webStorage.clearAuthToken(),
+    /not available/i,
+  );
 });
 
 test("getToken returns null safely if secure store read throws", async () => {

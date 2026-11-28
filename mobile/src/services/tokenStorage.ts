@@ -23,13 +23,22 @@ export interface TokenStorage {
   clearAuthToken(): Promise<void>;
 }
 
-function sanitizeToken(raw: string): string {
+// Printable non-whitespace US-ASCII only: blocks CRLF, spaces, NUL/control bytes, and non-ASCII.
+const VALID_TOKEN_PATTERN = /^[\x21-\x7e]+$/;
+
+export function isValidAuthTokenFormat(token: string): boolean {
+  return VALID_TOKEN_PATTERN.test(token);
+}
+
+function sanitizeToken(raw: unknown): string {
+  if (typeof raw !== "string") {
+    throw new Error("Cannot store an empty authentication token.");
+  }
   const trimmed = raw.trim();
   if (!trimmed) {
     throw new Error("Cannot store an empty authentication token.");
   }
-  // Reject whitespace/CRLF inside tokens to prevent HTTP header injection.
-  if (/\s/.test(trimmed)) {
+  if (!isValidAuthTokenFormat(trimmed)) {
     throw new Error("Cannot store a malformed authentication token.");
   }
   return trimmed;
@@ -37,35 +46,47 @@ function sanitizeToken(raw: string): string {
 
 export function createTokenStorage(
   store: SecureStoreLike,
-  keychainAccessible?: number,
+  keychainAccessible: number,
 ): TokenStorage {
-  const accessOptions: SecureStoreOptionsLike | undefined =
-    keychainAccessible === undefined ? undefined : { keychainAccessible };
+  const accessOptions: SecureStoreOptionsLike = { keychainAccessible };
 
   return {
     async getToken(): Promise<string | null> {
       try {
+        if (typeof store.getItemAsync !== "function") {
+          return null;
+        }
         const stored = await store.getItemAsync(TOKEN_KEY, accessOptions);
         if (typeof stored !== "string") {
           return null;
         }
         const trimmed = stored.trim();
-        return trimmed.length > 0 ? trimmed : null;
+        if (!trimmed || !isValidAuthTokenFormat(trimmed)) {
+          return null;
+        }
+        return trimmed;
       } catch {
-        // Never fall back to unencrypted storage or crash auth checks on keychain read errors.
+        // Never fall back to unencrypted storage or leak keychain internals.
         return null;
       }
     },
 
     async setAuthToken(token: string): Promise<void> {
-      if (typeof token !== "string") {
-        throw new Error("Cannot store an empty authentication token.");
-      }
       const normalized = sanitizeToken(token);
+      if (typeof store.setItemAsync !== "function") {
+        throw new Error(
+          "Secure token storage is not available on this platform.",
+        );
+      }
       await store.setItemAsync(TOKEN_KEY, normalized, accessOptions);
     },
 
     async clearAuthToken(): Promise<void> {
+      if (typeof store.deleteItemAsync !== "function") {
+        throw new Error(
+          "Secure token storage is not available on this platform.",
+        );
+      }
       await store.deleteItemAsync(TOKEN_KEY, accessOptions);
     },
   };
@@ -75,13 +96,23 @@ let defaultStoragePromise: Promise<TokenStorage> | null = null;
 
 async function getDefaultStorage(): Promise<TokenStorage> {
   if (!defaultStoragePromise) {
-    // Lazy import keeps Node unit tests decoupled from Expo's native bridge while Metro bundles it normally.
-    defaultStoragePromise = import("expo-secure-store").then((SecureStore) =>
-      createTokenStorage(
-        SecureStore,
-        SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-      ),
-    );
+    // Lazy import keeps Node unit tests decoupled from Expo's native bridge while Metro bundles it cleanly.
+    defaultStoragePromise = import("expo-secure-store")
+      .then((SecureStore) => {
+        if (typeof SecureStore.setItemAsync !== "function") {
+          throw new Error(
+            "Secure token storage is not available on this platform.",
+          );
+        }
+        return createTokenStorage(
+          SecureStore,
+          SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        );
+      })
+      .catch((error) => {
+        defaultStoragePromise = null;
+        throw error;
+      });
   }
   return defaultStoragePromise;
 }
