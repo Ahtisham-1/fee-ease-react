@@ -19,13 +19,16 @@ export function StudentSelectorCard({
     return (
       <View style={styles.card}>
         <Text style={styles.badge}>PARENT PORTAL</Text>
-        <Text style={styles.title}>No Children Linked to This Account</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          No Children Linked to This Account
+        </Text>
         <Text style={styles.subtitle}>
           Verify the mobile number registered with your school office to
           connect your account to your enrolled children.
         </Text>
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Connect to your school"
           onPress={onConnectToSchool}
           style={({ pressed }) => [
             styles.primaryButton,

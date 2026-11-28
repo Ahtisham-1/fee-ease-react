@@ -48,6 +48,7 @@ export default function VerifyOtpScreen() {
   );
   const [isBusy, setIsBusy] = useState(false);
 
+  const actionLockRef = useRef(false);
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -71,13 +72,16 @@ export default function VerifyOtpScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.fallbackContainer}>
           <View style={styles.card}>
-            <Text style={styles.title}>Verification Session Missing</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              Verification Session Missing
+            </Text>
             <StatusBanner
               message="Please start registration again to verify your email address."
               variant="warning"
             />
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Back to registration"
               onPress={() => {
                 clearPendingRegistration();
                 router.replace("/(auth)/register");
@@ -93,7 +97,7 @@ export default function VerifyOtpScreen() {
   }
 
   async function handleVerify() {
-    if (isBusy) return;
+    if (actionLockRef.current || isBusy) return;
     setErrorMessage(null);
     setSuccessMessage(null);
 
@@ -103,10 +107,12 @@ export default function VerifyOtpScreen() {
       return;
     }
 
+    actionLockRef.current = true;
     setIsBusy(true);
     try {
       await verifyOtpApi(email, cleanedCode);
     } catch (error) {
+      actionLockRef.current = false;
       if (mountedRef.current) {
         setErrorMessage(
           formatOtpError(error, "Verification failed. Please try again."),
@@ -127,6 +133,7 @@ export default function VerifyOtpScreen() {
       // Account is verified; fall back cleanly to login screen below.
     } finally {
       clearPendingRegistration();
+      actionLockRef.current = false;
     }
 
     if (mountedRef.current) {
@@ -139,7 +146,7 @@ export default function VerifyOtpScreen() {
   }
 
   async function handleResend() {
-    if (isBusy || cooldownSeconds > 0) return;
+    if (actionLockRef.current || isBusy || cooldownSeconds > 0) return;
     setErrorMessage(null);
     setSuccessMessage(null);
 
@@ -150,6 +157,7 @@ export default function VerifyOtpScreen() {
       return;
     }
 
+    actionLockRef.current = true;
     setIsBusy(true);
     try {
       await registerApi(creds.email, creds.password);
@@ -167,6 +175,7 @@ export default function VerifyOtpScreen() {
         );
       }
     } finally {
+      actionLockRef.current = false;
       if (mountedRef.current) {
         setIsBusy(false);
       }
@@ -174,7 +183,7 @@ export default function VerifyOtpScreen() {
   }
 
   function handleEditEmail() {
-    if (isBusy) return;
+    if (actionLockRef.current || isBusy) return;
     clearPendingRegistration();
     router.replace("/(auth)/register");
   }
@@ -191,7 +200,9 @@ export default function VerifyOtpScreen() {
         >
           <View style={styles.card}>
             <Text style={styles.badge}>EMAIL VERIFICATION</Text>
-            <Text style={styles.title}>Verify Your Email</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              Verify Your Email
+            </Text>
             <Text style={styles.subtitle}>{email}</Text>
 
             {errorMessage ? (
@@ -206,6 +217,7 @@ export default function VerifyOtpScreen() {
               <Text style={styles.label}>6-Digit Verification Code</Text>
               <TextInput
                 style={styles.otpInput}
+                accessibilityLabel="6-digit email verification code"
                 value={otpCode}
                 onChangeText={(text) =>
                   setOtpCode(text.replace(/\D/g, "").slice(0, 6))
@@ -225,6 +237,8 @@ export default function VerifyOtpScreen() {
 
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Verify email code and enter FeeEase"
+              accessibilityState={{ busy: isBusy, disabled: isBusy }}
               disabled={isBusy}
               onPress={() => {
                 void handleVerify();
@@ -253,6 +267,11 @@ export default function VerifyOtpScreen() {
             <View style={styles.secondaryRow}>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Resend verification code"
+                accessibilityState={{
+                  disabled: isBusy || cooldownSeconds > 0,
+                }}
+                hitSlop={8}
                 disabled={isBusy || cooldownSeconds > 0}
                 onPress={() => {
                   void handleResend();
@@ -271,6 +290,9 @@ export default function VerifyOtpScreen() {
 
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Edit email address"
+                accessibilityState={{ disabled: isBusy }}
+                hitSlop={8}
                 disabled={isBusy}
                 onPress={handleEditEmail}
                 style={styles.secondaryButton}

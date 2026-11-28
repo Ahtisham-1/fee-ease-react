@@ -62,6 +62,8 @@ export default function HomeScreen() {
             <StatusBanner message={error} variant="error" />
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Retry loading school records"
+              accessibilityState={{ busy: isRefreshing, disabled: isRefreshing }}
               disabled={isRefreshing}
               onPress={() => {
                 void refreshData();

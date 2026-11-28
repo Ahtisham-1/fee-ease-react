@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { type ComponentRef, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -28,8 +28,19 @@ export default function RegisterScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const submitLockRef = useRef(false);
+  const mountedRef = useRef(true);
+  const passwordInputRef = useRef<ComponentRef<typeof TextInput>>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   async function handleRegister() {
-    if (isSubmitting) return;
+    if (submitLockRef.current || isSubmitting) return;
     setErrorMessage(null);
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -38,17 +49,20 @@ export default function RegisterScreen() {
       return;
     }
 
+    submitLockRef.current = true;
     setIsSubmitting(true);
     try {
       await registerApi(normalizedEmail, password);
       // Keep password strictly in RAM (never in URL params) for post-OTP auto-login.
       setPendingRegistration(normalizedEmail, password);
+      if (!mountedRef.current) return;
       router.push({
         pathname: "/(auth)/verify-otp",
         params: { email: normalizedEmail },
       });
     } catch (error) {
       clearPendingRegistration();
+      if (!mountedRef.current) return;
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
       } else {
@@ -57,7 +71,10 @@ export default function RegisterScreen() {
         );
       }
     } finally {
-      setIsSubmitting(false);
+      submitLockRef.current = false;
+      if (mountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   }
 
@@ -73,7 +90,9 @@ export default function RegisterScreen() {
         >
           <View style={styles.card}>
             <Text style={styles.badge}>NEW PARENT ACCOUNT</Text>
-            <Text style={styles.title}>Create Account</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              Create Account
+            </Text>
             <Text style={styles.subtitle}>
               We will email a 6-digit verification code to confirm your account.
             </Text>
@@ -86,6 +105,7 @@ export default function RegisterScreen() {
               <Text style={styles.label}>Email Address</Text>
               <TextInput
                 style={styles.input}
+                accessibilityLabel="Email address"
                 value={email}
                 onChangeText={setEmail}
                 placeholder="parent@example.com"
@@ -97,6 +117,7 @@ export default function RegisterScreen() {
                 textContentType="emailAddress"
                 editable={!isSubmitting}
                 returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
               />
             </View>
 
@@ -104,7 +125,9 @@ export default function RegisterScreen() {
               <Text style={styles.label}>Password</Text>
               <View style={styles.passwordRow}>
                 <TextInput
+                  ref={passwordInputRef}
                   style={styles.passwordInput}
+                  accessibilityLabel="Password"
                   value={password}
                   onChangeText={setPassword}
                   placeholder="At least 6 characters"
@@ -124,6 +147,7 @@ export default function RegisterScreen() {
                   accessibilityLabel={
                     showPassword ? "Hide password" : "Show password"
                   }
+                  hitSlop={8}
                   onPress={() => setShowPassword((prev) => !prev)}
                   style={styles.toggleBtn}
                 >
@@ -136,6 +160,8 @@ export default function RegisterScreen() {
 
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Register and send verification code"
+              accessibilityState={{ busy: isSubmitting, disabled: isSubmitting }}
               disabled={isSubmitting}
               onPress={() => {
                 void handleRegister();
@@ -157,6 +183,8 @@ export default function RegisterScreen() {
 
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Back to sign in"
+              hitSlop={8}
               disabled={isSubmitting}
               onPress={() => {
                 clearPendingRegistration();

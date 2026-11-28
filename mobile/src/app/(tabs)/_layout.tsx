@@ -27,6 +27,7 @@ export default function TabLayout() {
           headerRight: () => (
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Sign out"
               hitSlop={8}
               onPress={() => {
                 void logout().catch(() => {});

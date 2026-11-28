@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -15,26 +16,43 @@ export function AdminNoticeScreen() {
   const { userEmail, logout } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const signOutLockRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   async function handleSignOut() {
-    if (isSigningOut) return;
+    if (signOutLockRef.current || isSigningOut) return;
+    signOutLockRef.current = true;
     setErrorMessage(null);
     setIsSigningOut(true);
     try {
       await logout();
     } catch {
-      setErrorMessage("Could not complete sign out. Please try again.");
+      if (mountedRef.current) {
+        setErrorMessage("Could not complete sign out. Please try again.");
+      }
     } finally {
-      setIsSigningOut(false);
+      signOutLockRef.current = false;
+      if (mountedRef.current) {
+        setIsSigningOut(false);
+      }
     }
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
           <Text style={styles.badge}>SCHOOL ADMIN ACCOUNT</Text>
-          <Text style={styles.title}>Use the Desktop Web Portal</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            Use the Desktop Web Portal
+          </Text>
           {userEmail ? <Text style={styles.email}>{userEmail}</Text> : null}
           <Text style={styles.body}>
             This mobile app is for Parents only. Please use the FeeEase web
@@ -49,6 +67,8 @@ export function AdminNoticeScreen() {
 
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Sign out"
+            accessibilityState={{ busy: isSigningOut, disabled: isSigningOut }}
             disabled={isSigningOut}
             onPress={() => {
               void handleSignOut();
@@ -66,7 +86,7 @@ export function AdminNoticeScreen() {
             )}
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

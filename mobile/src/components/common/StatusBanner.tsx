@@ -42,6 +42,9 @@ export function StatusBanner({
   return (
     <View
       accessibilityRole={variant === "success" ? "text" : "alert"}
+      accessibilityLiveRegion={
+        variant === "error" || variant === "warning" ? "polite" : "none"
+      }
       style={[
         styles.banner,
         {

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { type ComponentRef, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -34,6 +34,17 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const submitLockRef = useRef(false);
+  const mountedRef = useRef(true);
+  const passwordInputRef = useRef<ComponentRef<typeof TextInput>>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (initialEmail) {
       setEmail(initialEmail);
@@ -41,7 +52,7 @@ export default function LoginScreen() {
   }, [initialEmail]);
 
   async function handleLogin() {
-    if (isSubmitting) return;
+    if (submitLockRef.current || isSubmitting) return;
     setErrorMessage(null);
     clearSessionNotice();
 
@@ -51,17 +62,22 @@ export default function LoginScreen() {
       return;
     }
 
+    submitLockRef.current = true;
     setIsSubmitting(true);
     try {
       await login(trimmedEmail, password);
     } catch (error) {
+      if (!mountedRef.current) return;
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
       } else {
         setErrorMessage("Unable to sign in right now. Please try again.");
       }
     } finally {
-      setIsSubmitting(false);
+      submitLockRef.current = false;
+      if (mountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   }
 
@@ -77,7 +93,9 @@ export default function LoginScreen() {
         >
           <View style={styles.card}>
             <Text style={styles.badge}>PARENT PORTAL</Text>
-            <Text style={styles.title}>FeeEase Login</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              FeeEase Login
+            </Text>
             <Text style={styles.subtitle}>
               Sign in with your parent account to view fees and receipts.
             </Text>
@@ -98,6 +116,7 @@ export default function LoginScreen() {
               <Text style={styles.label}>Email Address</Text>
               <TextInput
                 style={styles.input}
+                accessibilityLabel="Email address"
                 value={email}
                 onChangeText={setEmail}
                 placeholder="parent@example.com"
@@ -109,6 +128,7 @@ export default function LoginScreen() {
                 textContentType="emailAddress"
                 editable={!isSubmitting}
                 returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
               />
             </View>
 
@@ -116,7 +136,9 @@ export default function LoginScreen() {
               <Text style={styles.label}>Password</Text>
               <View style={styles.passwordRow}>
                 <TextInput
+                  ref={passwordInputRef}
                   style={styles.passwordInput}
+                  accessibilityLabel="Password"
                   value={password}
                   onChangeText={setPassword}
                   placeholder="Enter your password"
@@ -137,6 +159,7 @@ export default function LoginScreen() {
                   accessibilityLabel={
                     showPassword ? "Hide password" : "Show password"
                   }
+                  hitSlop={8}
                   onPress={() => setShowPassword((prev) => !prev)}
                   style={styles.toggleBtn}
                 >
@@ -149,6 +172,8 @@ export default function LoginScreen() {
 
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Sign in"
+              accessibilityState={{ busy: isSubmitting, disabled: isSubmitting }}
               disabled={isSubmitting}
               onPress={() => {
                 void handleLogin();
@@ -168,6 +193,8 @@ export default function LoginScreen() {
 
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Create a new parent account"
+              hitSlop={8}
               disabled={isSubmitting}
               onPress={() => {
                 clearSessionNotice();
@@ -179,6 +206,10 @@ export default function LoginScreen() {
                 Need an account? <Text style={styles.switchLinkAccent}>Register</Text>
               </Text>
             </Pressable>
+
+            <Text style={styles.previewCaption}>
+              FeeEase Parent Portal • Client Preview
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -307,5 +338,11 @@ const styles = StyleSheet.create({
   switchLinkAccent: {
     color: COLORS.emeraldDark,
     fontWeight: "700",
+  },
+  previewCaption: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    textAlign: "center",
   },
 });

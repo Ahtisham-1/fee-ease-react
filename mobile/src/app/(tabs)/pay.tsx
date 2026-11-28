@@ -204,6 +204,8 @@ export default function PayFeesScreen() {
               <StatusBanner message={error} variant="error" />
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Retry loading fee balance"
+                accessibilityState={{ busy: isRefreshing, disabled: isRefreshing }}
                 disabled={isRefreshing}
                 onPress={() => {
                   void refreshData();
@@ -224,12 +226,15 @@ export default function PayFeesScreen() {
           {!error && students.length === 0 ? (
             <View style={styles.card}>
               <Text style={styles.badge}>PAY FEES</Text>
-              <Text style={styles.title}>No Children Linked</Text>
+              <Text accessibilityRole="header" style={styles.title}>
+                No Children Linked
+              </Text>
               <Text style={styles.subtitle}>
                 Connect to your school first to view and pay student fees.
               </Text>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Connect to your school"
                 onPress={() => router.navigate("/(tabs)/connect")}
                 style={({ pressed }) => [
                   styles.primaryButton,
@@ -368,6 +373,14 @@ export default function PayFeesScreen() {
 
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel={
+                      parsedPreview.valid
+                        ? `Proceed to pay ${formatRupees(parsedPreview.amount)}`
+                        : "Proceed to pay"
+                    }
+                    accessibilityState={{
+                      disabled: formDisabled || !amountInput.trim(),
+                    }}
                     disabled={formDisabled || !amountInput.trim()}
                     onPress={handleInitiatePayment}
                     style={({ pressed }) => [
@@ -432,6 +445,8 @@ export default function PayFeesScreen() {
               <View style={styles.modalActions}>
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel="Cancel fee payment"
+                  accessibilityState={{ disabled: isProcessingPayment }}
                   disabled={isProcessingPayment}
                   onPress={handleCloseModal}
                   style={[
@@ -444,6 +459,15 @@ export default function PayFeesScreen() {
 
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={
+                    pendingConfirm
+                      ? `Confirm and pay ${formatRupees(pendingConfirm.amount)}`
+                      : "Confirm and pay"
+                  }
+                  accessibilityState={{
+                    busy: isProcessingPayment,
+                    disabled: isProcessingPayment,
+                  }}
                   disabled={isProcessingPayment}
                   onPress={() => {
                     void handleConfirmPayment();

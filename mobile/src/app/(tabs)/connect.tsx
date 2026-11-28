@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -193,16 +194,33 @@ export default function ConnectSchoolScreen() {
   if (schoolLoadError && students.length === 0) {
     return (
       <SafeAreaView edges={["left", "right", "bottom"]} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => {
+                void refreshData();
+              }}
+              tintColor={COLORS.emeraldPrimary}
+              colors={[COLORS.emeraldPrimary]}
+            />
+          }
+        >
           <View style={styles.card}>
             <Text style={styles.badge}>CONNECTION ERROR</Text>
-            <Text style={styles.title}>Could Not Check Link Status</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              Could Not Check Link Status
+            </Text>
             {statusMessage ? (
               <StatusBanner message={statusMessage} variant="success" />
             ) : null}
             <StatusBanner message={schoolLoadError} variant="error" />
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Retry checking school link status"
+              accessibilityState={{ busy: isRefreshing, disabled: isRefreshing }}
               disabled={isRefreshing}
               onPress={() => {
                 void refreshData();
@@ -226,10 +244,24 @@ export default function ConnectSchoolScreen() {
   if (students.length > 0) {
     return (
       <SafeAreaView edges={["left", "right", "bottom"]} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => {
+                void refreshData();
+              }}
+              tintColor={COLORS.emeraldPrimary}
+              colors={[COLORS.emeraldPrimary]}
+            />
+          }
+        >
           <View style={styles.card}>
             <Text style={styles.badge}>SCHOOL CONNECTED</Text>
-            <Text style={styles.title}>Account Already Linked</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              Account Already Linked
+            </Text>
             <StatusBanner
               message={`Your parent account is connected to ${students.length} enrolled ${
                 students.length === 1 ? "child" : "children"
@@ -248,6 +280,7 @@ export default function ConnectSchoolScreen() {
             </View>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Go to Home tab"
               onPress={() => router.navigate("/(tabs)")}
               style={({ pressed }) => [
                 styles.primaryButton,
@@ -274,7 +307,9 @@ export default function ConnectSchoolScreen() {
         >
           <View style={styles.card}>
             <Text style={styles.badge}>CONNECT TO SCHOOL</Text>
-            <Text style={styles.title}>Verify Your Phone Number</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              Verify Your Phone Number
+            </Text>
             <Text style={styles.subtitle}>
               Enter the Indian mobile number (+91) registered with your school
               office to link your children.
@@ -298,6 +333,7 @@ export default function ConnectSchoolScreen() {
                   <Text style={styles.label}>Registered Phone Number</Text>
                   <TextInput
                     style={styles.input}
+                    accessibilityLabel="School-registered mobile number"
                     value={phoneInput}
                     onChangeText={(text) =>
                       setPhoneInput(sanitizePhoneInput(text))
@@ -320,6 +356,8 @@ export default function ConnectSchoolScreen() {
 
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel="Send SMS verification code"
+                  accessibilityState={{ busy: isBusy, disabled: isBusy }}
                   disabled={isBusy}
                   onPress={() => {
                     void handleSendOtp(phoneInput);
@@ -348,6 +386,7 @@ export default function ConnectSchoolScreen() {
                   <Text style={styles.label}>6-Digit SMS OTP</Text>
                   <TextInput
                     style={styles.otpInput}
+                    accessibilityLabel="6-digit SMS verification code"
                     value={otpCode}
                     onChangeText={(text) =>
                       setOtpCode(sanitizeOtpCodeInput(text))
@@ -367,6 +406,8 @@ export default function ConnectSchoolScreen() {
 
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel="Verify SMS verification code"
+                  accessibilityState={{ busy: isBusy, disabled: isBusy }}
                   disabled={isBusy}
                   onPress={() => {
                     void handleVerifyOtp();
@@ -393,6 +434,11 @@ export default function ConnectSchoolScreen() {
                 <View style={styles.secondaryRow}>
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel="Resend SMS verification code"
+                    accessibilityState={{
+                      disabled: isBusy || cooldownSeconds > 0,
+                    }}
+                    hitSlop={8}
                     disabled={isBusy || cooldownSeconds > 0}
                     onPress={() => {
                       void handleSendOtp(submittedPhone);
@@ -411,6 +457,9 @@ export default function ConnectSchoolScreen() {
 
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel="Change phone number"
+                    accessibilityState={{ disabled: isBusy }}
+                    hitSlop={8}
                     disabled={isBusy}
                     onPress={handleChangePhone}
                     style={styles.secondaryButton}

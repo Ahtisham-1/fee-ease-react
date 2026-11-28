@@ -70,6 +70,8 @@ export default function ReceiptHistoryScreen() {
             <StatusBanner message={error} variant="error" />
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Retry loading payment history"
+              accessibilityState={{ busy: isRefreshing, disabled: isRefreshing }}
               disabled={isRefreshing}
               onPress={() => {
                 void refreshData();
@@ -90,12 +92,15 @@ export default function ReceiptHistoryScreen() {
         {!error && students.length === 0 ? (
           <View style={styles.card}>
             <Text style={styles.badge}>RECEIPT HISTORY</Text>
-            <Text style={styles.title}>No Children Linked</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              No Children Linked
+            </Text>
             <Text style={styles.subtitle}>
               Connect to your school first to view payment receipts.
             </Text>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Connect to your school"
               onPress={() => router.navigate("/(tabs)/connect")}
               style={({ pressed }) => [
                 styles.primaryButton,
