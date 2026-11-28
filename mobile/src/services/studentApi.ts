@@ -1,15 +1,19 @@
 import type { Student } from "../types/index.ts";
-import { expectArray, requestJson, type ApiClient } from "./apiClient.ts";
+import {
+  expectRecord,
+  parseBooleanField,
+  parseNonNegativeInt,
+  parsePositiveIntId,
+  parseStringField,
+} from "../utils/validation.ts";
+import { ApiError, expectArray, requestJson, type ApiClient } from "./apiClient.ts";
 
-interface BackendStudent {
-  id: number;
-  student_name: string;
-  parent_id: number | null;
-  phone: string;
-  grade: string;
-  tuition_fee: number;
-  has_transport: boolean;
-  transport_fee: number;
+export interface StudentApi {
+  getStudents(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<Student[]>;
 }
 
 type StudentClient = Pick<ApiClient, "requestJson" | "expectArray">;
@@ -19,37 +23,58 @@ const defaultStudentClient: StudentClient = {
   expectArray,
 };
 
-function mapStudent(s: BackendStudent): Student {
+function mapStudent(raw: unknown): Student {
+  const s = expectRecord(raw, "student");
   return {
-    id: String(s.id),
-    name: String(s.student_name ?? ""),
-    parentId: s.parent_id != null ? String(s.parent_id) : "",
-    gradeName: String(s.grade ?? ""),
-    hasTransport: Boolean(s.has_transport),
-    transportFee: Number(s.transport_fee) || 0,
+    id: parsePositiveIntId(s.id, "student"),
+    name: parseStringField(s.student_name, "student_name"),
+    parentId: s.parent_id === null ? "" : parsePositiveIntId(s.parent_id, "parent"),
+    gradeName: parseStringField(s.grade, "grade"),
+    hasTransport: parseBooleanField(s.has_transport, "has_transport"),
+    transportFee: parseNonNegativeInt(s.transport_fee, "transport_fee"),
   };
 }
 
-export function createStudentApi(client: StudentClient = defaultStudentClient) {
+export function createStudentApi(
+  client: StudentClient = defaultStudentClient,
+): StudentApi {
   async function getStudents(params?: {
     page?: number;
     limit?: number;
     search?: string;
   }): Promise<Student[]> {
     const query = new URLSearchParams();
-    if (params?.page !== undefined) query.append("page", String(params.page));
+    if (params?.page !== undefined) {
+      if (!Number.isSafeInteger(params.page) || params.page < 1) {
+        throw new ApiError("Invalid page number.", 400, "validation");
+      }
+      query.append("page", String(params.page));
+    }
     if (params?.limit !== undefined) {
+      if (
+        !Number.isSafeInteger(params.limit) ||
+        params.limit < 1 ||
+        params.limit > 100
+      ) {
+        throw new ApiError("Invalid page limit.", 400, "validation");
+      }
       query.append("limit", String(params.limit));
     }
-    if (params?.search) query.append("search", params.search);
+    if (params?.search !== undefined) {
+      const trimmed = params.search.trim();
+      if (trimmed.length > 100 || /[\x00-\x1f\x7f]/.test(trimmed)) {
+        throw new ApiError("Invalid search query.", 400, "validation");
+      }
+      if (trimmed) {
+        query.append("search", trimmed);
+      }
+    }
 
     const queryString = query.toString();
     const url = queryString ? `/api/students/?${queryString}` : "/api/students/";
 
-    const rawStudents = await client.requestJson<BackendStudent[]>(url);
-    return client.expectArray<BackendStudent>(rawStudents, "students").map(
-      mapStudent,
-    );
+    const rawStudents = await client.requestJson<unknown>(url);
+    return client.expectArray<unknown>(rawStudents, "students").map(mapStudent);
   }
 
   return { getStudents };

@@ -1,3 +1,4 @@
+import { expectRecord, hasSafeOwnKey, normalizeIndianPhone } from "../utils/validation.ts";
 import { ApiError, requestJson, type ApiClient } from "./apiClient.ts";
 import { isValidAuthTokenFormat } from "./tokenStorage.ts";
 
@@ -11,6 +12,14 @@ export interface AuthMessageResponse {
   Parent_id?: number;
 }
 
+export interface AuthApi {
+  loginApi(email: string, password: string): Promise<LoginResponse>;
+  registerApi(email: string, password: string): Promise<AuthMessageResponse>;
+  verifyOtpApi(email: string, otp_code: string): Promise<AuthMessageResponse>;
+  sendPhoneOtpApi(phone: string): Promise<AuthMessageResponse>;
+  verifyPhoneOtpApi(phone: string, otp_code: string): Promise<AuthMessageResponse>;
+}
+
 type AuthClient = Pick<ApiClient, "requestJson">;
 
 const defaultAuthClient: AuthClient = {
@@ -21,14 +30,46 @@ function normalizeEmailInput(email: string): string {
   return typeof email === "string" ? email.trim().toLowerCase() : "";
 }
 
-export function createAuthApi(client: AuthClient = defaultAuthClient) {
+function parseAuthMessageResponse(raw: unknown): AuthMessageResponse {
+  const record = expectRecord(raw, "auth");
+  if (!hasSafeOwnKey(record, "message") || typeof record.message !== "string") {
+    throw new ApiError(
+      "Invalid auth response from server.",
+      0,
+      "invalid_response",
+    );
+  }
+
+  const parsed: AuthMessageResponse = { message: record.message };
+  if (hasSafeOwnKey(record, "Parent_id") && record.Parent_id !== undefined) {
+    if (
+      typeof record.Parent_id !== "number" ||
+      !Number.isSafeInteger(record.Parent_id) ||
+      record.Parent_id <= 0
+    ) {
+      throw new ApiError(
+        "Invalid auth response from server.",
+        0,
+        "invalid_response",
+      );
+    }
+    parsed.Parent_id = record.Parent_id;
+  }
+  return parsed;
+}
+
+export function createAuthApi(client: AuthClient = defaultAuthClient): AuthApi {
   async function loginApi(
     email: string,
     password: string,
   ): Promise<LoginResponse> {
     const normalizedEmail = normalizeEmailInput(email);
-    if (!normalizedEmail || typeof password !== "string" || !password) {
-      throw new ApiError("Email and password are required.", 400, "http");
+    if (!normalizedEmail || typeof password !== "string" || !password.trim()) {
+      throw new ApiError(
+        "Email and password are required.",
+        400,
+        "validation",
+      );
     }
 
     const formData = new URLSearchParams();
@@ -41,10 +82,10 @@ export function createAuthApi(client: AuthClient = defaultAuthClient) {
       skipAuth: true,
     });
 
+    const record = expectRecord(result, "login");
     if (
-      !result ||
-      typeof result !== "object" ||
-      typeof (result as { access_token?: unknown }).access_token !== "string"
+      !hasSafeOwnKey(record, "access_token") ||
+      typeof record.access_token !== "string"
     ) {
       throw new ApiError(
         "Invalid login response from server.",
@@ -53,7 +94,7 @@ export function createAuthApi(client: AuthClient = defaultAuthClient) {
       );
     }
 
-    const token = (result as { access_token: string }).access_token.trim();
+    const token = record.access_token.trim();
     if (!token || !isValidAuthTokenFormat(token)) {
       throw new ApiError(
         "Invalid login response from server.",
@@ -62,12 +103,20 @@ export function createAuthApi(client: AuthClient = defaultAuthClient) {
       );
     }
 
-    const tokenType =
-      typeof (result as { token_type?: unknown }).token_type === "string"
-        ? (result as { token_type: string }).token_type
-        : "bearer";
+    if (hasSafeOwnKey(record, "token_type") && record.token_type !== undefined) {
+      if (
+        typeof record.token_type !== "string" ||
+        record.token_type.trim().toLowerCase() !== "bearer"
+      ) {
+        throw new ApiError(
+          "Invalid login response from server.",
+          0,
+          "invalid_response",
+        );
+      }
+    }
 
-    return { access_token: token, token_type: tokenType };
+    return { access_token: token, token_type: "bearer" };
   }
 
   async function registerApi(
@@ -75,16 +124,21 @@ export function createAuthApi(client: AuthClient = defaultAuthClient) {
     password: string,
   ): Promise<AuthMessageResponse> {
     const normalizedEmail = normalizeEmailInput(email);
-    if (!normalizedEmail || typeof password !== "string" || !password) {
-      throw new ApiError("Email and password are required.", 400, "http");
+    if (!normalizedEmail || typeof password !== "string" || !password.trim()) {
+      throw new ApiError(
+        "Email and password are required.",
+        400,
+        "validation",
+      );
     }
 
     // Mobile registration always forces role="parent" so admin accounts cannot be created here.
-    return client.requestJson<AuthMessageResponse>("/api/auth/register", {
+    const raw = await client.requestJson<unknown>("/api/auth/register", {
       method: "POST",
       body: { email: normalizedEmail, password, role: "parent" },
       skipAuth: true,
     });
+    return parseAuthMessageResponse(raw);
   }
 
   async function verifyOtpApi(
@@ -93,54 +147,53 @@ export function createAuthApi(client: AuthClient = defaultAuthClient) {
   ): Promise<AuthMessageResponse> {
     const normalizedEmail = normalizeEmailInput(email);
     const trimmedCode = typeof otp_code === "string" ? otp_code.trim() : "";
-    if (!normalizedEmail || !trimmedCode) {
+    if (!normalizedEmail || !/^\d{6}$/.test(trimmedCode)) {
       throw new ApiError(
-        "Email and verification code are required.",
+        "Email and 6-digit verification code are required.",
         400,
-        "http",
+        "validation",
       );
     }
 
-    return client.requestJson<AuthMessageResponse>("/api/auth/verify_otp", {
+    const raw = await client.requestJson<unknown>("/api/auth/verify_otp", {
       method: "POST",
       body: { email: normalizedEmail, otp_code: trimmedCode },
       skipAuth: true,
     });
+    return parseAuthMessageResponse(raw);
   }
 
   async function sendPhoneOtpApi(phone: string): Promise<AuthMessageResponse> {
-    const trimmedPhone = typeof phone === "string" ? phone.trim() : "";
-    if (!trimmedPhone) {
-      throw new ApiError("Phone number is required.", 400, "http");
-    }
-
-    return client.requestJson<AuthMessageResponse>("/api/auth/phone/send-otp", {
+    const normalizedPhone = normalizeIndianPhone(phone);
+    const raw = await client.requestJson<unknown>("/api/auth/phone/send-otp", {
       method: "POST",
-      body: { phone: trimmedPhone },
+      body: { phone: normalizedPhone },
     });
+    return parseAuthMessageResponse(raw);
   }
 
   async function verifyPhoneOtpApi(
     phone: string,
     otp_code: string,
   ): Promise<AuthMessageResponse> {
-    const trimmedPhone = typeof phone === "string" ? phone.trim() : "";
+    const normalizedPhone = normalizeIndianPhone(phone);
     const trimmedCode = typeof otp_code === "string" ? otp_code.trim() : "";
-    if (!trimmedPhone || !trimmedCode) {
+    if (!/^\d{6}$/.test(trimmedCode)) {
       throw new ApiError(
-        "Phone number and verification code are required.",
+        "Valid 6-digit verification code is required.",
         400,
-        "http",
+        "validation",
       );
     }
 
-    return client.requestJson<AuthMessageResponse>(
+    const raw = await client.requestJson<unknown>(
       "/api/auth/phone/verify-otp",
       {
         method: "POST",
-        body: { phone: trimmedPhone, otp_code: trimmedCode },
+        body: { phone: normalizedPhone, otp_code: trimmedCode },
       },
     );
+    return parseAuthMessageResponse(raw);
   }
 
   return {
