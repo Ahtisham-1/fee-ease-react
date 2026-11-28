@@ -10,12 +10,24 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBanner } from "@/src/components/common/StatusBanner";
+import { FeeBreakdownCard } from "@/src/components/parent/FeeBreakdownCard";
+import { StudentSelectorCard } from "@/src/components/parent/StudentSelectorCard";
 import { useSchoolData } from "@/src/context/SchoolDataContext";
 import { COLORS, RADII, SPACING } from "@/src/theme/tokens";
+import { resolveActiveStudent } from "@/src/utils/feeLedgerViewModel";
 
 export default function HomeScreen() {
-  const { students, fees, isLoading, isRefreshing, error, refreshData } =
-    useSchoolData();
+  const {
+    students,
+    fees,
+    payments,
+    selectedStudentId,
+    setSelectedStudentId,
+    isLoading,
+    isRefreshing,
+    error,
+    refreshData,
+  } = useSchoolData();
 
   if (isLoading) {
     return (
@@ -27,6 +39,8 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
+
+  const activeStudent = resolveActiveStudent(students, selectedStudentId);
 
   return (
     <SafeAreaView edges={["left", "right", "bottom"]} style={styles.safeArea}>
@@ -66,51 +80,28 @@ export default function HomeScreen() {
         ) : null}
 
         {!error && students.length === 0 ? (
-          <View style={styles.card}>
-            <Text style={styles.badge}>PARENT PORTAL</Text>
-            <Text style={styles.title}>No Children Linked to This Account</Text>
-            <Text style={styles.subtitle}>
-              Verify the mobile number registered with your school office to
-              connect your account to your enrolled children.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.navigate("/(tabs)/connect")}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                pressed && styles.primaryButtonPressed,
-              ]}
-            >
-              <Text style={styles.primaryButtonText}>
-                Connect to Your School
-              </Text>
-            </Pressable>
-          </View>
+          <StudentSelectorCard
+            students={[]}
+            selectedStudentId=""
+            onSelectStudent={setSelectedStudentId}
+            onConnectToSchool={() => router.navigate("/(tabs)/connect")}
+          />
         ) : null}
 
-        {students.length > 0 ? (
-          <View style={styles.card}>
-            <Text style={styles.badge}>SCHOOL LINKED</Text>
-            <Text style={styles.title}>My Enrolled Children</Text>
-            <Text style={styles.subtitle}>
-              {students.length}{" "}
-              {students.length === 1 ? "child linked" : "children linked"} •{" "}
-              {fees.length} {fees.length === 1 ? "fee record" : "fee records"}{" "}
-              loaded in memory.
-            </Text>
-            <View style={styles.childList}>
-              {students.map((child) => (
-                <View key={child.id} style={styles.childRow}>
-                  <Text style={styles.childName}>{child.name}</Text>
-                  <Text style={styles.childGrade}>Class {child.gradeName}</Text>
-                </View>
-              ))}
-            </View>
-            <StatusBanner
-              message="Parent account connected cleanly. Full student selector and FIFO fee ledger will be wired in Feature 6."
-              variant="success"
+        {activeStudent ? (
+          <>
+            <StudentSelectorCard
+              students={students}
+              selectedStudentId={activeStudent.id}
+              onSelectStudent={setSelectedStudentId}
+              onConnectToSchool={() => router.navigate("/(tabs)/connect")}
             />
-          </View>
+            <FeeBreakdownCard
+              student={activeStudent}
+              obligations={fees}
+              payments={payments}
+            />
+          </>
         ) : null}
       </ScrollView>
     </SafeAreaView>
@@ -147,45 +138,6 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     gap: SPACING.md,
   },
-  badge: {
-    alignSelf: "flex-start",
-    backgroundColor: COLORS.emeraldLight,
-    color: COLORS.emeraldDark,
-    borderColor: COLORS.emeraldBorder,
-    borderWidth: 1,
-    borderRadius: RADII.pill,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    fontSize: 12,
-    fontWeight: "700",
-    overflow: "hidden",
-  },
-  title: {
-    fontSize: 21,
-    fontWeight: "800",
-    color: COLORS.textPrimary,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-  },
-  primaryButton: {
-    minHeight: 48,
-    borderRadius: RADII.md,
-    backgroundColor: COLORS.emeraldPrimary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: SPACING.xs,
-  },
-  primaryButtonPressed: {
-    backgroundColor: COLORS.emeraldDark,
-  },
-  primaryButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
-  },
   retryButton: {
     minHeight: 44,
     borderRadius: RADII.sm,
@@ -205,29 +157,5 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: 14,
     fontWeight: "700",
-  },
-  childList: {
-    gap: SPACING.sm,
-  },
-  childRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: COLORS.inputBg,
-    borderColor: COLORS.border,
-    borderWidth: 1,
-    borderRadius: RADII.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
-  },
-  childName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-  },
-  childGrade: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.emeraldDark,
   },
 });
